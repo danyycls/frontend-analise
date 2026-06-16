@@ -1,0 +1,378 @@
+.tcu-section {
+  background: var(--bg-surface);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+.tcu-topo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.tcu-topo h2 {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tcu-desc {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-right: auto;
+}
+
+.tcu-sub-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 24px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.tcu-sub-tab {
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tcu-sub-tab:hover {
+  color: #39ff14;
+  background: rgba(57, 255, 20, 0.03);
+  border-color: rgba(57, 255, 20, 0.2);
+}
+
+.tcu-sub-tab.ativo {
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.06);
+  border-color: rgba(168, 85, 247, 0.25);
+}
+
+.tcu-sub-tab-fechar {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 0.1s;
+}
+
+.tcu-sub-tab-fechar:hover {
+  color: var(--error);
+}
+
+.tcu-metodo-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+}
+
+.tcu-metodo-btn {
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tcu-metodo-btn:hover {
+  border-color: #39ff14;
+  background: rgba(57, 255, 20, 0.03);
+}
+
+.tcu-metodo-desc {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.tcu-search-box {
+  padding: 16px 24px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tcu-search-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.tcu-search-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.tcu-search-input {
+  flex: 1;
+  min-width: 140px;
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.tcu-search-input:focus { border-color: #39ff14; }
+
+.tcu-search-input-mono {
+  font-family: var(--font-mono);
+}
+
+.tcu-inner-sub-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.tcu-search-placeholder {
+  padding: 40px 24px;
+  text-align: center;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.tcu-result-area {
+  padding: 16px 24px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.tcu-result-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tcu-result-lista {
+  display: flex;
+  flex-direction: column;
+}
+
+.tcu-result-sumario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 14px;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tcu-result-count {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #a855f7;
+}
+
+.tcu-empty {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.tcu-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tcu-card {
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tcu-card-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tcu-card-tipo {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: rgba(168, 85, 247, 0.08);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.tcu-card-nome {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tcu-card-doc {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.tcu-card-corpo {
+  padding: 10px 14px;
+}
+
+.tcu-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+}
+
+.tcu-card-campo {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+.tcu-card-label {
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  min-width: 70px;
+}
+
+.tcu-card-value {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  word-break: break-word;
+  font-size: 0.7rem;
+}
+
+.tcu-card-links {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tcu-card-link {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: #a855f7;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.tcu-card-link:hover { color: #39ff14; }
+
+.tcu-error-box {
+  padding: 20px 24px;
+  font-family: var(--font-mono);
+  color: var(--error);
+  font-size: 0.78rem;
+}
+
+.tcu-saved-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tcu-saved-list {
+  padding: 12px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tcu-saved-title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.tcu-saved-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tcu-saved-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #a855f7;
+}
+
+.tcu-saved-meta {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.tcu-saved-actions {
+  flex-shrink: 0;
+}

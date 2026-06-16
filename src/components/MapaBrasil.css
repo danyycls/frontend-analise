@@ -1,0 +1,177 @@
+.mapa-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  height: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.mapa-titulo {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.mapa-info-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 24px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.mapa-info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.mapa-info-val {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mapa-info-lbl {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mapa-info-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mapa-controls {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.mapa-zoom-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 400;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+  user-select: none;
+}
+
+.mapa-zoom-btn:hover {
+  color: var(--text-primary);
+}
+
+.mapa-zoom-level {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.mapa-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  height: 600px;
+  overflow: hidden;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.15), inset 0 0 16px rgba(59, 130, 246, 0.03);
+}
+
+.mapa-wrapper svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.estado-geography {
+  fill: transparent !important;
+  stroke: #eab308 !important;
+  stroke-width: 1.8 !important;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  transition: fill 0.2s, stroke 0.2s;
+  cursor: pointer;
+  outline: none;
+}
+
+.estado-geography:hover {
+  fill: rgba(57, 255, 20, 0.08) !important;
+  stroke: #39ff14 !important;
+}
+
+.mapa-dot {
+  fill: #ffffff;
+  cursor: pointer;
+  transition: fill 0.15s;
+}
+
+.mapa-dot:hover {
+  fill: #39ff14;
+}
+
+.mapa-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  fill: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  text-shadow: 0 0 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6);
+  transition: fill 0.15s;
+  pointer-events: none;
+}
+
+.mapa-dot:hover + .mapa-label {
+  fill: #39ff14;
+}
+
+.mapa-tooltip {
+  position: absolute;
+  background: var(--header-bg);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 6px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.mapa-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}

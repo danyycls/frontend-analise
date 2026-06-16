@@ -1,0 +1,175 @@
+import { useState, useCallback, useRef } from 'react';
+import API_BASE_URL from '../config';
+import './RelacoesPoliticas.css';
+import './BuscaCargo.css';
+
+function fmtDoc(d) {
+  if (!d) return '';
+  const s = String(d).replace(/\D/g, '');
+  if (s.length === 11) return s.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  if (s.length === 14) return s.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  return String(d);
+}
+
+function fmtVal(v) {
+  if (v == null) return '-';
+  return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function fmtDate(d) {
+  if (!d) return '-';
+  return d;
+}
+
+export default function BuscaFornecedor({
+  onFechar, onIdClick, resultItem, onRPSearchComplete,
+}) {
+  const [documento, setDocumento] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const abortRef = useRef(null);
+
+  const handleBuscar = useCallback(async () => {
+    const digits = documento.replace(/\D/g, '');
+    if (digits.length < 3) { setError('Informe um CPF ou CNPJ'); return; }
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await fetch(`${API_BASE_URL}/busca/fornecedores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documento: digits }),
+        signal: controller.signal,
+      });
+      if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).erro || 'Erro na busca');
+      const json = await resp.json();
+      if (controller.signal.aborted) return;
+      onRPSearchComplete?.('fornecedor', digits, json);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      setError(err.message);
+    }
+    if (!controller.signal.aborted) {
+      setLoading(false);
+      abortRef.current = null;
+    }
+  }, [documento, onRPSearchComplete]);
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') handleBuscar();
+  }
+
+  const digits = documento.replace(/\D/g, '');
+
+  if (resultItem) {
+    const data = resultItem.data;
+    const despesas = data?.despesas || [];
+    const fornecedor = data?.fornecedor;
+    return (
+      <div className="rp-section">
+        <div className="rp-topo">
+          <h2>Relação de Fornecedores</h2>
+          <span className="rp-desc">{resultItem.searchParams ? fmtDoc(resultItem.searchParams) : ''}</span>
+          <div className="rp-topo-actions">
+            <button className="btn btn-sm" onClick={onFechar}>Voltar</button>
+          </div>
+        </div>
+        <div className="rp-result">
+          {fornecedor && (
+            <div className="rp-entity-card clickable" onClick={() => onIdClick?.('cpf_cnpj', fornecedor.cpf_cnpj)}>
+              <span className="rp-entity-tag tag-fornecedor">Fornecedor</span>
+              <span className="rp-entity-name">{fornecedor.nome}</span>
+              <span className="rp-entity-doc">{fmtDoc(fornecedor.cpf_cnpj)}</span>
+            </div>
+          )}
+          <div className="rp-sumario">
+            <div className="rp-sumario-item">
+              <span className="rp-sumario-valor">{data.total_despesas || despesas.length}</span>
+              <span className="rp-sumario-label">Despesas</span>
+            </div>
+          </div>
+          {despesas.length > 0 && (
+            <div className="rp-lista">
+              <h3 className="rp-lista-title">Despesas ({despesas.length})</h3>
+              <div className="rp-cards">
+                {despesas.map((d, i) => (
+                  <div key={i} className="rp-card rp-card-despesa">
+                    <div className="rp-card-topo">
+                      <span className="rp-card-tag tag-despesa">Despesa</span>
+                      <span className="rp-card-tipo">{d.tipo === 'candidato' ? 'Candidato' : 'Partido'}</span>
+                      <span className="rp-card-valor">{fmtVal(d.valor)}</span>
+                    </div>
+                    <div className="rp-card-body">
+                      <div className="rp-card-field">
+                        <span className="rp-card-label">SQ</span>
+                        <span className="rp-card-value rp-id-link" onClick={() => onIdClick?.('sq_despesa', String(d.sq_despesa))}>{d.sq_despesa}</span>
+                      </div>
+                      <div className="rp-card-field">
+                        <span className="rp-card-label">Data</span>
+                        <span className="rp-card-value">{fmtDate(d.data_despesa)}</span>
+                      </div>
+                      <div className="rp-card-field rp-card-field-full">
+                        <span className="rp-card-label">Descrição</span>
+                        <span className="rp-card-value">{d.descricao || '-'}</span>
+                      </div>
+                      <div className="rp-card-field">
+                        <span className="rp-card-label">Origem</span>
+                        <span className="rp-card-value">{d.origem_despesa_descricao || '-'}</span>
+                      </div>
+                      {d.candidato && (
+                        <div className="rp-card-field">
+                          <span className="rp-card-label">Candidato</span>
+                          <span className="rp-card-value rp-id-link" onClick={() => onIdClick?.('sq_candidato', String(d.candidato.sq_candidato))}>{d.candidato.sq_candidato}</span>
+                        </div>
+                      )}
+                      {d.partido && (
+                        <div className="rp-card-field">
+                          <span className="rp-card-label">Partido</span>
+                          <span className="rp-card-value">{d.partido.sigla} - {d.partido.nome}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {despesas.length === 0 && <p className="rp-empty">Nenhuma despesa encontrada para este fornecedor.</p>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rp-section">
+      <div className="rp-topo">
+        <h2>Relação de Fornecedores</h2>
+        <span className="rp-desc">Buscar fornecedor por CPF/CNPJ</span>
+        <div className="rp-topo-actions">
+          <button className="btn btn-sm" onClick={onFechar}>Fechar</button>
+        </div>
+      </div>
+      <div className="rp-search-box">
+        <label className="rp-search-label rp-search-label-required">CPF/CNPJ do fornecedor</label>
+        <div className="rp-search-row">
+          <input
+            type="text"
+            className="rp-search-input"
+            placeholder="00.000.000/0000-00"
+            value={documento}
+            onChange={e => setDocumento(e.target.value)}
+            onKeyDown={handleKeyDown}
+            maxLength={18}
+          />
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading || digits.length < 3}>
+            {loading ? 'Buscando...' : 'Buscar'}
+          </button>
+        </div>
+        {error && <p className="rp-error">{error}</p>}
+      </div>
+    </div>
+  );
+}

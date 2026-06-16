@@ -1,0 +1,417 @@
+.rp-section {
+  background: var(--bg-surface);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+.rp-topo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.rp-topo h2 {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rp-desc {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-right: auto;
+}
+
+.rp-topo-actions { flex-shrink: 0; }
+
+.rp-search-box {
+  padding: 16px 24px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.rp-search-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.rp-search-label-required::after {
+  content: " (obrigatório)";
+  color: var(--error);
+  font-weight: 400;
+  font-size: 0.62rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.rp-search-row {
+  display: flex;
+  gap: 8px;
+  max-width: 460px;
+}
+
+.rp-search-input {
+  flex: 1;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.rp-search-input:focus { border-color: #39ff14; }
+
+.rp-error {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--error);
+  margin-top: 8px;
+}
+
+.rp-result {
+  padding: 16px 24px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.rp-sumario {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.rp-sumario-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 24px;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 100px;
+}
+
+.rp-sumario-valor {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #a855f7;
+}
+
+.rp-sumario-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.rp-entity-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
+}
+
+.rp-entity-tag.tag-fornecedor {
+  background: var(--fornecedor);
+  color: var(--text-inverse);
+}
+
+.rp-entity-tag.tag-doador {
+  background: var(--doador);
+  color: var(--text-inverse);
+}
+
+.rp-card-tag.tag-despesa {
+  background: var(--despesa);
+  color: var(--text-inverse);
+}
+
+.rp-card-tag.tag-receita {
+  background: var(--receita);
+  color: var(--text-inverse);
+}
+
+.rp-entity-name {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rp-entity-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: rgba(168, 85, 247, 0.08);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.rp-entity-doc {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.rp-lista {
+  margin-top: 20px;
+}
+
+.rp-lista-title {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  position: relative;
+}
+
+.rp-lista-title::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 30px;
+  height: 1px;
+  background: #a855f7;
+}
+
+.rp-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rp-card {
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.rp-card-despesa { border-left: 2px solid var(--despesa); }
+.rp-card-receita { border-left: 2px solid var(--receita); }
+
+.rp-card-topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.rp-card-tag {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: rgba(168, 85, 247, 0.08);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.rp-card-tipo {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.rp-card-valor {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-left: auto;
+}
+
+.rp-card-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  padding: 10px 14px;
+}
+
+.rp-card-field {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+.rp-card-field-full {
+  grid-column: 1 / -1;
+}
+
+.rp-card-label {
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  min-width: 40px;
+}
+
+.rp-card-value {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  word-break: break-word;
+  font-size: 0.7rem;
+}
+
+.rp-id-link {
+  color: #a855f7;
+  cursor: pointer;
+  font-weight: 600;
+  transition: color 0.12s;
+}
+
+.rp-id-link:hover { color: #39ff14; }
+
+.rp-empty {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.rp-result-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rp-saved-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 8px;
+}
+
+.rp-saved-toggle {
+  width: 100%;
+  padding: 10px 24px;
+  background: var(--bg-tertiary);
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.rp-saved-toggle:hover { background: rgba(255, 255, 255, 0.02); }
+
+.rp-saved-list {
+  padding: 8px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rp-saved-card {
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 14px;
+}
+
+.rp-saved-card-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.rp-saved-cnpj {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #a855f7;
+}
+
+.rp-saved-data {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.rp-saved-card-body {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.rp-saved-stat {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+.rp-saved-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.rp-metodo-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+}
+
+.rp-metodo-btn {
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.rp-metodo-btn:hover {
+  border-color: #39ff14;
+  background: rgba(57, 255, 20, 0.03);
+}

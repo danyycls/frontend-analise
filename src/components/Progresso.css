@@ -1,0 +1,117 @@
+.progresso-card {
+  background: var(--bg-surface);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.progresso-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.progresso-card h2 {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.progresso-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progresso-preenchimento {
+  height: 100%;
+  background: #39ff14;
+  transition: width 0.3s ease;
+}
+
+.progresso-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.progresso-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.progresso-stat-val {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.progresso-stat-lbl {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.progresso-stat-sucesso {
+  color: var(--success);
+}
+
+.progresso-stat-erro {
+  color: var(--error);
+}
+
+.progresso-status {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.progresso-logs {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-surface);
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.progresso-log {
+  color: var(--text-secondary);
+  padding: 1px 0;
+}
+
+.progresso-log.erro { color: var(--error); }
+.progresso-log.sucesso { color: var(--success); }
+
+.progresso-cnpj {
+  font-weight: 600;
+}
+
+.progresso-mensagem {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 12px;
+}
+
+.progresso-mensagem.accent {
+  color: #a855f7;
+  font-weight: 600;
+}
