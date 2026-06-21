@@ -54,13 +54,13 @@ export default function App() {
 
 function AppInterno() {
   const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('liceu-theme');
+    const saved = localStorage.getItem('podp-theme');
     return saved || 'dark';
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('liceu-theme', theme);
+    localStorage.setItem('podp-theme', theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -520,7 +520,7 @@ function AppInterno() {
       <aside className="app-sidebar">
         <div className="sidebar-brand" onClick={() => setAbaAtiva('home')}>
           <span className="sidebar-logo">◆</span>
-          <span className="sidebar-title">Liceu</span>
+          <span className="sidebar-title">PODP</span>
           <span className="sidebar-badge">// SYS.v1</span>
         </div>
 
