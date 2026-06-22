@@ -349,7 +349,7 @@ function AppInterno() {
         licitacoes.push({
           numero_controle_pncp: contrato.numeroControlePNCP || '',
           cpf_cnpj: mainDoc,
-          socios: (contrato.fornecedor?.socios || []).map(s => ({
+          socios: (contrato.fornecedor?.qsa || []).map(s => ({
             nome: s.nome_socio || '',
             documento: s.cnpj_cpf_socio || ''
           }))
@@ -367,7 +367,7 @@ function AppInterno() {
         });
       }
     }
-    (contrato.fornecedor?.socios || []).forEach(s => {
+    (contrato.fornecedor?.qsa || []).forEach(s => {
       const sd = s.cnpj_cpf_socio;
       if (sd && sd.length >= 3 && sd !== mainDoc && sd !== contrato.niFornecedor && !seen.has(`${contrato.numeroControlePNCP || ''}_socio_${sd}`)) {
         seen.add(`${contrato.numeroControlePNCP || ''}_socio_${sd}`);
@@ -422,7 +422,7 @@ function AppInterno() {
         fornecedor: {
           razaoSocial: item.cpf_cnpj || '-',
           cnpj: item.cpf_cnpj,
-          socios: (item.socios || []).map(s => ({
+          qsa: (item.socios || []).map(s => ({
             nome_socio: s.nome,
             cnpj_cpf_socio: s.documento
           }))

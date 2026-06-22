@@ -2,8 +2,89 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import API_BASE_URL, { WS_BASE_URL } from '../config';
 import DetalheMunicipio from './DetalheMunicipio';
+import ErrorBoundary from './ErrorBoundary';
+import SecaoGeralDeputado from './DeputadoSecaoGeral';
+import SecaoGeralSenador from './SenadorSecaoGeral';
 import './ConhecendoEstado.css';
 import './AnaliseDeputados.css';
+
+function usePaginacao(dados, itensPorPagina = 10) {
+  const [pagina, setPagina] = useState(0);
+  const arr = dados || [];
+  const totalPaginas = Math.max(1, Math.ceil(arr.length / itensPorPagina));
+  const inicio = pagina * itensPorPagina;
+  const paginaDados = arr.slice(inicio, inicio + itensPorPagina);
+  return { pagina, setPagina, totalPaginas, paginaDados };
+}
+
+function Paginacao({ pagina, totalPaginas, onPagina }) {
+  if (totalPaginas <= 1) return null;
+  return (
+    <div className="dm-paginacao">
+      <button className="pagina-btn" disabled={pagina === 0} onClick={() => onPagina(pagina - 1)}>◀</button>
+      <span className="pagina-info">{pagina + 1} / {totalPaginas}</span>
+      <button className="pagina-btn" disabled={pagina >= totalPaginas - 1} onClick={() => onPagina(pagina + 1)}>▶</button>
+    </div>
+  );
+}
+
+const DATA_SOURCES = {
+  candidatos: { font: 'TSE - Tribunal Superior Eleitoral', desc: 'Prefeitos, vice-prefeitos e vereadores eleitos na UF (todos os anos disponíveis)', campos: {} },
+  deputados: { font: 'Câmara dos Deputados — Dados Abertos', desc: 'Deputados federais eleitos pela UF na legislatura atual', campos: {} },
+  senadores: { font: 'Senado Federal — Dados Abertos', desc: 'Senadores eleitos pela UF no período atual', campos: {} },
+  despesa_pessoal: { font: 'SICONFI / Tesouro Nacional — RGF (Anexo 01)', desc: 'Demonstrativo da Despesa com Pessoal — limite da LRF', campos: { valor_total: 'Valor total da despesa com pessoal no exercício', percentual_rcl: 'Percentual em relação à Receita Corrente Líquida (RCL)', periodo: 'Período de referência (ano)' } },
+  despesa_categoria: { font: 'SICONFI / Tesouro Nacional — RGF (Anexo 01)', desc: 'Despesa com pessoal por categoria (ativos, inativos, pensionistas, terceirizados)', campos: { categoria: 'Categoria funcional do servidor', quantidade: 'Quantidade de vínculos na categoria', despesa_total: 'Valor total da despesa da categoria', percentual_despesa: 'Percentual em relação à despesa total com pessoal' } },
+  gastos_por_funcao: { font: 'SICONFI / Tesouro Nacional — RREO (Anexo 02)', desc: 'Despesas empenhadas, liquidadas e pagas por função de governo', campos: { funcao: 'Função de governo (ex: Saúde, Educação, Segurança)', empenhado: 'Valor empenhado (reservado orçamentariamente)', liquidado: 'Valor liquidado (bem/serviço entregue)', pago: 'Valor efetivamente pago' } },
+  receitas: { font: 'SICONFI / Tesouro Nacional — RREO (Anexo 03)', desc: 'Receitas arrecadadas por categoria econômica', campos: { conta: 'Classificação da receita orçamentária', coluna: 'Tipo de valor (Previsão Inicial, Previsão Atualizada, Receita Realizada)', valor: 'Valor da receita no exercício', exercicio: 'Ano de referência' } },
+  recursos_federais: { font: 'Info Portal da Transparência — Transferências a Entes', desc: 'Recursos federais transferidos a estados e municípios', campos: { tipo_pessoa: 'Tipo de pessoa (Física ou Jurídica) do favorecido', nome_pessoa: 'Nome do favorecido (pessoa física ou jurídica)', nome_ug: 'Unidade Gestora responsável pelo recurso', nome_orgao: 'Órgão concedente do recurso', nome_orgao_superior: 'Órgão superior do órgão concedente', valor: 'Valor do recurso transferido', mes_ano: 'Mês e ano de referência (formato AAAAMM)' } },
+  contratos: { font: 'PNCP — Portal Nacional de Contratações Públicas', desc: 'Contratos e compras públicas realizadas', campos: {} },
+  servidores: { font: 'SICONFI / Tesouro Nacional — RGF (Anexo 01)', desc: 'Despesa com pessoal por categoria funcional', campos: { categoria: 'Categoria funcional', quantidade: 'Quantidade de servidores na categoria', despesa_total: 'Valor total da despesa da categoria', percentual_despesa: 'Percentual em relação à despesa total com pessoal' } },
+};
+
+function InfoBadge({ chave, onInfoClick }) {
+  const info = DATA_SOURCES[chave];
+  if (!info) return null;
+  return (
+    <span className="info-badge" onClick={() => onInfoClick?.(chave)} title="Clique para ver descrição dos campos" style={{ cursor: 'pointer', fontSize: '0.65rem', color: 'var(--accent)', marginLeft: 8, textDecoration: 'underline dotted' }}>
+      ⓘ {info.font}
+    </span>
+  );
+}
+
+function PopupInfo({ chave, onFechar }) {
+  const info = DATA_SOURCES[chave];
+  if (!info) return null;
+  const campos = Object.entries(info.campos || {});
+  return (
+    <div className="dm-modal-overlay" onClick={onFechar}>
+      <div className="dm-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
+        <div className="dm-modal-header">
+          <h3>Fonte: {info.font}</h3>
+          <button className="dm-modal-close" onClick={onFechar}>×</button>
+        </div>
+        <div className="dm-modal-body">
+          <p style={{ marginBottom: 16, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{info.desc}</p>
+          {campos.length > 0 && (
+            <table className="dm-detalhe-table">
+              <thead>
+                <tr><th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--border)' }}>Campo</th><th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--border)' }}>Descrição</th></tr>
+              </thead>
+              <tbody>
+                {campos.map(([campo, desc]) => (
+                  <tr key={campo}>
+                    <td className="dm-detalhe-label" style={{ whiteSpace: 'nowrap' }}>{campo}</td>
+                    <td className="dm-detalhe-valor">{desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {campos.length === 0 && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Detalhamento dos campos não disponível para esta seção.</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function fmtNum(n) {
   if (!n) return '-';
@@ -186,20 +267,61 @@ function TabelaCandidatos({ dados, titulo }) {
 function DetalheDeputado({ deputado, onFechar }) {
   const [dados, setDados] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(null);
+  const concluidoRef = useRef(false);
 
   useEffect(() => {
     if (!deputado) return;
+    console.log('[DetalheDeputado] iniciando fetch para deputado:', deputado.id, deputado);
+    concluidoRef.current = false;
     setLoading(true);
-    fetch(`${API_BASE_URL}/camara/deputados/${deputado.id}/completo`)
-      .then(r => r.json())
-      .then(data => { setDados(data); setLoading(false); })
-      .catch(() => setLoading(false));
+    setErro(null);
+    const url = `${API_BASE_URL}/deputados/${deputado.id}/completo`;
+    console.log('[DetalheDeputado] URL:', url);
+    fetch(url)
+      .then(r => {
+        console.log('[DetalheDeputado] resposta status:', r.status);
+        if (!r.ok) throw new Error(`Erro ${r.status}`);
+        return r.json();
+      })
+      .then(data => {
+        console.log('[DetalheDeputado] dados recebidos:', data);
+        concluidoRef.current = true;
+        setDados(data);
+        setLoading(false);
+      })
+      .catch(e => {
+        console.error('[DetalheDeputado] erro:', e.message);
+        concluidoRef.current = true;
+        setErro(e.message);
+        setLoading(false);
+      });
+
+    const timeout = setTimeout(() => {
+      if (!concluidoRef.current) {
+        console.warn('[DetalheDeputado] timeout de 30s excedido');
+        setLoading(false);
+        setErro('Tempo limite excedido ao carregar dados do deputado');
+      }
+    }, 30000);
+    return () => clearTimeout(timeout);
   }, [deputado]);
 
   if (loading) return <div className="estado-detalhe-loading"><div className="spinner" /> Carregando detalhes...</div>;
+  if (erro) return (
+    <div className="estado-detalhe">
+      <div className="estado-detalhe-header"><h3>Erro</h3><button className="voltar-btn" onClick={onFechar}>× Voltar</button></div>
+      <p style={{ textAlign: 'center', padding: 40, color: '#ff6b6b' }}>Erro ao carregar detalhes: {erro}</p>
+    </div>
+  );
 
   const dep = dados?.deputado || dados;
-  if (!dep) return null;
+  if (!dep) return (
+    <div className="estado-detalhe">
+      <div className="estado-detalhe-header"><h3>Deputado não encontrado</h3><button className="voltar-btn" onClick={onFechar}>× Voltar</button></div>
+      <p style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Dados do deputado não disponíveis</p>
+    </div>
+  );
 
   const u = dep.ultimoStatus || {};
 
@@ -218,40 +340,7 @@ function DetalheDeputado({ deputado, onFechar }) {
         </div>
         <button className="voltar-btn" onClick={onFechar}>× Voltar</button>
       </div>
-      <div className="ad-info-grid">
-        <div className="ad-info-item">
-          <span className="ad-info-label">Nome Civil</span>
-          <span className="ad-info-value">{dep.nomeCivil || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">CPF</span>
-          <span className="ad-info-value">{fmtDoc(dep.cpf)}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Partido</span>
-          <span className="ad-info-value">{u.siglaPartido || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">UF</span>
-          <span className="ad-info-value">{u.siglaUf || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Data Nascimento</span>
-          <span className="ad-info-value">{dep.dataNascimento || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Sexo</span>
-          <span className="ad-info-value">{dep.sexo || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Escolaridade</span>
-          <span className="ad-info-value">{dep.escolaridade || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Email</span>
-          <span className="ad-info-value">{u.email || '-'}</span>
-        </div>
-      </div>
+      <SecaoGeralDeputado deputado={dep} />
     </div>
   );
 }
@@ -259,20 +348,61 @@ function DetalheDeputado({ deputado, onFechar }) {
 function DetalheSenador({ senador, onFechar }) {
   const [dados, setDados] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(null);
+  const concluidoRef = useRef(false);
 
   useEffect(() => {
     if (!senador) return;
+    console.log('[DetalheSenador] iniciando fetch para senador:', senador.codigo, senador);
+    concluidoRef.current = false;
     setLoading(true);
-    fetch(`${API_BASE_URL}/senado/senadores/${senador.codigo}/completo`)
-      .then(r => r.json())
-      .then(data => { setDados(data); setLoading(false); })
-      .catch(() => setLoading(false));
+    setErro(null);
+    const url = `${API_BASE_URL}/senado/senadores/${senador.codigo}/completo`;
+    console.log('[DetalheSenador] URL:', url);
+    fetch(url)
+      .then(r => {
+        console.log('[DetalheSenador] resposta status:', r.status);
+        if (!r.ok) throw new Error(`Erro ${r.status}`);
+        return r.json();
+      })
+      .then(data => {
+        console.log('[DetalheSenador] dados recebidos:', data);
+        concluidoRef.current = true;
+        setDados(data);
+        setLoading(false);
+      })
+      .catch(e => {
+        console.error('[DetalheSenador] erro:', e.message);
+        concluidoRef.current = true;
+        setErro(e.message);
+        setLoading(false);
+      });
+
+    const timeout = setTimeout(() => {
+      if (!concluidoRef.current) {
+        console.warn('[DetalheSenador] timeout de 30s excedido');
+        setLoading(false);
+        setErro('Tempo limite excedido ao carregar dados do senador');
+      }
+    }, 30000);
+    return () => clearTimeout(timeout);
   }, [senador]);
 
   if (loading) return <div className="estado-detalhe-loading"><div className="spinner" /> Carregando detalhes...</div>;
+  if (erro) return (
+    <div className="estado-detalhe">
+      <div className="estado-detalhe-header"><h3>Erro</h3><button className="voltar-btn" onClick={onFechar}>× Voltar</button></div>
+      <p style={{ textAlign: 'center', padding: 40, color: '#ff6b6b' }}>Erro ao carregar detalhes: {erro}</p>
+    </div>
+  );
 
   const sen = dados?.senador || dados;
-  if (!sen) return null;
+  if (!sen) return (
+    <div className="estado-detalhe">
+      <div className="estado-detalhe-header"><h3>Senador não encontrado</h3><button className="voltar-btn" onClick={onFechar}>× Voltar</button></div>
+      <p style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Dados do senador não disponíveis</p>
+    </div>
+  );
 
   const ident = sen.IdentificacaoParlamentar || {};
   const basico = sen.DadosBasicosParlamentar || {};
@@ -292,32 +422,7 @@ function DetalheSenador({ senador, onFechar }) {
         </div>
         <button className="voltar-btn" onClick={onFechar}>× Voltar</button>
       </div>
-      <div className="ad-info-grid">
-        <div className="ad-info-item">
-          <span className="ad-info-label">Nome Completo</span>
-          <span className="ad-info-value">{ident.NomeCompletoParlamentar || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Partido</span>
-          <span className="ad-info-value">{ident.SiglaPartidoParlamentar || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">UF</span>
-          <span className="ad-info-value">{ident.UfParlamentar || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Data Nascimento</span>
-          <span className="ad-info-value">{basico.DataNascimento || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Naturalidade</span>
-          <span className="ad-info-value">{basico.Naturalidade || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Email</span>
-          <span className="ad-info-value">{ident.EmailParlamentar || '-'}</span>
-        </div>
-      </div>
+      <SecaoGeralSenador senador={sen} />
     </div>
   );
 }
@@ -335,9 +440,26 @@ export default function ConhecendoEstado() {
   const [senDetalhe, setSenDetalhe] = useState(null);
   const [municipioDetalhe, setMunicipioDetalhe] = useState(null);
 
+  const [anoFiltro, setAnoFiltro] = useState(new Date().getFullYear() - 1);
+  const [buscarKey, setBuscarKey] = useState(0);
   const [finSecoes, setFinSecoes] = useState({});
+  const [finErro, setFinErro] = useState(null);
   const finRef = useRef({});
   const finConcluidoRef = useRef(false);
+  const [popupInfo, setPopupInfo] = useState(null);
+  const [collapsed, setCollapsed] = useState({});
+
+  function handleBuscar() {
+    setFinSecoes({});
+    setFinErro(null);
+    finRef.current = {};
+    finConcluidoRef.current = false;
+    setBuscarKey(k => k + 1);
+  }
+
+  function toggleCollapse(secao) {
+    setCollapsed(prev => ({ ...prev, [secao]: !prev[secao] }));
+  }
 
   useEffect(() => {
     if (!uf) return;
@@ -368,10 +490,11 @@ export default function ConhecendoEstado() {
   useEffect(() => {
     if (!uf) return;
     setFinSecoes({});
+    setFinErro(null);
     finRef.current = {};
     finConcluidoRef.current = false;
 
-    const wsUrl = `${WS_BASE_URL}/estado/${uf}/financeiro/stream`;
+    const wsUrl = `${WS_BASE_URL}/estado/${uf}/financeiro/stream?exercicio=${anoFiltro}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (e) => {
@@ -398,6 +521,9 @@ export default function ConhecendoEstado() {
             finRef.current = { ...finRef.current, recursos_federais: msg.data?.dados || [] };
             setFinSecoes({ ...finRef.current });
             break;
+          case 'erro':
+            setFinErro(msg.data?.erro || 'Erro desconhecido');
+            break;
           case 'concluido':
             finConcluidoRef.current = true;
             ws.close();
@@ -411,12 +537,16 @@ export default function ConhecendoEstado() {
     };
 
     return () => { ws.close(); };
-  }, [uf]);
+  }, [uf, buscarKey]);
+
+  const recursosFedPag = usePaginacao(finSecoes?.recursos_federais, ITENS_POR_PAGINA);
 
   if (depDetalhe) {
     return (
       <div className="estado-page">
-        <DetalheDeputado deputado={depDetalhe} onFechar={() => setDepDetalhe(null)} />
+        <ErrorBoundary onFechar={() => setDepDetalhe(null)}>
+          <DetalheDeputado deputado={depDetalhe} onFechar={() => setDepDetalhe(null)} />
+        </ErrorBoundary>
       </div>
     );
   }
@@ -424,7 +554,9 @@ export default function ConhecendoEstado() {
   if (senDetalhe) {
     return (
       <div className="estado-page">
-        <DetalheSenador senador={senDetalhe} onFechar={() => setSenDetalhe(null)} />
+        <ErrorBoundary onFechar={() => setSenDetalhe(null)}>
+          <DetalheSenador senador={senDetalhe} onFechar={() => setSenDetalhe(null)} />
+        </ErrorBoundary>
       </div>
     );
   }
@@ -432,11 +564,13 @@ export default function ConhecendoEstado() {
   if (municipioDetalhe) {
     return (
       <div className="estado-page">
-        <DetalheMunicipio
-          municipio={municipioDetalhe}
-          uf={uf}
-          onFechar={() => setMunicipioDetalhe(null)}
-        />
+        <ErrorBoundary onFechar={() => setMunicipioDetalhe(null)}>
+          <DetalheMunicipio
+            municipio={municipioDetalhe}
+            uf={uf}
+            onFechar={() => setMunicipioDetalhe(null)}
+          />
+        </ErrorBoundary>
       </div>
     );
   }
@@ -490,18 +624,22 @@ export default function ConhecendoEstado() {
       />
 
       {candidatos ? (
-        <>
-          {listaVereadores.length > 0 && <TabelaCandidatos dados={listaVereadores} titulo="Vereadores Eleitos" />}
-          {listaPrefeitos.length > 0 && <TabelaCandidatos dados={listaPrefeitos} titulo="Prefeitos Eleitos" />}
-          {listaVice.length > 0 && <TabelaCandidatos dados={listaVice} titulo="Vice-Prefeitos Eleitos" />}
-
-          {listaVereadores.length === 0 && listaPrefeitos.length === 0 && listaVice.length === 0 && (
-            <div className="estado-section">
-              <h2>Candidatos Eleitos <span className="count">(0)</span></h2>
-              <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum candidato encontrado para esta UF</p>
-            </div>
+        <div className="estado-section">
+          <div className="estado-section-header" onClick={() => toggleCollapse('candidatos')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0 }}>Candidatos Eleitos <span className="count">({listaVereadores.length + listaPrefeitos.length + listaVice.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
+            <span>{collapsed.candidatos ? '▶' : '▼'}</span>
+          </div>
+          {!collapsed.candidatos && (
+            <>
+              {listaVereadores.length > 0 && <TabelaCandidatos dados={listaVereadores} titulo="Vereadores Eleitos" />}
+              {listaPrefeitos.length > 0 && <TabelaCandidatos dados={listaPrefeitos} titulo="Prefeitos Eleitos" />}
+              {listaVice.length > 0 && <TabelaCandidatos dados={listaVice} titulo="Vice-Prefeitos Eleitos" />}
+              {listaVereadores.length === 0 && listaPrefeitos.length === 0 && listaVice.length === 0 && (
+                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum candidato encontrado para esta UF</p>
+              )}
+            </>
           )}
-        </>
+        </div>
       ) : (
         <div className="estado-section">
           <h2>Candidatos Eleitos <span className="count">(...)</span></h2>
@@ -510,196 +648,271 @@ export default function ConhecendoEstado() {
       )}
 
       <div className="estado-section">
-        <h2>Deputados Federais <span className="count">({listaDeputados.length})</span></h2>
-        {listaDeputados.length > 0 ? (
-          <div className="ad-grid">
-            {listaDeputados.map(d => (
-              <div key={d.id} className="ad-card-dep">
-                <img className="ad-foto" src={d.url_foto} alt={d.nome} onError={(e) => { e.target.style.display = 'none'; }} />
-                <div className="ad-card-dep-info">
-                  <strong className="ad-card-dep-nome">{d.nome}</strong>
-                  <span className="ad-card-dep-partido">
-                    <span className="tag tag-candidato">{d.sigla_partido}</span>
-                    <span className="ad-card-dep-uf">{d.sigla_uf}</span>
-                  </span>
-                </div>
-                <button className="btn btn-sm btn-outline-accent" onClick={() => setDepDetalhe(d)}>Detalhes</button>
+        <div className="estado-section-header" onClick={() => toggleCollapse('deputados')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0 }}>Deputados Federais <span className="count">({listaDeputados.length})</span><InfoBadge chave="deputados" onInfoClick={setPopupInfo} /></h2>
+          <span>{collapsed.deputados ? '▶' : '▼'}</span>
+        </div>
+        {!collapsed.deputados && (
+          <>
+            {listaDeputados.length > 0 ? (
+              <div className="ad-grid">
+                {listaDeputados.map(d => (
+                  <div key={d.id} className="ad-card-dep">
+                    <img className="ad-foto" src={d.url_foto} alt={d.nome} onError={(e) => { e.target.style.display = 'none'; }} />
+                    <div className="ad-card-dep-info">
+                      <strong className="ad-card-dep-nome">{d.nome}</strong>
+                      <span className="ad-card-dep-partido">
+                        <span className="tag tag-candidato">{d.sigla_partido}</span>
+                        <span className="ad-card-dep-uf">{d.sigla_uf}</span>
+                      </span>
+                      <span className="ad-card-dep-extra" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                        {d.email ? `📧 ${d.email}` : ''}{d.email && d.nome_eleitoral ? ' · ' : ''}{d.nome_eleitoral ? `🗳 ${d.nome_eleitoral}` : ''}
+                      </span>
+                    </div>
+                    <button className="btn btn-sm btn-outline-accent" onClick={() => setDepDetalhe(d)}>Detalhes</button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : deputados !== null ? (
-          <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum deputado encontrado</p>
-        ) : (
-          <div className="municipios-loading">Carregando deputados...</div>
+            ) : deputados !== null ? (
+              <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum deputado encontrado</p>
+            ) : (
+              <div className="municipios-loading">Carregando deputados...</div>
+            )}
+          </>
         )}
       </div>
 
       <div className="estado-section">
-        <h2>Senadores <span className="count">({listaSenadores.length})</span></h2>
-        {listaSenadores.length > 0 ? (
-          <div className="ad-grid">
-            {listaSenadores.map(s => (
-              <div key={s.codigo} className="ad-card-dep">
-                <img className="ad-foto" src={s.url_foto} alt={s.nome_parlamentar} onError={(e) => { e.target.style.display = 'none'; }} />
-                <div className="ad-card-dep-info">
-                  <strong className="ad-card-dep-nome">{s.nome_parlamentar}</strong>
-                  <span className="ad-card-dep-partido">
-                    <span className="tag tag-candidato">{s.partido}</span>
-                    <span className="ad-card-dep-uf">{s.uf}</span>
-                  </span>
-                </div>
-                <button className="btn btn-sm btn-outline-accent" onClick={() => setSenDetalhe(s)}>Detalhes</button>
+        <div className="estado-section-header" onClick={() => toggleCollapse('senadores')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0 }}>Senadores <span className="count">({listaSenadores.length})</span><InfoBadge chave="senadores" onInfoClick={setPopupInfo} /></h2>
+          <span>{collapsed.senadores ? '▶' : '▼'}</span>
+        </div>
+        {!collapsed.senadores && (
+          <>
+            {listaSenadores.length > 0 ? (
+              <div className="ad-grid">
+                {listaSenadores.map(s => (
+                  <div key={s.codigo} className="ad-card-dep">
+                    <img className="ad-foto" src={s.url_foto} alt={s.nome_parlamentar} onError={(e) => { e.target.style.display = 'none'; }} />
+                    <div className="ad-card-dep-info">
+                      <strong className="ad-card-dep-nome">{s.nome_parlamentar}</strong>
+                      <span className="ad-card-dep-partido">
+                        <span className="tag tag-candidato">{s.partido}</span>
+                        <span className="ad-card-dep-uf">{s.uf}</span>
+                      </span>
+                      {s.nome_completo && (
+                        <span className="ad-card-dep-extra" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                          {s.nome_completo}
+                        </span>
+                      )}
+                    </div>
+                    <button className="btn btn-sm btn-outline-accent" onClick={() => setSenDetalhe(s)}>Detalhes</button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : senadores !== null ? (
-          <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum senador encontrado</p>
-        ) : (
-          <div className="municipios-loading">Carregando senadores...</div>
+            ) : senadores !== null ? (
+              <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum senador encontrado</p>
+            ) : (
+              <div className="municipios-loading">Carregando senadores...</div>
+            )}
+          </>
         )}
       </div>
 
+      <div className="estado-section" style={{ padding: '8px 12px', marginBottom: 8, background: 'var(--card-bg)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Ano exercício:</span>
+        <input type="number" min="2010" max={new Date().getFullYear()} value={anoFiltro} onChange={(e) => setAnoFiltro(Number(e.target.value))} style={{ width: 80, padding: '4px 8px', fontSize: '0.85rem' }} />
+        <button className="btn btn-sm" onClick={handleBuscar}>Buscar Dados Financeiros</button>
+      </div>
+
+      {finErro && (
+        <div className="estado-erro" style={{ marginBottom: 8 }}>{finErro}</div>
+      )}
+
       {finDespesaPessoal && (
         <div className="estado-section">
-          <h2>Despesa com Pessoal <span className="count">(Executivo)</span></h2>
-          <div className="dm-cards">
-            <FinCard label="Total Despesa Pessoal" value={fmtMoney(finDespesaPessoal.valor_total)} />
-            <FinCard label="% da RCL" value={fmtNum(finDespesaPessoal.percentual_rcl) + '%'} />
-            <FinCard label="Exercício" value={finDespesaPessoal.periodo} />
+          <div className="estado-section-header" onClick={() => toggleCollapse('despesa_pessoal')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0 }}>Despesa com Pessoal <span className="count">(Executivo)</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoFiltro}</span><InfoBadge chave="despesa_pessoal" onInfoClick={setPopupInfo} /></h2>
+            <span>{collapsed.despesa_pessoal ? '▶' : '▼'}</span>
           </div>
+          {!collapsed.despesa_pessoal && (
+            <div className="dm-cards">
+              <FinCard label="Total Despesa Pessoal" value={fmtMoney(finDespesaPessoal.valor_total)} />
+              <FinCard label="% da RCL" value={fmtNum(finDespesaPessoal.percentual_rcl) + '%'} />
+              <FinCard label="Exercício" value={finDespesaPessoal.periodo} />
+            </div>
+          )}
         </div>
       )}
 
       {finDespesaCategoria && finDespesaCategoria.length > 0 && (
         <div className="estado-section">
-          <h2>Despesa com Pessoal por Categoria <span className="count">({finDespesaCategoria.length})</span></h2>
-          <table className="estado-table">
-            <thead>
-              <tr>
-                <th>Categoria</th>
-                <th>Despesa Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {finDespesaCategoria.map((c, i) => (
-                <tr key={i}>
-                  <td>{c.categoria || '-'}</td>
-                  <td>{fmtMoney(c.despesa_total)}</td>
+          <div className="estado-section-header" onClick={() => toggleCollapse('despesa_categoria')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0 }}>Despesa com Pessoal por Categoria <span className="count">({finDespesaCategoria.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoFiltro}</span><InfoBadge chave="despesa_categoria" onInfoClick={setPopupInfo} /></h2>
+            <span>{collapsed.despesa_categoria ? '▶' : '▼'}</span>
+          </div>
+          {!collapsed.despesa_categoria && (
+            <table className="estado-table">
+              <thead>
+                <tr>
+                  <th>Categoria</th>
+                  <th>Qtd</th>
+                  <th>Despesa Total</th>
+                  <th>% Despesa</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {finDespesaCategoria.map((c, i) => (
+                  <tr key={i}>
+                    <td>{c.categoria || '-'}</td>
+                    <td>{c.quantidade != null ? c.quantidade : '-'}</td>
+                    <td>{fmtMoney(c.despesa_total)}</td>
+                    <td>{c.percentual_despesa != null ? c.percentual_despesa.toFixed(2) + '%' : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
       {finGastosFuncao && finGastosFuncao.length > 0 && (
         <div className="estado-section">
-          <h2>Gastos por Função <span className="count">({finGastosFuncao.length})</span></h2>
-          <table className="estado-table">
-            <thead>
-              <tr>
-                <th>Função</th>
-                <th>Empenhado</th>
-                <th>Liquidado</th>
-                <th>Pago</th>
-              </tr>
-            </thead>
-            <tbody>
-              {finGastosFuncao.map((g, i) => (
-                <tr key={i}>
-                  <td>{g.funcao}</td>
-                  <td>{fmtMoney(g.empenhado)}</td>
-                  <td>{fmtMoney(g.liquidado)}</td>
-                  <td>{fmtMoney(g.pago)}</td>
+          <div className="estado-section-header" onClick={() => toggleCollapse('gastos_por_funcao')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0 }}>Gastos por Função <span className="count">({finGastosFuncao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoFiltro}</span><InfoBadge chave="gastos_por_funcao" onInfoClick={setPopupInfo} /></h2>
+            <span>{collapsed.gastos_por_funcao ? '▶' : '▼'}</span>
+          </div>
+          {!collapsed.gastos_por_funcao && (
+            <table className="estado-table">
+              <thead>
+                <tr>
+                  <th>Função</th>
+                  <th>Empenhado</th>
+                  <th>Liquidado</th>
+                  <th>Pago</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {finGastosFuncao.map((g, i) => (
+                  <tr key={i}>
+                    <td>{g.funcao}</td>
+                    <td>{fmtMoney(g.empenhado)}</td>
+                    <td>{fmtMoney(g.liquidado)}</td>
+                    <td>{fmtMoney(g.pago)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
       {finReceitas && finReceitas.length > 0 && (
         <div className="estado-section">
-          <h2>Receitas <span className="count">({finReceitas.length})</span></h2>
-          <table className="estado-table">
-            <thead>
-              <tr>
-                <th>Conta</th>
-                <th>Coluna</th>
-                <th>Exercício</th>
-                <th>Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {finReceitas.map((r, i) => (
-                <tr key={i}>
-                  <td>{r.conta || '-'}</td>
-                  <td className="dm-obj-col">{r.coluna || '-'}</td>
-                  <td>{r.exercicio || '-'}</td>
-                  <td>{fmtMoney(r.valor)}</td>
+          <div className="estado-section-header" onClick={() => toggleCollapse('receitas')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0 }}>Receitas <span className="count">({finReceitas.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoFiltro}</span><InfoBadge chave="receitas" onInfoClick={setPopupInfo} /></h2>
+            <span>{collapsed.receitas ? '▶' : '▼'}</span>
+          </div>
+          {!collapsed.receitas && (
+            <table className="estado-table">
+              <thead>
+                <tr>
+                  <th>Conta</th>
+                  <th>Coluna</th>
+                  <th>Exercício</th>
+                  <th>Valor</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {finReceitas.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.conta || '-'}</td>
+                    <td className="dm-obj-col">{r.coluna || '-'}</td>
+                    <td>{r.exercicio || '-'}</td>
+                    <td>{fmtMoney(r.valor)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
       {finRecursosFed && finRecursosFed.length > 0 && (
         <div className="estado-section">
-          <h2>Recursos Federais Recebidos <span className="count">({finRecursosFed.length})</span></h2>
-          <table className="estado-table">
-            <thead>
-              <tr>
-                <th>Favorecido</th>
-                <th>Órgão Superior</th>
-                <th>Mês/Ano</th>
-                <th>Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {finRecursosFed.map((rf, i) => (
-                <tr key={i}>
-                  <td>{rf.nome_pessoa || '-'}</td>
-                  <td>{rf.nome_orgao_superior || '-'}</td>
-                  <td>{fmtMesAno(rf.mes_ano)}</td>
-                  <td>{fmtMoney(rf.valor)}</td>
+          <div className="estado-section-header" onClick={() => toggleCollapse('recursos_federais')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0 }}>Recursos Federais Recebidos <span className="count">({finRecursosFed.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoFiltro}</span><InfoBadge chave="recursos_federais" onInfoClick={setPopupInfo} /></h2>
+            <span>{collapsed.recursos_federais ? '▶' : '▼'}</span>
+          </div>
+          {!collapsed.recursos_federais && (<>
+            <table className="estado-table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Favorecido</th>
+                  <th>UG</th>
+                  <th>Órgão</th>
+                  <th>Órgão Superior</th>
+                  <th>Mês/Ano</th>
+                  <th>Valor</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {recursosFedPag.paginaDados.map((rf, i) => (
+                  <tr key={i}>
+                    <td>{rf.tipo_pessoa || '-'}</td>
+                    <td>{rf.nome_pessoa || '-'}</td>
+                    <td>{rf.nome_ug || '-'}</td>
+                    <td>{rf.nome_orgao || '-'}</td>
+                    <td>{rf.nome_orgao_superior || '-'}</td>
+                    <td>{fmtMesAno(rf.mes_ano)}</td>
+                    <td>{fmtMoney(rf.valor)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <Paginacao pagina={recursosFedPag.pagina} totalPaginas={recursosFedPag.totalPaginas} onPagina={recursosFedPag.setPagina} />
+          </>)}
         </div>
       )}
 
       <div className="estado-section">
-        <h2>Municípios <span className="count">({municipios.length} no total)</span></h2>
-        {basico ? (
-          <>
-            <div className="municipios-loading">
-              {municipios.length > 0
-                ? `${municipios.length} municípios • do menor para o maior`
-                : 'Carregando municípios...'}
-            </div>
-            <div className="estado-cards">
-              {municipios.map(m => (
-                <div key={m.id} className="estado-card">
-                  <div className="municipio-nome">{m.nome}</div>
-                  <div className="municipio-pop">
-                    {m.populacao ? `Pop: ${fmtNum(m.populacao)} hab.` : ''}
+        <div className="estado-section-header" onClick={() => toggleCollapse('municipios')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0 }}>Municípios <span className="count">({municipios.length} no total)</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
+          <span>{collapsed.municipios ? '▶' : '▼'}</span>
+        </div>
+        {!collapsed.municipios && (
+          basico ? (
+            <>
+              <div className="municipios-loading">
+                {municipios.length > 0
+                  ? `${municipios.length} municípios • do menor para o maior`
+                  : 'Carregando municípios...'}
+              </div>
+              <div className="estado-cards">
+                {municipios.map(m => (
+                  <div key={m.id} className="estado-card">
+                    <div className="municipio-nome">{m.nome}</div>
+                    <div className="municipio-pop">
+                      {m.populacao ? `Pop: ${fmtNum(m.populacao)} hab.` : ''}
+                    </div>
+                    <button
+                      className="btn btn-sm btn-outline-accent"
+                      onClick={() => setMunicipioDetalhe(m)}
+                    >
+                      Detalhes
+                    </button>
                   </div>
-                  <button
-                    className="btn btn-sm btn-outline-accent"
-                    onClick={() => setMunicipioDetalhe(m)}
-                  >
-                    Detalhes
-                  </button>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="municipios-loading">Carregando municípios...</div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="municipios-loading">Carregando municípios...</div>
+          )
         )}
       </div>
+
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

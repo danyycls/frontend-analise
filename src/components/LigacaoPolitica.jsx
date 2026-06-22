@@ -547,7 +547,7 @@ export default function LigacaoPolitica({
               lista.push({
                 numero_controle_pncp: ct.numeroControlePNCP || '',
                 cpf_cnpj: mainDoc,
-                socios: (ct.fornecedor?.socios || []).map(s => ({
+                socios: (ct.fornecedor?.qsa || []).map(s => ({
                   nome: s.nome_socio || '',
                   documento: s.cnpj_cpf_socio || ''
                 }))
@@ -561,14 +561,14 @@ export default function LigacaoPolitica({
               lista.push({
                 numero_controle_pncp: ct.numeroControlePNCP || '',
                 cpf_cnpj: ct.niFornecedor,
-                socios: (ct.fornecedor?.socios || []).map(s => ({
+                socios: (ct.fornecedor?.qsa || []).map(s => ({
                   nome: s.nome_socio || '',
                   documento: s.cnpj_cpf_socio || ''
                 }))
               });
             }
           }
-          (ct.fornecedor?.socios || []).forEach(s => {
+          (ct.fornecedor?.qsa || []).forEach(s => {
             const sd = s.cnpj_cpf_socio;
             if (sd && sd.length >= 3 && sd !== mainDoc && sd !== ct.niFornecedor) {
               const key = `${ct.numeroControlePNCP || ''}_socio_${sd}`;

@@ -7,6 +7,18 @@ const UFS = [
   'PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'
 ];
 
+const MODALIDADES = [
+  { codigo: '', nome: 'Todas as modalidades' },
+  { codigo: '1', nome: 'Dispensa de Licitação' },
+  { codigo: '2', nome: 'Inexigibilidade' },
+  { codigo: '3', nome: 'Pregão' },
+  { codigo: '4', nome: 'Concorrência' },
+  { codigo: '5', nome: 'Concurso' },
+  { codigo: '6', nome: 'Leilão' },
+  { codigo: '7', nome: 'Chamamento Público' },
+  { codigo: '8', nome: 'Credenciamento' },
+];
+
 function pad(n) { return String(n).padStart(2, '0'); }
 function hoje() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function tresMesesAtras() { const d = new Date(); d.setMonth(d.getMonth()-3); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -19,6 +31,7 @@ export default function FormularioPublicacao({ onIniciar }) {
   const [municipioNome, setMunicipioNome] = useState('');
   const [municipios, setMunicipios] = useState([]);
   const [carregandoMunicipios, setCarregandoMunicipios] = useState(false);
+  const [codigoModalidade, setCodigoModalidade] = useState('');
   const [dataInicial, setDataInicial] = useState(tresMesesAtras);
   const [dataFinal, setDataFinal] = useState(hoje);
   const [loading, setLoading] = useState(false);
@@ -77,6 +90,7 @@ export default function FormularioPublicacao({ onIniciar }) {
       uf,
       dataInicial: toAPI(dataInicial),
       dataFinal: toAPI(dataFinal),
+      codigoModalidadeContratacao: codigoModalidade || undefined,
     };
     if (tipo === 'municipio') {
       body.codigoMunicipioIbge = codigoMunicipio;
@@ -154,6 +168,15 @@ export default function FormularioPublicacao({ onIniciar }) {
           )}
         </div>
       )}
+
+      <div className="form-group optional">
+        <label htmlFor="modalidade">Modalidade</label>
+        <select id="modalidade" value={codigoModalidade} onChange={(e) => setCodigoModalidade(e.target.value)}>
+          {MODALIDADES.map((m) => (
+            <option key={m.codigo} value={m.codigo}>{m.nome}</option>
+          ))}
+        </select>
+      </div>
 
       <div className="form-row">
         <div className="form-group optional">

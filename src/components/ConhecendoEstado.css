@@ -570,6 +570,13 @@
   color: #a855f7;
 }
 
+.dm-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
 .dm-hint {
   text-align: center;
   font-size: 0.65rem;
@@ -577,6 +584,17 @@
   padding: 6px 0 0;
   margin: 0;
   font-family: var(--font-mono);
+}
+
+.dm-banner {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: #856404;
+  text-align: center;
 }
 
 .dm-modal-overlay {

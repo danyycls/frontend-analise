@@ -166,49 +166,59 @@ export function ContratoDetalhes({ contrato, onIdClick }) {
     <div className="detalhes-contrato">
       <Secao titulo="Identificação">
         <Campo label="Nº Controle PNCP" valor={c.numeroControlePNCP} />
-        <Campo label="Ano" valor={c.anoContrato || c.anoCompra} />
-        <Campo label="Sequencial" valor={c.sequencialContrato || c.sequencialCompra} />
-        <Campo label="Nº Empenho" valor={c.numeroContratoEmpenho} />
-        <Campo label="Nº Compra" valor={c.numeroCompra} />
-        <Campo label="Processo" valor={c.processo} />
-        <Campo label="Nº Parcelas" valor={c.numeroParcelas} />
-        <Campo label="Nº Retificação" valor={c.numeroRetificacao} />
+        <Campo label="Ano" valor={c.anoContrato} />
+        <Campo label="Nº Contrato" valor={c.numeroContrato} />
+        <Campo label="Código Contrato" valor={c.codigoContrato} />
+        <Campo label="Código Tipo Contrato" valor={c.codigoTipoContrato} />
+        <Campo label="Nº Licitação" valor={c.numeroLicitacao} />
         <Campo label="Tipo" valor={c.tipoContrato?.nome || c.modalidadeNome} />
+        <Campo label="Tipo ID" valor={c.tipoContrato?.id} />
         <Campo label="Categoria" valor={c.categoriaProcesso?.nome} />
-        <Campo label="Tipo Pessoa" valor={c.tipoPessoa} />
-        <Campo label="Receita" valor={fmtBool(c.receita)} />
-        <Campo label="Nº Controle Compra" valor={c.numeroControlePncpCompra} />
-        <Campo label="Nº Controle Ata" valor={c.numeroControlePncpAta} />
+        <Campo label="Categoria ID" valor={c.categoriaProcesso?.id} />
+        <Campo label="Modalidade" valor={c.modalidadeNome} />
+        <Campo label="Origem" valor={c.origemLicitacao} />
+        <Campo label="Produto" valor={c.produto} />
+        <Campo label="Subtipo" valor={c.subtipoContrato} />
+        <Campo label="CNPJ Órgão Sub" valor={c.cnpjOrgaoSub} />
+        <Campo label="Nº CNPJ" valor={c.numeroCNPJ} />
+        <Campo label="Nº CPF" valor={c.numeroCPF} />
+        <Campo label="SRP" valor={c.srp} />
       </Secao>
 
       <Secao titulo="Datas">
-        <Campo label="Assinatura / Inclusão" valor={fmtData(c.dataAssinatura || c.dataInclusao)} />
-        <Campo label="Abertura Proposta" valor={fmtData(c.dataAberturaProposta)} />
-        <Campo label="Encerramento Proposta" valor={fmtData(c.dataEncerramentoProposta)} />
+        <Campo label="Assinatura" valor={fmtData(c.dataAssinatura)} />
         <Campo label="Vigência Início" valor={fmtData(c.dataVigenciaInicio)} />
         <Campo label="Vigência Fim" valor={fmtData(c.dataVigenciaFim)} />
-        <Campo label="Publicação PNCP" valor={fmtData(c.dataPublicacaoPncp)} />
-        <Campo label="Atualização" valor={c.dataAtualizacao} />
-        <Campo label="Atualização Global" valor={c.dataAtualizacaoGlobal} />
+        <Campo label="Publicação" valor={fmtData(c.dataPublicacaoPncp)} />
+        <Campo label="Prazo Início" valor={fmtData(c.prazoInicioVigencia)} />
+        <Campo label="Prazo Fim" valor={fmtData(c.prazoTerminoVigencia)} />
       </Secao>
 
       <Secao titulo="Valores">
         <Campo label="Valor Global" valor={fmtValor(c.valorGlobal)} />
-        <Campo label="Valor Acumulado" valor={fmtValor(c.valorAcumulado)} />
         <Campo label="Valor Inicial" valor={fmtValor(c.valorInicial)} />
         <Campo label="Valor Parcela" valor={fmtValor(c.valorParcela)} />
         <Campo label="Valor Total Estimado" valor={fmtValor(c.valorTotalEstimado)} />
         <Campo label="Valor Total Homologado" valor={fmtValor(c.valorTotalHomologado)} />
       </Secao>
 
+      {(c.fonteOrcamentaria || c.codigoFonteOrcamentaria) && (
+        <Secao titulo="Fonte Orçamentária">
+          <Campo label="Código Fonte" valor={c.codigoFonteOrcamentaria} />
+          <Campo label="Código" valor={c.fonteOrcamentaria?.codigo} />
+          <Campo label="Nome" valor={c.fonteOrcamentaria?.nome} />
+          <Campo label="Descrição" valor={c.fonteOrcamentaria?.descricao} />
+          <Campo label="Data Inclusão" valor={c.fonteOrcamentaria?.dataInclusao} />
+        </Secao>
+      )}
+
       <Secao titulo="Objeto">
-        <div className="campo-full">{c.objetoContrato || c.objetoCompra || '-'}</div>
+        <div className="campo-full">{c.objetoContrato || '-'}</div>
       </Secao>
 
       {c.amparoLegal && (
-        <Secao titulo="Amparo Legal / Modalidade">
-          <Campo label="Modalidade" valor={c.modalidadeNome} />
-          <Campo label="Modo Disputa" valor={c.modoDisputaNome} />
+        <Secao titulo="Amparo Legal">
+          <Campo label="Código" valor={c.amparoLegal?.codigo} />
           <Campo label="Amparo Legal" valor={c.amparoLegal?.nome} />
           <div className="campo-full">{c.amparoLegal?.descricao || '-'}</div>
         </Secao>
@@ -222,25 +232,23 @@ export function ContratoDetalhes({ contrato, onIdClick }) {
         <Campo label="NI Fornecedor" valor={c.niFornecedor ? <span className="ad-id-link" onClick={() => onIdClick?.('cpf_cnpj', c.niFornecedor)}>{fmtCNPJ(c.niFornecedor)}</span> : '-'} />
         <Campo label="Situação Cadastral" valor={c.fornecedor?.situacaoCadastral} />
         <Campo label="Capital Social" valor={c.fornecedor?.capitalSocial} />
-        <Campo label="Código País" valor={c.codigoPaisFornecedor} />
-        <Campo label="Sub-Contratado NI" valor={c.niFornecedorSubContratado} />
-        <Campo label="Sub-Contratado Nome" valor={c.nomeFornecedorSubContratado} />
-        <Campo label="Tipo Pessoa Sub" valor={c.tipoPessoaSubContratada} />
-        {/* Lista de sócios do fornecedor, se houver */}
-        {c.fornecedor?.socios?.length > 0 && (
+        {c.fornecedor?.qsa?.length > 0 && (
           <div className="socios-wrapper">
             <details className="socios">
-              <summary>{c.fornecedor.socios.length} sócio(s)</summary>
-              {c.fornecedor.socios.map((s, i) => (
+              <summary>{c.fornecedor.qsa.length} sócio(s)</summary>
+              {c.fornecedor.qsa.map((s, i) => (
                 <div key={i} className="socio-card">
                   <Campo label="Nome" valor={s.nome_socio} />
                   <Campo label="CPF/CNPJ" valor={s.cnpj_cpf_socio ? <span className="ad-id-link" onClick={() => onIdClick?.('cpf_cnpj', s.cnpj_cpf_socio)}>{s.cnpj_cpf_socio}</span> : '-'} />
                   <Campo label="Qualificação" valor={s.qualificacao_socio} />
                   <Campo label="Identificador" valor={s.identificador_socio} />
                   <Campo label="Faixa Etária" valor={s.faixa_etaria} />
+                  <Campo label="Código País" valor={s.codigo_pais} />
+                  <Campo label="País" valor={s.pais?.descricao || s.pais?.codigo} />
                   <Campo label="Data Entrada" valor={fmtData(s.data_entrada_sociedade)} />
                   <Campo label="Representante" valor={s.nome_representante} />
                   <Campo label="Qualificação Rep." valor={s.qualificacao_representante?.descricao} />
+                  <Campo label="Código Qualif. Rep." valor={s.qualificacao_representante?.codigo} />
                   <Campo label="Representante Legal" valor={s.representante_legal} />
                 </div>
               ))}
@@ -251,12 +259,24 @@ export function ContratoDetalhes({ contrato, onIdClick }) {
 
       <Secao titulo="Órgão Entidade">
         <Campo label="CNPJ" valor={c.orgaoEntidade?.cnpj ? <span className="ad-id-link" onClick={() => onIdClick?.('cpf_cnpj', c.orgaoEntidade.cnpj)}>{fmtCNPJ(c.orgaoEntidade.cnpj)}</span> : '-'} />
+        <Campo label="CNPJ Órgão" valor={c.cnpjOrgao ? <span className="ad-id-link" onClick={() => onIdClick?.('cpf_cnpj', c.cnpjOrgao)}>{fmtCNPJ(c.cnpjOrgao)}</span> : '-'} />
         <Campo label="Razão Social" valor={c.orgaoEntidade?.razaoSocial} />
-        {/* Mapeia sigla da esfera para nome legível */}
+        <Campo label="Nome Órgão" valor={c.nomeOrgao} />
+        <Campo label="Código Órgão" valor={c.codigoOrgao} />
+        <Campo label="Código UG" valor={c.codigoUg} />
         <Campo label="Esfera" valor={c.orgaoEntidade?.esferaId === 'M' ? 'Municipal' : c.orgaoEntidade?.esferaId === 'E' ? 'Estadual' : c.orgaoEntidade?.esferaId === 'F' ? 'Federal' : c.orgaoEntidade?.esferaId} />
-        {/* Mapeia sigla do poder para nome legível */}
         <Campo label="Poder" valor={c.orgaoEntidade?.poderId === 'N' ? 'Executivo' : c.orgaoEntidade?.poderId === 'L' ? 'Legislativo' : c.orgaoEntidade?.poderId === 'J' ? 'Judiciário' : c.orgaoEntidade?.poderId} />
       </Secao>
+
+      {c.orgaoSub && (
+        <Secao titulo="Órgão Substituto">
+          <Campo label="CNPJ" valor={c.orgaoSub?.cnpj} />
+          <Campo label="Razão Social" valor={c.orgaoSub?.razaoSocial} />
+          <Campo label="Esfera" valor={c.orgaoSub?.esferaId === 'M' ? 'Municipal' : c.orgaoSub?.esferaId === 'E' ? 'Estadual' : c.orgaoSub?.esferaId === 'F' ? 'Federal' : c.orgaoSub?.esferaId} />
+          <Campo label="Poder" valor={c.orgaoSub?.poderId === 'N' ? 'Executivo' : c.orgaoSub?.poderId === 'L' ? 'Legislativo' : c.orgaoSub?.poderId === 'J' ? 'Judiciário' : c.orgaoSub?.poderId} />
+          <Campo label="Nome" valor={c.nomeOrgaoSub} />
+        </Secao>
+      )}
 
       <Secao titulo="Unidade Órgão">
         <Campo label="Código IBGE" valor={c.unidadeOrgao?.codigoIbge} />
@@ -267,17 +287,27 @@ export function ContratoDetalhes({ contrato, onIdClick }) {
         <Campo label="UF Nome" valor={c.unidadeOrgao?.ufNome} />
       </Secao>
 
-      <Secao titulo="Informações Adicionais">
-        <Campo label="Usuário" valor={c.usuarioNome} />
-        <Campo label="Informação Complementar" valor={c.informacaoComplementar} />
-        <Campo label="Emenda Parlamentar" valor={String(c.emendaParlamentar ?? '')} />
-        <Campo label="Fruto Adesão" valor={String(c.frutoAdesao ?? '')} />
-        <Campo label="Identificador CIPI" valor={String(c.identificadorCipi ?? '')} />
-        <Campo label="URL CIPI" valor={String(c.urlCipi ?? '')} />
-        <Campo label="Órgão Sub-Rogado" valor={String(c.orgaoSubRogado ?? '')} />
-        <Campo label="Unidade Sub-Rogada" valor={String(c.unidadeSubRogada ?? '')} />
-        <Campo label="Tem Remanejamento" valor={String(c.temRemanejamento ?? '')} />
-      </Secao>
+      {c.orgaoVinculado && (
+        <Secao titulo="Órgão Vinculado">
+          <Campo label="Código IBGE" valor={c.orgaoVinculado?.codigoIbge} />
+          <Campo label="Nome Unidade" valor={c.orgaoVinculado?.nomeUnidade} />
+          <Campo label="Código Unidade" valor={c.orgaoVinculado?.codigoUnidade} />
+          <Campo label="Município" valor={c.orgaoVinculado?.municipioNome} />
+          <Campo label="UF" valor={c.orgaoVinculado?.ufSigla} />
+          <Campo label="UF Nome" valor={c.orgaoVinculado?.ufNome} />
+        </Secao>
+      )}
+
+      {c.unidadeSub && (
+        <Secao titulo="Unidade Sub">
+          <Campo label="Código IBGE" valor={c.unidadeSub?.codigoIbge} />
+          <Campo label="Nome Unidade" valor={c.unidadeSub?.nomeUnidade} />
+          <Campo label="Código Unidade" valor={c.unidadeSub?.codigoUnidade} />
+          <Campo label="Município" valor={c.unidadeSub?.municipioNome} />
+          <Campo label="UF" valor={c.unidadeSub?.ufSigla} />
+          <Campo label="UF Nome" valor={c.unidadeSub?.ufNome} />
+        </Secao>
+      )}
     </div>
   );
 }
@@ -303,6 +333,7 @@ function OrgaoCard({ resultado, pncpDestacado, onAnaliseDetalhada, pncpComMatch,
   const [apenasComMatch, setApenasComMatch] = useState(false);
 
   const orgao = resultado.orgao || {};
+  const periodo = resultado.periodo || {};
   const resumo = resultado.resumo || {};
   const contratos = resultado.contratos || [];
 
@@ -369,9 +400,9 @@ function OrgaoCard({ resultado, pncpDestacado, onAnaliseDetalhada, pncpComMatch,
       if (!aMatch && bMatch) return 1;
       switch (ordem) {
         case 'data':
-          return (b.dataAssinatura || b.dataInclusao || '').localeCompare(a.dataAssinatura || a.dataInclusao || '');
+          return (b.dataAssinatura || '').localeCompare(a.dataAssinatura || '');
         case 'vigencia':
-          return (b.dataVigenciaInicio || b.dataAberturaProposta || '').localeCompare(a.dataVigenciaInicio || a.dataAberturaProposta || '');
+          return (b.dataInicioVigencia || '').localeCompare(a.dataInicioVigencia || '');
         case 'valor':
           return valorNumerico(b.valorGlobal ?? b.valorTotalEstimado) - valorNumerico(a.valorGlobal ?? a.valorTotalEstimado);
         case 'categoria':
@@ -396,6 +427,9 @@ function OrgaoCard({ resultado, pncpDestacado, onAnaliseDetalhada, pncpComMatch,
         </div>
         <div className="orgao-sumario">
           {resumo.totalContratos || 0} contratos &middot; {fmtValor(resumo.valorTotalContratos)}
+          {(periodo.dataInicial || periodo.dataFinal) && (
+            <span className="orgao-periodo"> &middot; {periodo.dataInicial || '?'} a {periodo.dataFinal || '?'}</span>
+          )}
         </div>
         <span className="seta">{aberto ? '▼' : '▶'}</span>
       </div>
@@ -523,11 +557,11 @@ function OrgaoCard({ resultado, pncpDestacado, onAnaliseDetalhada, pncpComMatch,
                           <td>{c.tipoContrato?.nome || c.modalidadeNome || '-'}</td>
                           <td><span className="cell-categoria">{c.categoriaProcesso?.nome || c.modalidadeNome || '-'}</span></td>
                           <td><span className="fn-nome">{c.fornecedor?.razaoSocial || c.niFornecedor || (c.valorTotalEstimado != null ? 'Compra Direta' : '-')}</span></td>
-                          <td className="cell-objeto" title={c.objetoContrato || c.objetoCompra || ''}>
-                            {(c.objetoContrato || c.objetoCompra || '-').substring(0, 60)}{(c.objetoContrato || c.objetoCompra || '').length > 60 ? '…' : ''}
+                          <td className="cell-objeto" title={c.objetoContrato || ''}>
+                            {(c.objetoContrato || '-').substring(0, 60)}{(c.objetoContrato || '').length > 60 ? '…' : ''}
                           </td>
                           <td className="cell-vigencia">
-                            {fmtData(c.dataVigenciaInicio || c.dataAberturaProposta)} ~ {fmtData(c.dataVigenciaFim || c.dataEncerramentoProposta)}
+                            {fmtData(c.dataVigenciaInicio)} ~ {fmtData(c.dataVigenciaFim)}
                           </td>
                           <td>{fmtData(c.dataPublicacaoPncp)}</td>
                           <td className="cell-valor">{fmtValor(c.valorGlobal ?? c.valorTotalEstimado)}</td>

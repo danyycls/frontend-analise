@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import API_BASE_URL from '../config';
 import './AnaliseDeputados.css';
+import SecaoGeralDeputado from './DeputadoSecaoGeral';
+import TabelaDespesasDeputado from './DeputadoDespesas';
+import CardGridOrgaosDeputado from './DeputadoOrgaos';
 
 const SECOES_ESTATICAS = [
   { key: 'frente', label: 'Frente Parlamentar' },
@@ -94,136 +97,6 @@ function SectionMandatos({ dados }) {
   );
 }
 
-function SecaoGeral({ deputado }) {
-  if (!deputado) return null;
-  const u = deputado.ultimoStatus || {};
-  return (
-    <div className="ad-section">
-      <h3 className="ad-section-title">Informações Gerais</h3>
-      <div className="ad-info-grid">
-        <div className="ad-info-item">
-          <span className="ad-info-label">Nome Civil</span>
-          <span className="ad-info-value">{deputado.nomeCivil || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">CPF</span>
-          <span className="ad-info-value">{fmtDoc(deputado.cpf)}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Data de Nascimento</span>
-          <span className="ad-info-value">{deputado.dataNascimento || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Sexo</span>
-          <span className="ad-info-value">{deputado.sexo || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">UF de Nascimento</span>
-          <span className="ad-info-value">{deputado.ufNascimento || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Município</span>
-          <span className="ad-info-value">{deputado.municipioNascimento || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Escolaridade</span>
-          <span className="ad-info-value">{deputado.escolaridade || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Partido</span>
-          <span className="ad-info-value">{u.siglaPartido || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">UF</span>
-          <span className="ad-info-value">{u.siglaUf || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Situação</span>
-          <span className="ad-info-value">{u.situacao || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Condição Eleitoral</span>
-          <span className="ad-info-value">{u.condicaoEleitoral || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Email</span>
-          <span className="ad-info-value">{u.email || '-'}</span>
-        </div>
-        <div className="ad-info-item">
-          <span className="ad-info-label">Gabinete</span>
-          <span className="ad-info-value">
-            {u.gabinete ? `${u.gabinete.nome || ''} ${u.gabinete.predio || ''} ${u.gabinete.sala || ''}`.trim() || '-' : '-'}
-          </span>
-        </div>
-        {deputado.urlWebsite && (
-          <div className="ad-info-item ad-info-item-full">
-            <span className="ad-info-label">Website</span>
-            <span className="ad-info-value">
-              <a href={deputado.urlWebsite} target="_blank" rel="noopener noreferrer" className="ad-link">{deputado.urlWebsite}</a>
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TabelaDespesas({ dados }) {
-  if (!dados || dados.length === 0) return <p className="ad-empty">Nenhuma despesa encontrada.</p>;
-  return (
-    <div className="ad-table-wrap">
-      <table className="ad-table">
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Tipo</th>
-            <th>Fornecedor</th>
-            <th>Valor</th>
-            <th>Documento</th>
-          </tr>
-        </thead>
-        <tbody>
-          {dados.map((d, i) => (
-            <tr key={i}>
-              <td>{d.dataDocumento || '-'}</td>
-              <td>{d.tipoDespesa || d.tipoDocumento || '-'}</td>
-              <td>{d.nomeFornecedor || fmtDoc(d.cnpjCpfFornecedor) || '-'}</td>
-              <td>{formatValor(d.valorLiquido)}</td>
-              <td>
-                {d.urlDocumento ? (
-                  <a href={d.urlDocumento} target="_blank" rel="noopener noreferrer" className="ad-link">Ver</a>
-                ) : (
-                  d.numDocumento || '-'
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function CardGridOrgaos({ dados }) {
-  if (!dados || dados.length === 0) return <p className="ad-empty">Nenhum órgão encontrado.</p>;
-  return (
-    <div className="ad-card-grid">
-      {dados.map((o, i) => (
-        <div key={i} className="ad-card">
-          <div className="ad-card-header">
-            {o.siglaOrgao ? <span className="ad-card-tag ad-card-tag-orgao">{o.siglaOrgao}</span> : null}
-            {o.nomeOrgao || '-'}
-          </div>
-          <div className="ad-card-body">
-            <div className="ad-card-row"><span className="ad-card-label">Título:</span> {o.titulo || '-'}</div>
-            <div className="ad-card-row"><span className="ad-card-label">Período:</span> {o.dataInicio || '-'} ~ {o.dataFim || '-'}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function QueryForm({ campos, onBuscar, loading }) {
   const [params, setParams] = useState({});
   return (
@@ -257,7 +130,7 @@ function GridDeputados({ deputados, detalheLoading, onDetalhes }) {
   return (
     <div className="ad-grid">
       {deputados.map(dep => (
-        <div key={dep.id} className="ad-card-dep">
+        <div key={`${dep.id}-${dep.nome || ''}-${dep.siglaPartido || ''}`} className="ad-card-dep">
           <img
             className="ad-foto"
             src={dep.urlFoto}
@@ -343,7 +216,7 @@ export default function AnaliseDeputados({ onFechar }) {
       const qs = new URLSearchParams(
         Object.fromEntries(Object.entries(params).filter(([, v]) => v))
       ).toString();
-      const resp = await fetch(`${API_BASE_URL}/camara/deputados?${qs}`);
+      const resp = await fetch(`${API_BASE_URL}/deputados?${qs}`);
       const json = await resp.json();
       const novos = json.dados || [];
       setDeputados(prev => append ? [...prev, ...novos] : novos);
@@ -373,7 +246,7 @@ export default function AnaliseDeputados({ onFechar }) {
     if (!dadosCacheRef.current[id]) {
       setDetalheLoading(id);
       try {
-        const resp = await fetch(`${API_BASE_URL}/camara/deputados/${id}/completo`);
+        const resp = await fetch(`${API_BASE_URL}/deputados/${id}/completo`);
         const json = await resp.json();
         setDadosCache(prev => ({ ...prev, [id]: json }));
         setSubSecao(prev => ({ ...prev, [id]: 'geral' }));
@@ -452,7 +325,7 @@ export default function AnaliseDeputados({ onFechar }) {
       const qs = new URLSearchParams(
         Object.fromEntries(Object.entries(params).filter(([, v]) => v))
       ).toString();
-      const resp = await fetch(`${API_BASE_URL}/camara/deputados/${depId}/${tipo}?${qs}`);
+      const resp = await fetch(`${API_BASE_URL}/deputados/${depId}/${tipo}?${qs}`);
       const json = await resp.json();
       setQueryTabs(prev => ({
         ...prev,
@@ -679,7 +552,7 @@ export default function AnaliseDeputados({ onFechar }) {
                 </div>
 
                 {(subSecao[t.id] || 'geral') === 'geral' ? (
-                  <SecaoGeral deputado={dados.deputado} />
+                  <SecaoGeralDeputado deputado={dados.deputado} />
                 ) : subSecao[t.id] === 'despesas' || subSecao[t.id] === 'orgaos' ? (
                   <>
                     <div className="ad-query-sub-tabs">
@@ -752,9 +625,9 @@ export default function AnaliseDeputados({ onFechar }) {
                         <div key={qt.id} className="ad-query-tab-content">
                           <h4 className="ad-section-title">{qt.label}</h4>
                           {qt.tipo === 'despesas' ? (
-                            <TabelaDespesas dados={qt.dados} />
+                            <TabelaDespesasDeputado dados={qt.dados} />
                           ) : (
-                            <CardGridOrgaos dados={qt.dados} />
+                            <CardGridOrgaosDeputado dados={qt.dados} />
                           )}
                           {qt.erro && <p className="ad-error">Erro: {qt.erro}</p>}
                         </div>
