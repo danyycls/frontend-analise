@@ -99,8 +99,6 @@
   max-width: 800px;
   height: 600px;
   overflow: hidden;
-  border: 1px solid var(--accent-secondary);
-  box-shadow: 0 0 20px var(--accent-glow), inset 0 0 20px var(--accent-subtle);
 }
 
 .mapa-wrapper svg {

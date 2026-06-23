@@ -97,9 +97,9 @@ export default function MapaBrasil() {
                     key={`outline-${geo.rsmKey}`}
                     geography={geo}
                     style={{
-                      default: { fill: 'none', stroke: 'var(--accent-secondary)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
-                      hover: { fill: 'none', stroke: 'var(--accent-secondary)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
-                      pressed: { fill: 'none', stroke: 'var(--accent-secondary)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                      default: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                      hover: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                      pressed: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
                     }}
                   />
                 ))}

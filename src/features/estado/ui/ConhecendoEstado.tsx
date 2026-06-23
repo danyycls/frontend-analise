@@ -3,9 +3,12 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { API_BASE_URL, WS_BASE_URL } from '@/shared/config';
 import DetalheMunicipio from './DetalheMunicipio';
+import RecursosMunicipioDetalhe from './RecursosMunicipioDetalhe';
 import ErrorBoundary from '@/shared/ui/ErrorBoundary/ErrorBoundary';
+import { PieChart, aggregateBy, topN, CHART_COLORS, fmtMoneyCompact } from './chart-utils';
 import DeputadoDetailView from '@/features/analise/ui/DeputadoDetailView';
 import SenadorDetailView from '@/features/analise/ui/SenadorDetailView';
+import { JanelaPopup, ContratoDetalhes } from '../../ligacao-politica/ui/Resultados';
 import './ConhecendoEstado.css';
 import '../../analise/ui/AnaliseDeputados.css';
 
@@ -39,6 +42,7 @@ const DATA_SOURCES = {
   receitas: { font: 'SICONFI / Tesouro Nacional — RREO (Anexo 03)', desc: 'Receitas arrecadadas por categoria econômica', campos: { conta: 'Classificação da receita orçamentária', coluna: 'Tipo de valor (Previsão Inicial, Previsão Atualizada, Receita Realizada)', valor: 'Valor da receita no exercício', exercicio: 'Ano de referência' } },
   recursos_federais: { font: 'Info Portal da Transparência — Transferências a Entes', desc: 'Recursos federais transferidos a estados e municípios', campos: { tipo_pessoa: 'Tipo de pessoa (Física ou Jurídica) do favorecido', nome_pessoa: 'Nome do favorecido (pessoa física ou jurídica)', nome_ug: 'Unidade Gestora responsável pelo recurso', nome_orgao: 'Órgão concedente do recurso', nome_orgao_superior: 'Órgão superior do órgão concedente', valor: 'Valor do recurso transferido', mes_ano: 'Mês e ano de referência (formato AAAAMM)' } },
   contratos: { font: 'PNCP — Portal Nacional de Contratações Públicas', desc: 'Contratos e compras públicas realizadas', campos: {} },
+  licitacoes: { font: 'PNCP — Portal Nacional de Contratações Públicas', desc: 'Licitações e contratos públicos do estado por ano, incluindo tipo, categoria, fornecedor, vigência e valores', campos: { numeroControlePNCP: 'Identificador único do contrato no PNCP', anoContrato: 'Ano do contrato', numeroContrato: 'Número do contrato', tipoContrato: 'Tipo de contrato (ex: Fornecimento, Serviço)', categoriaProcesso: 'Categoria do processo licitatório', modalidadeNome: 'Modalidade da licitação (ex: Pregão, Concorrência)', fornecedor: 'Fornecedor com CNPJ, razão social e QSA', objetoContrato: 'Descrição do objeto contratado', valorGlobal: 'Valor global do contrato', dataVigenciaInicio: 'Início da vigência', dataVigenciaFim: 'Fim da vigência', dataPublicacaoPncp: 'Data de publicação no PNCP' } },
   servidores: { font: 'SICONFI / Tesouro Nacional — RGF (Anexo 01)', desc: 'Despesa com pessoal por categoria funcional', campos: { categoria: 'Categoria funcional', quantidade: 'Quantidade de servidores na categoria', despesa_total: 'Valor total da despesa da categoria', percentual_despesa: 'Percentual em relação à despesa total com pessoal' } },
 };
 
@@ -112,6 +116,13 @@ function fmtMesAno(n) {
   return s;
 }
 
+function fmtDate(d) {
+  if (!d) return '-';
+  const m = String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return d;
+}
+
 function FinCard({ label, value }) {
   return (
     <div className="dm-card">
@@ -121,30 +132,47 @@ function FinCard({ label, value }) {
   );
 }
 
-function ContadoresBar({ vereadores, deputados, senadores, municipios, pequenos }) {
+function ContadoresBar({ prefeitos, vices, vereadores, deputados, senadores, municipios, pequenos, populacao }) {
   return (
-    <div className="estado-counters">
-      <div className="estado-counter-item">
-        <span className="estado-counter-val">{vereadores}</span>
-        <span className="estado-counter-lbl">VEREADORES</span>
+    <>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
+        Quantidades de politicos responsaveis por UF ou municipio dessa UF
       </div>
-      <div className="estado-counter-item">
-        <span className="estado-counter-val">{deputados}</span>
-        <span className="estado-counter-lbl">DEPUTADOS</span>
+      <div className="estado-counters">
+        <div className="estado-counter-item">
+          <span className="estado-counter-val">{prefeitos}</span>
+          <span className="estado-counter-lbl">PREFEITOS 2024</span>
+        </div>
+        <div className="estado-counter-item">
+          <span className="estado-counter-val">{vices}</span>
+          <span className="estado-counter-lbl">VICE-PREFEITOS 2024</span>
+        </div>
+        <div className="estado-counter-item">
+          <span className="estado-counter-val">{vereadores}</span>
+          <span className="estado-counter-lbl">VEREADORES 2024</span>
+        </div>
+        <div className="estado-counter-item">
+          <span className="estado-counter-val">{deputados}</span>
+          <span className="estado-counter-lbl">DEPUTADOS</span>
+        </div>
+        <div className="estado-counter-item">
+          <span className="estado-counter-val">{senadores}</span>
+          <span className="estado-counter-lbl">SENADORES</span>
+        </div>
+        <div className="estado-counter-item">
+          <span className="estado-counter-val">{municipios}</span>
+          <span className="estado-counter-lbl">MUNICÍPIOS</span>
+        </div>
+        <div className="estado-counter-item">
+          <span className="estado-counter-val">{pequenos}</span>
+          <span className="estado-counter-lbl">MUNICÍPIOS &lt;10K HAB</span>
+        </div>
+        <div className="estado-counter-item">
+          <span className="estado-counter-val">{fmtNum(populacao)}</span>
+          <span className="estado-counter-lbl">POPULAÇÃO TOTAL</span>
+        </div>
       </div>
-      <div className="estado-counter-item">
-        <span className="estado-counter-val">{senadores}</span>
-        <span className="estado-counter-lbl">SENADORES</span>
-      </div>
-      <div className="estado-counter-item">
-        <span className="estado-counter-val">{municipios}</span>
-        <span className="estado-counter-lbl">MUNICÍPIOS</span>
-      </div>
-      <div className="estado-counter-item">
-        <span className="estado-counter-val">{pequenos}</span>
-        <span className="estado-counter-lbl">MUNICÍPIOS &lt;10K HAB</span>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -376,106 +404,11 @@ function TabelaCandidatos({ dados, titulo, semSecao }) {
   return <div className="estado-section">{inner}</div>;
 }
 
-const CHART_COLORS = [
-  '#ff0080', '#00ffff', '#39ff14', '#ff6600', '#b000ff',
-  '#ff00ff', '#00ffcc', '#ffff00', '#0066ff', '#ff4400',
-];
-
-function aggregateBy(data: any[], key: string) {
-  const map = new Map<string, number>();
-  data.forEach(d => {
-    const k = d[key] || 'Desconhecido';
-    map.set(k, (map.get(k) || 0) + Number(d.valor || 0));
-  });
-  return Array.from(map.entries())
-    .map(([nome, valor]) => ({ nome, valor }))
-    .sort((a, b) => b.valor - a.valor);
-}
-
-function aggregateByValueRange(data: any[]) {
-  const ranges = [
-    { label: 'Até R$ 10 mil', min: 0, max: 10000 },
-    { label: 'R$ 10 mil a R$ 100 mil', min: 10000, max: 100000 },
-    { label: 'R$ 100 mil a R$ 1 mi', min: 100000, max: 1000000 },
-    { label: 'Acima de R$ 1 milhão', min: 1000000, max: Infinity },
-  ];
-  return ranges.map(r => ({
-    nome: r.label,
-    valor: data
-      .filter(d => Number(d.valor || 0) >= r.min && Number(d.valor || 0) < r.max)
-      .reduce((s, d) => s + Number(d.valor || 0), 0),
-  })).filter(r => r.valor > 0);
-}
-
-function topN(data: { nome: string; valor: number }[], n = 8) {
-  if (data.length <= n) return data;
-  const top = data.slice(0, n - 1);
-  const outrosValor = data.slice(n - 1).reduce((s, d) => s + d.valor, 0);
-  return [...top, { nome: `Outros (${data.length - n + 1})`, valor: outrosValor }];
-}
-
-function fmtMoneyCompact(v: number) {
-  if (v >= 1e9) return 'R$ ' + (v / 1e9).toFixed(1) + ' bi';
-  if (v >= 1e6) return 'R$ ' + (v / 1e6).toFixed(1) + ' mi';
-  if (v >= 1e3) return 'R$ ' + (v / 1e3).toFixed(0) + ' mil';
-  return 'R$ ' + v.toFixed(0);
-}
-
-function PieChart({ data, size = 160 }: { data: { nome: string; valor: number }[]; size?: number }) {
-  const total = data.reduce((s, d) => s + d.valor, 0);
-  if (total === 0 || data.length === 0) {
-    return <div className="chart-empty">Sem dados</div>;
-  }
-
-  const radius = size / 2 - 2;
-  const cx = size / 2;
-  const cy = size / 2;
-  let currentAngle = -90;
-
-  const slices = data.map(d => {
-    const pct = (d.valor / total) * 360;
-    const startAngle = currentAngle;
-    const endAngle = currentAngle + pct;
-    currentAngle += pct;
-    return { ...d, startAngle, endAngle, pct };
-  });
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <svg className="chart-svg" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {slices.map((slice, i) => {
-          const startRad = (slice.startAngle * Math.PI) / 180;
-          const endRad = (slice.endAngle * Math.PI) / 180;
-          const x1 = cx + radius * Math.cos(startRad);
-          const y1 = cy + radius * Math.sin(startRad);
-          const x2 = cx + radius * Math.cos(endRad);
-          const y2 = cy + radius * Math.sin(endRad);
-          const largeArc = slice.endAngle - slice.startAngle > 180 ? 1 : 0;
-          const d = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-          return <path key={i} d={d} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="var(--bg-surface)" strokeWidth="1.5" />;
-        })}
-      </svg>
-      <div className="chart-legend">
-        {slices.map((slice, i) => (
-          <div className="chart-legend-item" key={i} title={`${slice.nome}: ${fmtMoneyCompact(slice.valor)} (${slice.pct.toFixed(1)}%)`}>
-            <span className="chart-legend-color" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-            <span className="chart-legend-name">{slice.nome}</span>
-            <span className="chart-legend-val">{fmtMoneyCompact(slice.valor)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 const PAGE_SECTIONS = [
   { id: 'estado-inicio', label: 'Início' },
-  { id: 'estado-prefeitos', label: 'Prefeitos' },
-  { id: 'estado-vice', label: 'Vice-Prefeitos' },
-  { id: 'estado-vereadores', label: 'Vereadores' },
-  { id: 'estado-deputados', label: 'Deputados' },
-  { id: 'estado-senadores', label: 'Senadores' },
+  { id: 'estado-candidatos', label: 'Candidatos' },
   { id: 'estado-financas', label: 'Finanças' },
+  { id: 'estado-licitacoes', label: 'Licitações' },
   { id: 'estado-municipios', label: 'Municípios' },
 ];
 
@@ -537,18 +470,28 @@ export default function ConhecendoEstado() {
   const [depDetalhe, setDepDetalhe] = useState(null);
   const [senDetalhe, setSenDetalhe] = useState(null);
   const [municipioDetalhe, setMunicipioDetalhe] = useState(null);
+  const [recursosDetalhe, setRecursosDetalhe] = useState(false);
 
   const [finErro, setFinErro] = useState(null);
   const [finCache, setFinCache] = useState({});
   const [anosCarregados, setAnosCarregados] = useState(new Set());
   const [anoAtualCarregando, setAnoAtualCarregando] = useState(null);
-  const [anosSelecionados, setAnosSelecionados] = useState([new Date().getFullYear() - 1]);
+  const [anosSelecionados, setAnosSelecionados] = useState([new Date().getFullYear()]);
   const [mesSelecionado, setMesSelecionado] = useState(0);
   const [popupInfo, setPopupInfo] = useState(null);
   const [collapsed, setCollapsed] = useState({ deputados: true });
   const [depBuscaTexto, setDepBuscaTexto] = useState('');
   const [munNomeBusca, setMunNomeBusca] = useState('');
   const [chartPopup, setChartPopup] = useState(null);
+  const [licAnoInput, setLicAnoInput] = useState('');
+  const [licTrimestresSelecionados, setLicTrimestresSelecionados] = useState(new Set());
+  const [licCache, setLicCache] = useState({});
+  const [licChavesSelecionadas, setLicChavesSelecionadas] = useState(new Set());
+  const [licEmAndamento, setLicEmAndamento] = useState(false);
+  const [licProgresso, setLicProgresso] = useState({ buscados: 0, total: 0 });
+  const [licErro, setLicErro] = useState(null);
+  const [licitacaoPopup, setLicitacaoPopup] = useState(null);
+  const licCancelRef = useRef(false);
 
   function toggleAno(ano) {
     setAnosSelecionados(prev => {
@@ -566,6 +509,90 @@ export default function ConhecendoEstado() {
 
   function toggleCollapse(secao) {
     setCollapsed(prev => ({ ...prev, [secao]: !prev[secao] }));
+  }
+
+  function toggleTrimestre(t) {
+    setLicTrimestresSelecionados(prev => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t);
+      else next.add(t);
+      return next;
+    });
+  }
+
+  function licBuscar() {
+    const ano = licAnoInput.trim();
+    if (!ano.match(/^\d{4}$/)) return;
+
+    let trimestres = [...licTrimestresSelecionados];
+    if (trimestres.length === 0) {
+      trimestres = [1, 2, 3, 4];
+      setLicTrimestresSelecionados(new Set(trimestres));
+    }
+
+    const fila = trimestres.map(t => `${ano}-${t}`).filter(k => !licCache[k]);
+    if (fila.length === 0) return;
+
+    setLicEmAndamento(true);
+    setLicProgresso({ buscados: 0, total: fila.length });
+    setLicErro(null);
+    licCancelRef.current = false;
+
+    processarFilaSequencial(fila);
+  }
+
+  async function processarFilaSequencial(fila) {
+    for (const chave of fila) {
+      if (licCancelRef.current) break;
+
+      const [a, t] = chave.split('-');
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/estado/${uf}/licitacoes?ano=${a}&trimestre=${t}`);
+        if (!res.ok) throw new Error(`Erro ${res.status}`);
+        const data = await res.json();
+
+        if (licCancelRef.current) break;
+
+        setLicCache(prev => ({ ...prev, [chave]: Array.isArray(data) ? data : [] }));
+        setLicChavesSelecionadas(prev => new Set([...prev, chave]));
+        setLicProgresso(prev => ({ ...prev, buscados: prev.buscados + 1 }));
+      } catch (err) {
+        if (licCancelRef.current) break;
+        setLicErro(err.message || `Erro no trimestre ${a}-T${t}`);
+        setLicProgresso(prev => ({ ...prev, buscados: prev.buscados + 1 }));
+        break;
+      }
+    }
+
+    setLicEmAndamento(false);
+  }
+
+  function licCancelar() {
+    licCancelRef.current = true;
+    setLicEmAndamento(false);
+  }
+
+  function licRemoverChave(chave) {
+    setLicCache(prev => {
+      const next = { ...prev };
+      delete next[chave];
+      return next;
+    });
+    setLicChavesSelecionadas(prev => {
+      const next = new Set(prev);
+      next.delete(chave);
+      return next;
+    });
+  }
+
+  function licToggleChave(chave) {
+    setLicChavesSelecionadas(prev => {
+      const next = new Set(prev);
+      if (next.has(chave)) next.delete(chave);
+      else next.add(chave);
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -600,6 +627,13 @@ export default function ConhecendoEstado() {
     setAnosCarregados(new Set());
     setAnoAtualCarregando(null);
     setFinErro(null);
+    setLicCache({});
+    setLicChavesSelecionadas(new Set());
+    setLicEmAndamento(false);
+    setLicErro(null);
+    setLicAnoInput('');
+    setLicTrimestresSelecionados(new Set());
+    licCancelRef.current = true;
   }, [uf]);
 
   useEffect(() => {
@@ -609,10 +643,14 @@ export default function ConhecendoEstado() {
     if (anosFaltantes.length === 0) return;
     if (anoAtualCarregando !== null) return;
 
-    const anoParaCarregar = anosFaltantes[0];
-    setAnoAtualCarregando(anoParaCarregar);
+    setAnoAtualCarregando(anosFaltantes[0]);
     setFinErro(null);
+  }, [uf, anosSelecionados, anosCarregados, anoAtualCarregando]);
 
+  useEffect(() => {
+    if (!uf || anoAtualCarregando === null) return;
+
+    const anoParaCarregar = anoAtualCarregando;
     const dadosAno = {};
 
     const ws = new WebSocket(`${WS_BASE_URL}/ws`);
@@ -655,11 +693,10 @@ export default function ConhecendoEstado() {
 
     ws.onerror = () => {
       setAnoAtualCarregando(null);
-      ws.close();
     };
 
     return () => { ws.close(); };
-  }, [uf, anosSelecionados, anosCarregados, anoAtualCarregando]);
+  }, [uf, anoAtualCarregando]);
 
   const finSecoes = useMemo(() => {
     const anos = Object.keys(finCache).map(Number).sort();
@@ -696,6 +733,56 @@ export default function ConhecendoEstado() {
     };
   }, [recursosFedExibicao]);
 
+  const licExibicao = useMemo(() => {
+    let dados = [];
+    licChavesSelecionadas.forEach(chave => {
+      if (licCache[chave]) {
+        dados = dados.concat(licCache[chave]);
+      }
+    });
+    return dados;
+  }, [licCache, licChavesSelecionadas]);
+
+  const licPag = usePaginacao(licExibicao, ITENS_POR_PAGINA);
+
+  const licChartData = useMemo(() => {
+    if (!licExibicao.length) return null;
+    const data = licExibicao.map(c => ({
+      nome: c.categoriaProcesso?.nome || c.modalidadeNome || 'Sem categoria',
+      valor: c.valorGlobal ?? c.valorTotalEstimado ?? 0,
+    }));
+    const grouped = new Map();
+    data.forEach(d => {
+      grouped.set(d.nome, (grouped.get(d.nome) || 0) + d.valor);
+    });
+    return Array.from(grouped.entries())
+      .map(([nome, valor]) => ({ nome, valor }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [licExibicao]);
+
+  const licFaixaChartData = useMemo(() => {
+    if (!licExibicao.length) return null;
+    const faixas = {
+      'Até R$ 5 mil': 0,
+      'R$ 5 mil - R$ 20 mil': 0,
+      'R$ 20 mil - R$ 50 mil': 0,
+      'R$ 50 mil - R$ 100 mil': 0,
+      'Acima de R$ 100 mil': 0,
+    };
+    licExibicao.forEach(c => {
+      const v = c.valorGlobal ?? c.valorTotalEstimado ?? 0;
+      if (v < 5000) faixas['Até R$ 5 mil'] += v;
+      else if (v < 20000) faixas['R$ 5 mil - R$ 20 mil'] += v;
+      else if (v < 50000) faixas['R$ 20 mil - R$ 50 mil'] += v;
+      else if (v < 100000) faixas['R$ 50 mil - R$ 100 mil'] += v;
+      else faixas['Acima de R$ 100 mil'] += v;
+    });
+    return Object.entries(faixas)
+      .filter(([_, v]) => v > 0)
+      .map(([nome, valor]) => ({ nome, valor }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [licExibicao]);
+
   const anoExibicao = useMemo(() => {
     const anos = Object.keys(finCache).map(Number).sort();
     return anos.length > 0 ? anos[anos.length - 1] : null;
@@ -709,6 +796,18 @@ export default function ConhecendoEstado() {
   const listaVereadores = candidatos?.vereadores || [];
   const listaPrefeitos = candidatos?.prefeitos || [];
   const listaVice = candidatos?.vice_prefeitos || [];
+
+  const ANO_BASE = 2024;
+
+  const prefeitos2024 = (candidatos?.prefeitos || []).filter(c => c.ano_eleicao === ANO_BASE);
+  const vices2024 = (candidatos?.vice_prefeitos || []).filter(c => c.ano_eleicao === ANO_BASE);
+
+  const SITUACOES_VEREADOR = ['ELEITO', 'ELEITO POR MÉDIA', 'ELEITO POR QP', 'SUPLENTE'];
+  const vereadores2024 = (candidatos?.vereadores || []).filter(c =>
+    c.ano_eleicao === ANO_BASE && SITUACOES_VEREADOR.includes(c.situacao_totalizacao_descricao)
+  );
+
+  const populacaoTotal = municipios.reduce((sum, m) => sum + (m.populacao || 0), 0);
 
   const listaDeputados = deputados || [];
   const listaSenadores = senadores || [];
@@ -780,6 +879,18 @@ export default function ConhecendoEstado() {
       </div>
     );
   }
+  if (recursosDetalhe) {
+    return (
+      <div className="estado-page">
+        <RecursosMunicipioDetalhe
+          uf={uf}
+          ufNome={nome}
+          municipios={municipios}
+          onFechar={() => setRecursosDetalhe(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="estado-page">
@@ -792,55 +903,57 @@ export default function ConhecendoEstado() {
       </div>
 
       <ContadoresBar
-        vereadores={listaVereadores.length}
+        prefeitos={prefeitos2024.length}
+        vices={vices2024.length}
+        vereadores={vereadores2024.length}
         deputados={listaDeputados.length}
         senadores={listaSenadores.length}
         municipios={municipios.length}
         pequenos={municipios.filter(m => m.populacao > 0 && m.populacao < 10000).length}
+        populacao={populacaoTotal}
       />
 
-      {/* ── Linha 1: Prefeitos + Vice ── */}
-      <div className="politicos-grid">
-        <div className="estado-section" id="estado-prefeitos">
-          <div className="estado-section-header" onClick={() => toggleCollapse('prefeitos')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Prefeitos Eleitos <span className="count">({listaPrefeitos.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
-            <span>{collapsed.prefeitos ? '▶' : '▼'}</span>
-          </div>
-          {!collapsed.prefeitos && (
-            candidatos ? (
-              listaPrefeitos.length > 0 ? (
-                <TabelaCandidatos dados={listaPrefeitos} titulo="" semSecao />
+      {/* ── Candidatos ── */}
+      <div id="estado-candidatos">
+        <div className="politicos-grid">
+          <div className="estado-section" id="estado-prefeitos">
+            <div className="estado-section-header" onClick={() => toggleCollapse('prefeitos')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0 }}>Prefeitos Eleitos <span className="count">({listaPrefeitos.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
+              <span>{collapsed.prefeitos ? '▶' : '▼'}</span>
+            </div>
+            {!collapsed.prefeitos && (
+              candidatos ? (
+                listaPrefeitos.length > 0 ? (
+                  <TabelaCandidatos dados={listaPrefeitos} titulo="" semSecao />
+                ) : (
+                  <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum prefeito encontrado</p>
+                )
               ) : (
-                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum prefeito encontrado</p>
+                <div className="municipios-loading">Carregando prefeitos...</div>
               )
-            ) : (
-              <div className="municipios-loading">Carregando prefeitos...</div>
-            )
-          )}
+            )}
+          </div>
+
+          <div className="estado-section" id="estado-vice">
+            <div className="estado-section-header" onClick={() => toggleCollapse('vice')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0 }}>Vice-Prefeitos Eleitos <span className="count">({listaVice.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
+              <span>{collapsed.vice ? '▶' : '▼'}</span>
+            </div>
+            {!collapsed.vice && (
+              candidatos ? (
+                listaVice.length > 0 ? (
+                  <TabelaCandidatos dados={listaVice} titulo="" semSecao />
+                ) : (
+                  <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum vice-prefeito encontrado</p>
+                )
+              ) : (
+                <div className="municipios-loading">Carregando vice-prefeitos...</div>
+              )
+            )}
+          </div>
         </div>
 
-        <div className="estado-section" id="estado-vice">
-          <div className="estado-section-header" onClick={() => toggleCollapse('vice')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Vice-Prefeitos Eleitos <span className="count">({listaVice.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
-            <span>{collapsed.vice ? '▶' : '▼'}</span>
-          </div>
-          {!collapsed.vice && (
-            candidatos ? (
-              listaVice.length > 0 ? (
-                <TabelaCandidatos dados={listaVice} titulo="" semSecao />
-              ) : (
-                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum vice-prefeito encontrado</p>
-              )
-            ) : (
-              <div className="municipios-loading">Carregando vice-prefeitos...</div>
-            )
-          )}
-        </div>
-      </div>
-
-      {/* ── Linha 2: Vereadores + Deputados ── */}
-      <div className="politicos-grid">
-        <div className="estado-section" id="estado-vereadores">
+        <div className="estado-section politicos-grid-full" id="estado-vereadores">
           <div className="estado-section-header" onClick={() => toggleCollapse('vereadores')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 style={{ margin: 0 }}>Vereadores Eleitos <span className="count">({listaVereadores.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
             <span>{collapsed.vereadores ? '▶' : '▼'}</span>
@@ -858,66 +971,65 @@ export default function ConhecendoEstado() {
           )}
         </div>
 
-        <div className="estado-section" id="estado-deputados">
-          <div className="estado-section-header" onClick={() => toggleCollapse('deputados')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Deputados Federais <span className="count">({depFiltrados.length}/{listaDeputados.length})</span><InfoBadge chave="deputados" onInfoClick={setPopupInfo} /></h2>
-            <span>{collapsed.deputados ? '▶' : '▼'}</span>
-          </div>
-          {!collapsed.deputados && (
-            <>
-              {listaDeputados.length > 0 ? (
-                <>
-                  <SearchAutocomplete
-                    dados={listaDeputados}
-                    placeholder="🔍 Buscar deputado por nome ou partido..."
-                    campoNome="nome"
-                    campoPartido="sigla_partido"
-                    onFilter={setDepBuscaTexto}
-                  />
-                  {depFiltrados.length > 0 ? (
-                    <div className="ad-grid">
-                      {depFiltrados.map(d => (
-                        <div key={d.id} className="ad-card-dep">
-                          <img className="ad-foto" src={d.url_foto} alt={d.nome} onError={(e) => { e.target.style.display = 'none'; }} />
-                          <div className="ad-card-dep-info">
-                            <strong className="ad-card-dep-nome">{d.nome}</strong>
-                            <span className="ad-card-dep-partido">
-                              <span className="tag tag-candidato">{d.sigla_partido}</span>
-                              <span className="ad-card-dep-uf">{d.sigla_uf}</span>
-                            </span>
-                            <span className="ad-card-dep-extra" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                              {d.email ? `📧 ${d.email}` : ''}{d.email && d.nome_eleitoral ? ' · ' : ''}{d.nome_eleitoral ? `🗳 ${d.nome_eleitoral}` : ''}
-                            </span>
+        <div className="politicos-grid">
+          <div className="estado-section" id="estado-deputados">
+            <div className="estado-section-header" onClick={() => toggleCollapse('deputados')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0 }}>Deputados Federais <span className="count">({depFiltrados.length}/{listaDeputados.length})</span><InfoBadge chave="deputados" onInfoClick={setPopupInfo} /></h2>
+              <span>{collapsed.deputados ? '▶' : '▼'}</span>
+            </div>
+            {!collapsed.deputados && (
+              <>
+                {listaDeputados.length > 0 ? (
+                  <>
+                    <SearchAutocomplete
+                      dados={listaDeputados}
+                      placeholder="🔍 Buscar deputado por nome ou partido..."
+                      campoNome="nome"
+                      campoPartido="sigla_partido"
+                      onFilter={setDepBuscaTexto}
+                    />
+                    {depFiltrados.length > 0 ? (
+                      <div className="ad-grid">
+                        {depFiltrados.map(d => (
+                          <div key={d.id} className="ad-card-dep">
+                            <img className="ad-foto" src={d.url_foto} alt={d.nome} onError={(e) => { e.target.style.display = 'none'; }} />
+                            <div className="ad-card-dep-info">
+                              <strong className="ad-card-dep-nome">{d.nome}</strong>
+                              <span className="ad-card-dep-partido">
+                                <span className="tag tag-candidato">{d.sigla_partido}</span>
+                                <span className="ad-card-dep-uf">{d.sigla_uf}</span>
+                              </span>
+                              <span className="ad-card-dep-extra" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                                {d.email ? `📧 ${d.email}` : ''}{d.email && d.nome_eleitoral ? ' · ' : ''}{d.nome_eleitoral ? `🗳 ${d.nome_eleitoral}` : ''}
+                              </span>
+                            </div>
+                            <button className="btn btn-sm btn-outline-accent" onClick={() => setDepDetalhe(d)}>Detalhes</button>
                           </div>
-                          <button className="btn btn-sm btn-outline-accent" onClick={() => setDepDetalhe(d)}>Detalhes</button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum deputado encontrado para os filtros atuais</p>
-                  )}
-                </>
-              ) : deputados !== null ? (
-                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum deputado encontrado</p>
-              ) : (
-                <div className="municipios-loading">Carregando deputados...</div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum deputado encontrado para os filtros atuais</p>
+                    )}
+                  </>
+                ) : deputados !== null ? (
+                  <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum deputado encontrado</p>
+                ) : (
+                  <div className="municipios-loading">Carregando deputados...</div>
+                )}
+              </>
+            )}
+          </div>
 
-      {/* ── Senadores Full Width ── */}
-      <div className="estado-section" id="estado-senadores" style={{ marginBottom: 24 }}>
-        <div className="estado-section-header" onClick={() => toggleCollapse('senadores')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}>Senadores <span className="count">({listaSenadores.length})</span><InfoBadge chave="senadores" onInfoClick={setPopupInfo} /></h2>
-          <span>{collapsed.senadores ? '▶' : '▼'}</span>
-        </div>
-        {!collapsed.senadores && (
-          <>
-            {listaSenadores.length > 0 ? (
-              <div className="ad-grid">
-                {listaSenadores.map(s => (
+          <div className="estado-section" id="estado-senadores">
+            <div className="estado-section-header" onClick={() => toggleCollapse('senadores')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0 }}>Senadores <span className="count">({listaSenadores.length})</span><InfoBadge chave="senadores" onInfoClick={setPopupInfo} /></h2>
+              <span>{collapsed.senadores ? '▶' : '▼'}</span>
+            </div>
+            {!collapsed.senadores && (
+              <>
+                {listaSenadores.length > 0 ? (
+                  <div className="ad-grid">
+                    {listaSenadores.map(s => (
                       <div key={s.codigo} className="ad-card-dep">
                         <img className="ad-foto" src={s.url_foto} alt={s.nome_parlamentar} onError={(e) => { e.target.style.display = 'none'; }} />
                         <div className="ad-card-dep-info">
@@ -941,13 +1053,15 @@ export default function ConhecendoEstado() {
                 ) : (
                   <div className="municipios-loading">Carregando senadores...</div>
                 )}
-          </>
-        )}
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="estado-section" id="estado-financas" style={{ padding: '12px', marginBottom: 8, background: 'var(--card-bg)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Anos:</span>
-        {Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - 1 - i).reverse().map(ano => (
+        {Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - i).reverse().map(ano => (
           <button
             key={ano}
             className={`ano-btn ${anosSelecionados.includes(ano) ? 'ativo' : ''}`}
@@ -1085,63 +1199,195 @@ export default function ConhecendoEstado() {
         </div>
       )}
 
-      {recursosFedExibicao.length > 0 && (
-        <div className="estado-section">
-          <div className="estado-section-header" onClick={() => toggleCollapse('recursos_federais')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Recursos Federais Recebidos <span className="count">({recursosFedExibicao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anosSelecionados.sort().join(', ')}</span><InfoBadge chave="recursos_federais" onInfoClick={setPopupInfo} /></h2>
-            <span>{collapsed.recursos_federais ? '▶' : '▼'}</span>
-          </div>
-          {!collapsed.recursos_federais && (<>
-            {chartData && (
-              <div className="chart-row">
-                <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Tipo Pessoa', data: chartData.tipoPessoa })}>
-                  <div className="chart-card-title">Tipo Pessoa</div>
-                  <PieChart data={chartData.tipoPessoa} size={240} />
-                </div>
-                <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Órgão', data: chartData.porOrgao })}>
-                  <div className="chart-card-title">Por Órgão</div>
-                  <PieChart data={chartData.porOrgao} size={240} />
-                </div>
-                <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Órgão Superior', data: chartData.porOrgaoSuperior })}>
-                  <div className="chart-card-title">Órgão Superior</div>
-                  <PieChart data={chartData.porOrgaoSuperior} size={240} />
-                </div>
-                <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Mês/Ano', data: chartData.porMesAno })}>
-                  <div className="chart-card-title">Por Mês/Ano</div>
-                  <PieChart data={chartData.porMesAno} size={240} />
-                </div>
+      <div className="estado-section">
+        <div className="estado-section-header" onClick={() => toggleCollapse('recursos_federais')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0 }}>Recursos Federais Recebidos <span className="count">({recursosFedExibicao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anosSelecionados.sort().join(', ')}</span><button className="btn btn-sm btn-outline-accent" style={{ marginLeft: 8 }} onClick={(e) => { e.stopPropagation(); setRecursosDetalhe(true); }}>Detalhes ▸</button><InfoBadge chave="recursos_federais" onInfoClick={setPopupInfo} /></h2>
+          <span>{collapsed.recursos_federais ? '▶' : '▼'}</span>
+        </div>
+        {!collapsed.recursos_federais && recursosFedExibicao.length > 0 && (<>
+          {chartData && (
+            <div className="chart-row">
+              <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Tipo Pessoa', data: chartData.tipoPessoa })}>
+                <div className="chart-card-title">Tipo Pessoa</div>
+                <PieChart data={chartData.tipoPessoa} size={240} />
               </div>
-            )}
-            <table className="estado-table">
-              <thead>
-                <tr>
-                  <th>Tipo</th>
-                  <th>Favorecido</th>
-                  <th>UG</th>
-                  <th>Órgão</th>
-                  <th>Órgão Superior</th>
-                  <th>Mês/Ano</th>
-                  <th>Valor</th>
+              <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Órgão', data: chartData.porOrgao })}>
+                <div className="chart-card-title">Por Órgão</div>
+                <PieChart data={chartData.porOrgao} size={240} />
+              </div>
+              <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Órgão Superior', data: chartData.porOrgaoSuperior })}>
+                <div className="chart-card-title">Órgão Superior</div>
+                <PieChart data={chartData.porOrgaoSuperior} size={240} />
+              </div>
+              <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Mês/Ano', data: chartData.porMesAno })}>
+                <div className="chart-card-title">Por Mês/Ano</div>
+                <PieChart data={chartData.porMesAno} size={240} />
+              </div>
+            </div>
+          )}
+          <table className="estado-table">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Favorecido</th>
+                <th>UG</th>
+                <th>Órgão</th>
+                <th>Órgão Superior</th>
+                <th>Mês/Ano</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recursosFedPag.paginaDados.map((rf, i) => (
+                <tr key={i}>
+                  <td>{rf.tipo_pessoa || '-'}</td>
+                  <td>{rf.nome_pessoa || '-'}</td>
+                  <td>{rf.nome_ug || '-'}</td>
+                  <td>{rf.nome_orgao || '-'}</td>
+                  <td>{rf.nome_orgao_superior || '-'}</td>
+                  <td>{fmtMesAno(rf.mes_ano)}</td>
+                  <td>{fmtMoney(rf.valor)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {recursosFedPag.paginaDados.map((rf, i) => (
-                  <tr key={i}>
-                    <td>{rf.tipo_pessoa || '-'}</td>
-                    <td>{rf.nome_pessoa || '-'}</td>
-                    <td>{rf.nome_ug || '-'}</td>
-                    <td>{rf.nome_orgao || '-'}</td>
-                    <td>{rf.nome_orgao_superior || '-'}</td>
-                    <td>{fmtMesAno(rf.mes_ano)}</td>
-                    <td>{fmtMoney(rf.valor)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <Paginacao pagina={recursosFedPag.pagina} totalPaginas={recursosFedPag.totalPaginas} onPagina={recursosFedPag.setPagina} />
-          </>)}
+              ))}
+            </tbody>
+          </table>
+          <Paginacao pagina={recursosFedPag.pagina} totalPaginas={recursosFedPag.totalPaginas} onPagina={recursosFedPag.setPagina} />
+        </>)}
+        {!collapsed.recursos_federais && recursosFedExibicao.length === 0 && (
+          <div className="rp-empty" style={{ padding: 20, textAlign: 'center' }}>
+            {anoAtualCarregando ? 'Carregando dados...' : 'Selecione anos e meses acima para carregar os dados'}
+          </div>
+        )}
+      </div>
+
+      <div className="estado-section" id="estado-licitacoes" style={{ padding: '12px', marginBottom: 8, background: 'var(--card-bg)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Ano:</span>
+        <input
+          type="text"
+          placeholder="2024"
+          value={licAnoInput}
+          onChange={e => setLicAnoInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') licBuscar(); }}
+          style={{ width: 70, padding: '6px 8px', fontSize: '0.78rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)', borderRadius: 4 }}
+          maxLength={4}
+          disabled={licEmAndamento}
+        />
+        <span style={{ fontSize: '0.8rem', fontWeight: 600, marginLeft: 4 }}>Trimestre:</span>
+        {[1, 2, 3, 4].map(t => (
+          <button key={t} className={`ano-btn${licTrimestresSelecionados.has(t) ? ' ativo' : ''}`} onClick={() => toggleTrimestre(t)} disabled={licEmAndamento}>
+            Q{t}
+          </button>
+        ))}
+        <button className="btn btn-sm" onClick={licBuscar} disabled={licEmAndamento || !licAnoInput.trim().match(/^\d{4}$/)}>
+          {licEmAndamento ? '⟳ Buscando...' : 'Buscar'}
+        </button>
+        {licEmAndamento && (
+          <button className="btn btn-sm" onClick={licCancelar} style={{ background: 'var(--error-bg)', border: '1px solid var(--error)', color: 'var(--error)' }}>
+            Cancelar
+          </button>
+        )}
+        {Object.keys(licCache).length > 0 && !licEmAndamento && (
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: 8 }}>
+            {Object.keys(licCache).length} trimestre(s) buscado(s)
+          </span>
+        )}
+        {licErro && !licEmAndamento && <span style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{licErro}</span>}
+      </div>
+
+      {licEmAndamento && (
+        <div style={{ padding: '8px 12px', marginBottom: 8, borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--accent-secondary)' }}>
+          <div className="spinner-sm" />
+          <span>Progresso: {licProgresso.buscados} de {licProgresso.total} trimestre(s) buscado(s)</span>
         </div>
       )}
+
+      {Object.keys(licCache).length > 0 && (
+        <div className="estado-section" style={{ padding: '8px 12px', marginBottom: 8, background: 'var(--card-bg)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Chaves buscadas:</span>
+          {Object.keys(licCache).sort().map(chave => (
+            <span key={chave} className="ano-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: 'var(--bg-elevated)', borderRadius: 12, fontSize: '0.78rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer' }}>
+                <input type="checkbox" checked={licChavesSelecionadas.has(chave)} onChange={() => licToggleChave(chave)} style={{ margin: 0 }} />
+                {chave}
+              </label>
+              {!licEmAndamento && (
+                <button
+                  onClick={() => licRemoverChave(chave)}
+                  title="Remover"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', padding: 0, lineHeight: 1 }}
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="estado-section">
+        <div className="estado-section-header" onClick={() => toggleCollapse('licitacoes')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0 }}>Licitações (PNCP) <span className="count">({licExibicao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{licChavesSelecionadas.size > 0 ? [...licChavesSelecionadas].sort().join(', ') : ''}</span><InfoBadge chave="licitacoes" onInfoClick={setPopupInfo} /></h2>
+          <span>{collapsed.licitacoes ? '▶' : '▼'}</span>
+        </div>
+        {!collapsed.licitacoes && licExibicao.length > 0 && (<>
+          {licChartData && (
+            <div className="chart-row">
+              <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Licitações por Categoria', data: licChartData })}>
+                <div className="chart-card-title">Categorias</div>
+                <PieChart data={licChartData} size={240} />
+              </div>
+              {licFaixaChartData && (
+                <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Licitações por Faixa de Valor', data: licFaixaChartData })}>
+                  <div className="chart-card-title">Faixa de Valores</div>
+                  <PieChart data={licFaixaChartData} size={240} />
+                </div>
+              )}
+            </div>
+          )}
+          <table className="estado-table">
+            <thead>
+              <tr>
+                <th>Contrato</th>
+                <th>Tipo</th>
+                <th>Categoria</th>
+                <th>Fornecedor</th>
+                <th>Objeto</th>
+                <th>Vigência</th>
+                <th>Data Publ.</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {licPag.paginaDados.map((c, i) => (
+                <tr
+                  key={c.numeroControlePNCP || i}
+                  className="dm-row-click"
+                  onClick={() => setLicitacaoPopup(c)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>
+                    {(c.numeroControlePNCP || '').slice(-12)}
+                  </td>
+                  <td>{c.tipoContrato?.nome || c.modalidadeNome || '-'}</td>
+                  <td>{c.categoriaProcesso?.nome || c.modalidadeNome || '-'}</td>
+                  <td>{c.fornecedor?.razaoSocial || c.nomeRazaoSocialFornecedor || '-'}</td>
+                  <td className="dm-obj-col">{(c.objetoContrato || '').substring(0, 60)}{(c.objetoContrato || '').length > 60 ? '…' : ''}</td>
+                  <td style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>{fmtDate(c.dataVigenciaInicio)} ~ {fmtDate(c.dataVigenciaFim)}</td>
+                  <td style={{ fontSize: '0.7rem' }}>{fmtDate(c.dataPublicacaoPncp)}</td>
+                  <td>{fmtMoney(c.valorGlobal ?? c.valorTotalEstimado)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Paginacao pagina={licPag.pagina} totalPaginas={licPag.totalPaginas} onPagina={licPag.setPagina} />
+          <p className="dm-hint">Clique em um contrato para ver detalhes completos</p>
+        </>)}
+        {!collapsed.licitacoes && licExibicao.length === 0 && (
+          <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>
+            {licEmAndamento ? 'Buscando licitações...' : Object.keys(licCache).length === 0 ? 'Insira um ano, selecione os trimestres e clique em Buscar' : 'Nenhum dado encontrado para as chaves selecionadas'}
+          </div>
+        )}
+      </div>
 
       <div className="estado-section" id="estado-municipios">
         <div className="estado-section-header" onClick={() => toggleCollapse('municipios')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1206,6 +1452,12 @@ export default function ConhecendoEstado() {
             </div>
           </div>
         </div>
+      )}
+
+      {licitacaoPopup && (
+        <JanelaPopup titulo={`Licitação ${(licitacaoPopup.numeroControlePNCP || '').slice(-12)}`} onFechar={() => setLicitacaoPopup(null)}>
+          <ContratoDetalhes contrato={licitacaoPopup} onIdClick={() => {}} />
+        </JanelaPopup>
       )}
     </div>
   );

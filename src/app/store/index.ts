@@ -6,6 +6,7 @@ import portalReducer from './slices/portalSlice';
 import consultaReducer from './slices/consultaSlice';
 import ligacaoPoliticaReducer from './slices/ligacaoPoliticaSlice';
 import investigationReducer from './slices/investigationSlice';
+import recursosMunicipioReducer from './slices/recursosMunicipioSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     consulta: consultaReducer,
     ligacaoPolitica: ligacaoPoliticaReducer,
     investigation: investigationReducer,
+    recursosMunicipio: recursosMunicipioReducer,
   },
 });
 
