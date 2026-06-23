@@ -562,8 +562,11 @@ function AppInterno() {
             <div className="hero-content">
               <div className="hero-badge">// PLATAFORMA DE ANÁLISE // SYS.v1</div>
               <h1 className="hero-title">
-                <span className="hero-highlight">ANÁLISE DE DADOS PÚBLICOS</span>
+                <span className="hero-highlight">PODP - Ambiente de visualização da ferramenta</span>
               </h1>
+              <div className="hero-alerta">
+                ⚠ ACESSO AO TSE disponivel na interface, mas essa versao ambiente nao possui os dados populados!!! DEMAIS INTEGRACOES EM FUNCIONAMENTO
+              </div>
               <div className="hero-actions">
                 <button
                   className="hero-cta"

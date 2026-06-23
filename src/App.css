@@ -392,6 +392,24 @@
   background: rgba(255, 68, 68, 0.06);
 }
 
+/* ── Hero Alerta ─────────────────────────────── */
+
+.hero-alerta {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-top: 14px;
+  text-align: center;
+  line-height: 1.4;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* ── Features Grid ───────────────────────────── */
 
 .features {
