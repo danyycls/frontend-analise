@@ -48,6 +48,10 @@ export const ENDPOINTS = {
 
   // TCU
   TCU: '/tcu',
+  TCU_CONTAS_IRREGULARES: '/tcu/contas-irregulares',
+  TCU_FINS_ELEITORAIS: '/tcu/fins-eleitorais',
+  TCU_INABILITADOS: '/tcu/inabilitados',
+  TCU_INIDONEOS: '/tcu/inidoneos',
 
   // Ligacao Politica
   LIGACAO_POLITICA: '/ligacao-politica',

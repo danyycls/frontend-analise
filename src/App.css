@@ -168,6 +168,19 @@
   flex: 1;
 }
 
+.nav-tab-badge {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  background: #a855f7;
+  color: #0d0d1a;
+  padding: 1px 6px;
+  border-radius: 8px;
+  line-height: 1.4;
+  min-width: 14px;
+  text-align: center;
+}
+
 .nav-tab:hover {
   color: #39ff14;
   border-left-color: #39ff14;

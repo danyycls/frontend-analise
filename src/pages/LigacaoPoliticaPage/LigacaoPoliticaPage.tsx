@@ -14,6 +14,7 @@ import EntityPopup from '@/features/ligacao-politica/ui/EntityPopup';
 import { api } from '@/shared/api/client';
 import { fmtDoc } from '@/shared/lib/formatters';
 import { ENDPOINTS } from '@/shared/api/endpoints';
+import { useDiscoveryReporter } from '@/shared/lib/entity-discovery';
 
 let lpUid = 0;
 let adUid = 0;
@@ -46,6 +47,7 @@ export default function LigacaoPoliticaPage() {
   const [analiseDetalhadaLoading, setAnaliseDetalhadaLoading] = useState(false);
   const subTabsRef = useRef(subTabs);
   const adAnalisesRef = useRef(adAnalises);
+  const reportDiscovery = useDiscoveryReporter();
   useEffect(() => { subTabsRef.current = subTabs; }, [subTabs]);
   useEffect(() => { adAnalisesRef.current = adAnalises; }, [adAnalises]);
 
@@ -81,7 +83,27 @@ export default function LigacaoPoliticaPage() {
 
   const handleLPDadosAtualizados = useCallback((data) => {
     dispatch(setLpResultados(data));
-  }, [dispatch]);
+    if (data?.resultados) {
+      const discoveries: any[] = [];
+      const seen = new Set();
+      data.resultados.forEach((item: any) => {
+        const doc = item.cpf_cnpj;
+        if (doc && doc.length >= 3 && !seen.has(doc)) {
+          seen.add(doc);
+          discoveries.push({
+            id: doc,
+            type: doc.length <= 11 ? 'pessoa_fisica' : 'empresa',
+            label: doc.length > 11 ? 'Empresa' : doc,
+            document: doc,
+            source: 'pncp',
+            originalData: {},
+            context: 'Ligação Política',
+          });
+        }
+      });
+      reportDiscovery(discoveries);
+    }
+  }, [dispatch, reportDiscovery]);
 
   const handleLPResults = useCallback((consultaId, data, licitacoes) => {
     const key = consultaId || 'all';
@@ -146,6 +168,35 @@ export default function LigacaoPoliticaPage() {
     if (licitacoes.length === 0) { setAnaliseDetalhadaLoading(false); return; }
     try {
       const json = await api.post<any>(ENDPOINTS.BUSCA_CONTEXTO, { licitacoes });
+      const discoveries: any[] = [];
+      const seen = new Set();
+      (json.resultados || []).forEach((item: any) => {
+        const doc = item.cpf_cnpj;
+        if (doc && doc.length >= 3 && !seen.has(doc)) {
+          seen.add(doc);
+          discoveries.push({
+            id: doc,
+            type: doc.length <= 11 ? 'pessoa_fisica' : 'empresa',
+            label: doc.length > 11 ? 'Empresa' : doc,
+            document: doc,
+            source: 'pncp',
+            originalData: {},
+            context: 'Análise Detalhada',
+          });
+        }
+        (item.socios || []).forEach((s: any) => {
+          const sd = s.documento;
+          if (sd && sd.length >= 3 && !seen.has(sd)) {
+            seen.add(sd);
+            discoveries.push({
+              id: sd, type: sd.length <= 11 ? 'pessoa_fisica' : 'empresa',
+              label: s.nome || sd, document: sd, source: 'pncp',
+              originalData: {}, context: 'Análise Detalhada (Sócio)',
+            });
+          }
+        });
+      });
+      reportDiscovery(discoveries);
       const id = ++adUid;
       const analise = { id, licitacao: { numeroControlePNCP: contrato.numeroControlePNCP, fornecedor: contrato.fornecedor?.razaoSocial || contrato.niFornecedor || '-' }, data: json, licitacoes, timestamp: new Date().toISOString() };
       dispatch(addAdAnalise(analise));

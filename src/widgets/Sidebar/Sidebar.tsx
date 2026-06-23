@@ -6,6 +6,7 @@ import { setSubTabAtiva } from '@/app/store/slices/ligacaoPoliticaSlice';
 
 const TAB_ROUTES: Record<string, string> = {
   'home': '/',
+  'investigar': '/investigar',
   'conheca-estado': '/estado',
   'licitacoes': '/licitacoes',
   'relacoes': '/tse',
@@ -33,6 +34,7 @@ export function Sidebar() {
   const theme = useAppSelector((s) => s.theme.theme);
   const lpResultados = useAppSelector((s) => s.ligacaoPolitica.lpResultados);
   const ligPoliticaCache = useAppSelector((s) => s.ligacaoPolitica.ligPoliticaCache);
+  const discoveryCount = useAppSelector((s) => s.investigation.discoveries.length);
 
   const showLpNavBtn = lpResultados && ligPoliticaCache.length > 0;
 
@@ -64,6 +66,9 @@ export function Sidebar() {
           >
             <span className="nav-tab-icon">{tab.icon}</span>
             <span className="nav-tab-label">{tab.label}</span>
+            {tab.id === 'investigar' && discoveryCount > 0 && (
+              <span className="nav-tab-badge">{discoveryCount}</span>
+            )}
           </button>
         ))}
         {showLpNavBtn && (

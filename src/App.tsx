@@ -12,6 +12,7 @@ const DeputadosPage = lazy(() => import('./pages/DeputadosPage/DeputadosPage'));
 const SenadoresPage = lazy(() => import('./pages/SenadoresPage/SenadoresPage'));
 const TcuPage = lazy(() => import('./pages/TcuPage/TcuPage'));
 const LigacaoPoliticaPage = lazy(() => import('./pages/LigacaoPoliticaPage/LigacaoPoliticaPage'));
+const InvestigativePanelPage = lazy(() => import('./pages/InvestigativePanelPage/InvestigativePanelPage'));
 const EstadoPage = lazy(() => import('./pages/EstadoPage/EstadoPage'));
 const WikiPage = lazy(() => import('./pages/WikiPage/WikiPage'));
 
@@ -49,6 +50,7 @@ function AppLayout() {
             <Route path="senadores" element={<SenadoresPage />} />
             <Route path="tcu" element={<TcuPage />} />
             <Route path="ligacao-politica" element={<LigacaoPoliticaPage />} />
+            <Route path="investigar" element={<InvestigativePanelPage />} />
             <Route path="estado" element={<EstadoPage />} />
             <Route path="wiki" element={<WikiPage />} />
             <Route path="*" element={<HomePage />} />

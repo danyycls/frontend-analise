@@ -12,6 +12,7 @@ import BuscaPartido from '@/features/tse/ui/BuscaPartido';
 import BuscaDoador from '@/features/tse/ui/BuscaDoador';
 import BuscaFornecedor from '@/features/tse/ui/BuscaFornecedor';
 import { fmtDoc } from '@/shared/lib/formatters';
+import { useDiscoveryReporter } from '@/shared/lib/entity-discovery';
 
 let rpUid = 0;
 
@@ -31,6 +32,7 @@ export default function TsePage() {
   const [rpCache, setRpCache] = useState([]);
   const rpDataCacheRef = useRef(rpDataCache);
   const rpMetodoStateRef = useRef(rpMetodoState);
+  const reportDiscovery = useDiscoveryReporter();
 
   useEffect(() => { rpDataCacheRef.current = rpDataCache; }, [rpDataCache]);
   useEffect(() => { rpMetodoStateRef.current = rpMetodoState; }, [rpMetodoState]);
@@ -53,7 +55,22 @@ export default function TsePage() {
     dispatch(setRpMetodoAtiva({ method, ativa: `rp-${id}` }));
     dispatch(setRpTopAba(method));
     dispatch(setAbaAtiva('relacoes'));
-  }, [dispatch]);
+
+    const discoveries: any[] = [];
+    const doc = searchParams?.replace?.(/\D/g, '') || '';
+    if (doc && doc.length >= 3) {
+      discoveries.push({
+        id: doc,
+        type: doc.length <= 11 ? 'pessoa_fisica' : 'empresa',
+        label: doc.length > 11 ? 'Empresa' : 'Pessoa Física',
+        document: doc,
+        source: 'tse',
+        originalData: { method },
+        context: `TSE Busca: ${method}`,
+      });
+    }
+    reportDiscovery(discoveries);
+  }, [dispatch, reportDiscovery]);
 
   const handleFecharRPSubTab = useCallback((method, key) => {
     const id = Number(key.replace('rp-', ''));

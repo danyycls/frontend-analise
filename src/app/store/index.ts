@@ -5,6 +5,7 @@ import tseReducer from './slices/tseSlice';
 import portalReducer from './slices/portalSlice';
 import consultaReducer from './slices/consultaSlice';
 import ligacaoPoliticaReducer from './slices/ligacaoPoliticaSlice';
+import investigationReducer from './slices/investigationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     portal: portalReducer,
     consulta: consultaReducer,
     ligacaoPolitica: ligacaoPoliticaReducer,
+    investigation: investigationReducer,
   },
 });
 
