@@ -578,7 +578,7 @@ function SecaoAgenda() {
     setLoading(prev => ({ ...prev, [subTabId]: true }));
 
     try {
-      const resp = await api.get<any>('`/senado/agenda/dia/${data}`');
+      const resp = await api.get<any>(`/senado/agenda/dia/${data}`);
       const json = await resp.json();
       setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: json.dados || [], loading: false } }));
     } catch (err) {
@@ -604,7 +604,7 @@ function SecaoAgenda() {
     setLoading(prev => ({ ...prev, [subTabId]: true }));
 
     try {
-      const resp = await api.get<any>('`/senado/agenda/mes/${data}`');
+      const resp = await api.get<any>(`/senado/agenda/mes/${data}`);
       const json = await resp.json();
       setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: json.dados || [], loading: false } }));
     } catch (err) {
@@ -628,7 +628,7 @@ function SecaoAgenda() {
     setLoading(prev => ({ ...prev, [subTabId]: true }));
 
     try {
-      const resp = await api.get<any>('`/senado/encontro/${params.codigo}`');
+      const resp = await api.get<any>(`/senado/encontro/${params.codigo}`);
       const json = await resp.json();
       setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: json, loading: false } }));
     } catch (err) {
@@ -808,7 +808,7 @@ function SecaoComissoes() {
     if (!comDadosCacheRef.current[id]) {
       setComDetalheLoading(id);
       try {
-        const resp = await api.get<any>('`/senado/comissoes/${id}`');
+        const resp = await api.get<any>(`/senado/comissoes/${id}`);
         const json = await resp.json();
         setComDadosCache(prev => ({ ...prev, [id]: json.dados }));
         setComSecao(prev => ({ ...prev, [id]: 'info' }));
@@ -1167,7 +1167,7 @@ export default function AnaliseSenadores() {
     if (!dadosCacheRef.current[id]) {
       setDetalheLoading(id);
       try {
-        const resp = await api.get<any>('`/senado/senadores/${id}/completo`');
+        const resp = await api.get<any>(`/senado/senadores/${id}/completo`);
         const json = await resp.json();
         setDadosCache(prev => ({ ...prev, [id]: json }));
         setSenatorSecao(prev => ({ ...prev, [id]: 'geral' }));

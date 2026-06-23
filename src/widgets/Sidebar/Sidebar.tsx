@@ -52,9 +52,9 @@ export function Sidebar() {
   return (
     <aside className="app-sidebar">
       <div className="sidebar-brand" onClick={() => { navigate('/'); dispatch(setAbaAtiva('home')); }}>
-        <span className="sidebar-logo">◆</span>
-        <span className="sidebar-title">PODP</span>
-        <span className="sidebar-badge">// SYS.v1</span>
+        <span className="sidebar-logo">◈</span>
+        <span className="sidebar-title">OBSERVATÓRIO</span>
+        <span className="sidebar-badge">// DADOS PÚBLICOS</span>
       </div>
 
       <nav className="sidebar-nav">

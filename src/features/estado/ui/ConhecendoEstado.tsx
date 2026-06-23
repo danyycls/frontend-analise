@@ -1,12 +1,11 @@
 // @ts-nocheck
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { api } from '@/shared/api/client';
-import { WS_BASE_URL } from '@/shared/config';
+import { API_BASE_URL, WS_BASE_URL } from '@/shared/config';
 import DetalheMunicipio from './DetalheMunicipio';
 import ErrorBoundary from '@/shared/ui/ErrorBoundary/ErrorBoundary';
-import SecaoGeralDeputado from '@/entities/deputado/ui/DeputadoSecaoGeral';
-import SecaoGeralSenador from '@/entities/senador/ui/SenadorSecaoGeral';
+import DeputadoDetailView from '@/features/analise/ui/DeputadoDetailView';
+import SenadorDetailView from '@/features/analise/ui/SenadorDetailView';
 import './ConhecendoEstado.css';
 import '../../analise/ui/AnaliseDeputados.css';
 
@@ -151,17 +150,111 @@ function ContadoresBar({ vereadores, deputados, senadores, municipios, pequenos 
 
 const ITENS_POR_PAGINA = 10;
 
-function TabelaCandidatos({ dados, titulo }) {
+function SearchAutocomplete({ dados, placeholder, campoNome, campoPartido, onFilter }: {
+  dados: any[];
+  placeholder: string;
+  campoNome: string;
+  campoPartido: string;
+  onFilter: (texto: string) => void;
+}) {
+  const [texto, setTexto] = useState('');
+  const [dropdown, setDropdown] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const sugestoes = useMemo(() => {
+    if (!texto.trim()) return dados.slice(0, 15);
+    const q = texto.toLowerCase();
+    return dados.filter(d => {
+      const nome = (d[campoNome] || '').toLowerCase();
+      const partido = (d[campoPartido] || '').toLowerCase();
+      return nome.includes(q) || partido.includes(q);
+    }).slice(0, 15);
+  }, [texto, dados, campoNome, campoPartido]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setDropdown(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTexto(e.target.value);
+    onFilter(e.target.value);
+  };
+
+  const handleSelect = (item: any) => {
+    const val = (item[campoNome] || '') + ' ' + (item[campoPartido] || '');
+    setTexto(val.trim());
+    setDropdown(false);
+    onFilter(val.trim());
+  };
+
+  const handleClear = () => {
+    setTexto('');
+    setDropdown(false);
+    onFilter('');
+  };
+
+  const handleToggle = () => {
+    setDropdown(!dropdown);
+  };
+
+  return (
+    <div className="search-autocomplete" ref={ref}>
+      <div className="search-input-row">
+        <input
+          className="search-input"
+          type="text"
+          placeholder={placeholder}
+          value={texto}
+          onChange={handleChange}
+          onFocus={() => setDropdown(true)}
+        />
+        {texto ? (
+          <button type="button" className="search-clear" onClick={handleClear} title="Limpar">×</button>
+        ) : (
+          <button type="button" className="search-toggle" onClick={handleToggle} title="Ver lista">{dropdown ? '▴' : '▾'}</button>
+        )}
+      </div>
+      {dropdown && (
+        <div className="autocomplete-list">
+          {sugestoes.map((item, i) => (
+            <div key={i} className="autocomplete-item" onClick={() => handleSelect(item)}>
+              <span className="autocomplete-nome">{item[campoNome] || '-'}</span>
+              {item[campoPartido] && <span className="autocomplete-partido">{item[campoPartido]}</span>}
+            </div>
+          ))}
+          {sugestoes.length === 0 && texto && (
+            <div className="autocomplete-empty">Nenhum resultado</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabelaCandidatos({ dados, titulo, semSecao }) {
   const [situacaoAtiva, setSituacaoAtiva] = useState(null);
   const [tipoAtivo, setTipoAtivo] = useState('TODAS');
   const [anoFiltro, setAnoFiltro] = useState(null);
   const [pagina, setPagina] = useState(0);
+  const [buscaTexto, setBuscaTexto] = useState('');
+  const [showBusca, setShowBusca] = useState(false);
 
   const situacoes = [...new Set(dados.map(d => d.situacao_totalizacao_descricao))].filter(Boolean).sort();
 
   const dadosSituacao = situacaoAtiva ? dados.filter(d => d.situacao_totalizacao_descricao === situacaoAtiva) : dados;
 
-  const anos = [...new Set(dadosSituacao.map(d => d.ano_eleicao))].sort((a, b) => b - a);
+  const dadosBuscados = !buscaTexto ? dadosSituacao : dadosSituacao.filter(d => {
+    const q = buscaTexto.toLowerCase();
+    return (d.nome_urna || '').toLowerCase().includes(q) ||
+           (d.nome_completo || '').toLowerCase().includes(q) ||
+           (d.partido_sigla || '').toLowerCase().includes(q);
+  });
+
+  const anos = [...new Set(dadosBuscados.map(d => d.ano_eleicao))].sort((a, b) => b - a);
 
   useEffect(() => {
     if (anos.length > 0 && anoFiltro === null) setAnoFiltro(anos[0]);
@@ -171,9 +264,11 @@ function TabelaCandidatos({ dados, titulo }) {
     setPagina(0);
     setAnoFiltro(anos.length > 0 ? anos[0] : null);
     setTipoAtivo('TODAS');
+    setBuscaTexto('');
+    setShowBusca(false);
   }, [situacaoAtiva]);
 
-  const filtrados = dadosSituacao.filter(d => {
+  const filtrados = dadosBuscados.filter(d => {
     if (anoFiltro !== null && d.ano_eleicao !== anoFiltro) return false;
     if (tipoAtivo === 'ORDINÁRIA') return d.eleicao_tipo === 'ORDINÁRIA';
     if (tipoAtivo === 'SUPLEMENTAR') return d.eleicao_tipo === 'SUPLEMENTAR';
@@ -185,9 +280,9 @@ function TabelaCandidatos({ dados, titulo }) {
   const inicio = paginaCorrigida * ITENS_POR_PAGINA;
   const paginaDados = filtrados.slice(inicio, inicio + ITENS_POR_PAGINA);
 
-  return (
-    <div className="estado-section">
-      <h2>{titulo} <span className="count">({dados.length} registros)</span></h2>
+  const inner = (
+    <>
+      <h2 style={{ display: titulo ? 'block' : 'none' }}>{titulo} <span className="count">({dados.length} registros)</span></h2>
 
       <div className="cand-situacao-btns">
         {situacoes.map(s => (
@@ -217,7 +312,20 @@ function TabelaCandidatos({ dados, titulo }) {
                 {t === 'TODAS' ? 'Todas' : t.charAt(0) + t.slice(1).toLowerCase()}
               </button>
             ))}
+            <button className={`ano-btn ${showBusca ? 'ativo' : ''}`} onClick={() => setShowBusca(!showBusca)} title="Buscar por nome ou partido">
+              🔍
+            </button>
           </div>
+
+          {showBusca && (
+            <SearchAutocomplete
+              dados={dadosSituacao}
+              placeholder="🔍 Buscar por nome ou partido..."
+              campoNome="nome_urna"
+              campoPartido="partido_sigla"
+              onFilter={(t) => { setBuscaTexto(t); setPagina(0); }}
+            />
+          )}
 
           <table className="estado-table">
             <thead>
@@ -262,170 +370,158 @@ function TabelaCandidatos({ dados, titulo }) {
       {situacaoAtiva && dadosSituacao.length === 0 && (
         <p style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)' }}>Nenhum candidato nesta situação</p>
       )}
+    </>
+  );
+  if (semSecao) return inner;
+  return <div className="estado-section">{inner}</div>;
+}
+
+const CHART_COLORS = [
+  '#ff0080', '#00ffff', '#39ff14', '#ff6600', '#b000ff',
+  '#ff00ff', '#00ffcc', '#ffff00', '#0066ff', '#ff4400',
+];
+
+function aggregateBy(data: any[], key: string) {
+  const map = new Map<string, number>();
+  data.forEach(d => {
+    const k = d[key] || 'Desconhecido';
+    map.set(k, (map.get(k) || 0) + Number(d.valor || 0));
+  });
+  return Array.from(map.entries())
+    .map(([nome, valor]) => ({ nome, valor }))
+    .sort((a, b) => b.valor - a.valor);
+}
+
+function aggregateByValueRange(data: any[]) {
+  const ranges = [
+    { label: 'Até R$ 10 mil', min: 0, max: 10000 },
+    { label: 'R$ 10 mil a R$ 100 mil', min: 10000, max: 100000 },
+    { label: 'R$ 100 mil a R$ 1 mi', min: 100000, max: 1000000 },
+    { label: 'Acima de R$ 1 milhão', min: 1000000, max: Infinity },
+  ];
+  return ranges.map(r => ({
+    nome: r.label,
+    valor: data
+      .filter(d => Number(d.valor || 0) >= r.min && Number(d.valor || 0) < r.max)
+      .reduce((s, d) => s + Number(d.valor || 0), 0),
+  })).filter(r => r.valor > 0);
+}
+
+function topN(data: { nome: string; valor: number }[], n = 8) {
+  if (data.length <= n) return data;
+  const top = data.slice(0, n - 1);
+  const outrosValor = data.slice(n - 1).reduce((s, d) => s + d.valor, 0);
+  return [...top, { nome: `Outros (${data.length - n + 1})`, valor: outrosValor }];
+}
+
+function fmtMoneyCompact(v: number) {
+  if (v >= 1e9) return 'R$ ' + (v / 1e9).toFixed(1) + ' bi';
+  if (v >= 1e6) return 'R$ ' + (v / 1e6).toFixed(1) + ' mi';
+  if (v >= 1e3) return 'R$ ' + (v / 1e3).toFixed(0) + ' mil';
+  return 'R$ ' + v.toFixed(0);
+}
+
+function PieChart({ data, size = 160 }: { data: { nome: string; valor: number }[]; size?: number }) {
+  const total = data.reduce((s, d) => s + d.valor, 0);
+  if (total === 0 || data.length === 0) {
+    return <div className="chart-empty">Sem dados</div>;
+  }
+
+  const radius = size / 2 - 2;
+  const cx = size / 2;
+  const cy = size / 2;
+  let currentAngle = -90;
+
+  const slices = data.map(d => {
+    const pct = (d.valor / total) * 360;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + pct;
+    currentAngle += pct;
+    return { ...d, startAngle, endAngle, pct };
+  });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <svg className="chart-svg" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {slices.map((slice, i) => {
+          const startRad = (slice.startAngle * Math.PI) / 180;
+          const endRad = (slice.endAngle * Math.PI) / 180;
+          const x1 = cx + radius * Math.cos(startRad);
+          const y1 = cy + radius * Math.sin(startRad);
+          const x2 = cx + radius * Math.cos(endRad);
+          const y2 = cy + radius * Math.sin(endRad);
+          const largeArc = slice.endAngle - slice.startAngle > 180 ? 1 : 0;
+          const d = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+          return <path key={i} d={d} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="var(--bg-surface)" strokeWidth="1.5" />;
+        })}
+      </svg>
+      <div className="chart-legend">
+        {slices.map((slice, i) => (
+          <div className="chart-legend-item" key={i} title={`${slice.nome}: ${fmtMoneyCompact(slice.valor)} (${slice.pct.toFixed(1)}%)`}>
+            <span className="chart-legend-color" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+            <span className="chart-legend-name">{slice.nome}</span>
+            <span className="chart-legend-val">{fmtMoneyCompact(slice.valor)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function DetalheDeputado({ deputado, onFechar }) {
-  const [dados, setDados] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState(null);
-  const concluidoRef = useRef(false);
+const PAGE_SECTIONS = [
+  { id: 'estado-inicio', label: 'Início' },
+  { id: 'estado-prefeitos', label: 'Prefeitos' },
+  { id: 'estado-vice', label: 'Vice-Prefeitos' },
+  { id: 'estado-vereadores', label: 'Vereadores' },
+  { id: 'estado-deputados', label: 'Deputados' },
+  { id: 'estado-senadores', label: 'Senadores' },
+  { id: 'estado-financas', label: 'Finanças' },
+  { id: 'estado-municipios', label: 'Municípios' },
+];
+
+function PageNav() {
+  const [active, setActive] = useState('estado-inicio');
 
   useEffect(() => {
-    if (!deputado) return;
-    console.log('[DetalheDeputado] iniciando fetch para deputado:', deputado.id, deputado);
-    concluidoRef.current = false;
-    setLoading(true);
-    setErro(null);
-    const url = `${API_BASE_URL}/deputados/${deputado.id}/completo`;
-    console.log('[DetalheDeputado] URL:', url);
-    fetch(url)
-      .then(r => {
-        console.log('[DetalheDeputado] resposta status:', r.status);
-        if (!r.ok) throw new Error(`Erro ${r.status}`);
-        return r.json();
-      })
-      .then(data => {
-        console.log('[DetalheDeputado] dados recebidos:', data);
-        concluidoRef.current = true;
-        setDados(data);
-        setLoading(false);
-      })
-      .catch(e => {
-        console.error('[DetalheDeputado] erro:', e.message);
-        concluidoRef.current = true;
-        setErro(e.message);
-        setLoading(false);
-      });
+    const ids = PAGE_SECTIONS.map((s) => s.id);
+    const elements = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
 
-    const timeout = setTimeout(() => {
-      if (!concluidoRef.current) {
-        console.warn('[DetalheDeputado] timeout de 30s excedido');
-        setLoading(false);
-        setErro('Tempo limite excedido ao carregar dados do deputado');
-      }
-    }, 30000);
-    return () => clearTimeout(timeout);
-  }, [deputado]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          setActive(visible[0].target.id);
+        }
+      },
+      { rootMargin: '-15% 0px -70% 0px', threshold: 0 },
+    );
 
-  if (loading) return <div className="estado-detalhe-loading"><div className="spinner" /> Carregando detalhes...</div>;
-  if (erro) return (
-    <div className="estado-detalhe">
-      <div className="estado-detalhe-header"><h3>Erro</h3><button className="voltar-btn" onClick={onFechar}>× Voltar</button></div>
-      <p style={{ textAlign: 'center', padding: 40, color: '#ff6b6b' }}>Erro ao carregar detalhes: {erro}</p>
-    </div>
-  );
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
-  const dep = dados?.deputado || dados;
-  if (!dep) return (
-    <div className="estado-detalhe">
-      <div className="estado-detalhe-header"><h3>Deputado não encontrado</h3><button className="voltar-btn" onClick={onFechar}>× Voltar</button></div>
-      <p style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Dados do deputado não disponíveis</p>
-    </div>
-  );
-
-  const u = dep.ultimoStatus || {};
+  const scrollTo = useCallback((id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
 
   return (
-    <div className="estado-detalhe">
-      <div className="estado-detalhe-header">
-        <div className="estado-detalhe-header-info">
-          {u.urlFoto && <img className="ad-dep-foto" src={u.urlFoto} alt={dep.nomeCivil || u.nome} onError={(e) => { e.target.style.display = 'none'; }} />}
-          <div>
-            <h3>{dep.nomeCivil || u.nome || '-'}</h3>
-            <div className="ad-dep-tags">
-              <span className="tag tag-candidato">{u.siglaPartido || '-'}</span>
-              <span className="tag tag-partido">{u.siglaUf || '-'}</span>
-            </div>
-          </div>
-        </div>
-        <button className="voltar-btn" onClick={onFechar}>× Voltar</button>
-      </div>
-      <SecaoGeralDeputado deputado={dep} />
-    </div>
-  );
-}
-
-function DetalheSenador({ senador, onFechar }) {
-  const [dados, setDados] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState(null);
-  const concluidoRef = useRef(false);
-
-  useEffect(() => {
-    if (!senador) return;
-    console.log('[DetalheSenador] iniciando fetch para senador:', senador.codigo, senador);
-    concluidoRef.current = false;
-    setLoading(true);
-    setErro(null);
-    const url = `${API_BASE_URL}/senado/senadores/${senador.codigo}/completo`;
-    console.log('[DetalheSenador] URL:', url);
-    fetch(url)
-      .then(r => {
-        console.log('[DetalheSenador] resposta status:', r.status);
-        if (!r.ok) throw new Error(`Erro ${r.status}`);
-        return r.json();
-      })
-      .then(data => {
-        console.log('[DetalheSenador] dados recebidos:', data);
-        concluidoRef.current = true;
-        setDados(data);
-        setLoading(false);
-      })
-      .catch(e => {
-        console.error('[DetalheSenador] erro:', e.message);
-        concluidoRef.current = true;
-        setErro(e.message);
-        setLoading(false);
-      });
-
-    const timeout = setTimeout(() => {
-      if (!concluidoRef.current) {
-        console.warn('[DetalheSenador] timeout de 30s excedido');
-        setLoading(false);
-        setErro('Tempo limite excedido ao carregar dados do senador');
-      }
-    }, 30000);
-    return () => clearTimeout(timeout);
-  }, [senador]);
-
-  if (loading) return <div className="estado-detalhe-loading"><div className="spinner" /> Carregando detalhes...</div>;
-  if (erro) return (
-    <div className="estado-detalhe">
-      <div className="estado-detalhe-header"><h3>Erro</h3><button className="voltar-btn" onClick={onFechar}>× Voltar</button></div>
-      <p style={{ textAlign: 'center', padding: 40, color: '#ff6b6b' }}>Erro ao carregar detalhes: {erro}</p>
-    </div>
-  );
-
-  const sen = dados?.senador || dados;
-  if (!sen) return (
-    <div className="estado-detalhe">
-      <div className="estado-detalhe-header"><h3>Senador não encontrado</h3><button className="voltar-btn" onClick={onFechar}>× Voltar</button></div>
-      <p style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Dados do senador não disponíveis</p>
-    </div>
-  );
-
-  const ident = sen.IdentificacaoParlamentar || {};
-  const basico = sen.DadosBasicosParlamentar || {};
-
-  return (
-    <div className="estado-detalhe">
-      <div className="estado-detalhe-header">
-        <div className="estado-detalhe-header-info">
-          {ident.UrlFotoParlamentar && <img className="ad-dep-foto" src={ident.UrlFotoParlamentar} alt={ident.NomeParlamentar} onError={(e) => { e.target.style.display = 'none'; }} />}
-          <div>
-            <h3>{ident.NomeParlamentar || ident.NomeCompletoParlamentar || '-'}</h3>
-            <div className="ad-dep-tags">
-              <span className="tag tag-candidato">{ident.SiglaPartidoParlamentar || '-'}</span>
-              <span className="tag tag-partido">{ident.UfParlamentar || '-'}</span>
-            </div>
-          </div>
-        </div>
-        <button className="voltar-btn" onClick={onFechar}>× Voltar</button>
-      </div>
-      <SecaoGeralSenador senador={sen} />
-    </div>
+    <nav className="estado-page-nav">
+      {PAGE_SECTIONS.map((section) => (
+        <button
+          key={section.id}
+          className={`page-nav-item ${active === section.id ? 'active' : ''}`}
+          onClick={() => scrollTo(section.id)}
+        >
+          <span className="page-nav-dot" />
+          <span>{section.label}</span>
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -442,21 +538,30 @@ export default function ConhecendoEstado() {
   const [senDetalhe, setSenDetalhe] = useState(null);
   const [municipioDetalhe, setMunicipioDetalhe] = useState(null);
 
-  const [anoFiltro, setAnoFiltro] = useState(new Date().getFullYear() - 1);
-  const [buscarKey, setBuscarKey] = useState(0);
-  const [finSecoes, setFinSecoes] = useState({});
   const [finErro, setFinErro] = useState(null);
-  const finRef = useRef({});
-  const finConcluidoRef = useRef(false);
+  const [finCache, setFinCache] = useState({});
+  const [anosCarregados, setAnosCarregados] = useState(new Set());
+  const [anoAtualCarregando, setAnoAtualCarregando] = useState(null);
+  const [anosSelecionados, setAnosSelecionados] = useState([new Date().getFullYear() - 1]);
+  const [mesSelecionado, setMesSelecionado] = useState(0);
   const [popupInfo, setPopupInfo] = useState(null);
-  const [collapsed, setCollapsed] = useState({});
+  const [collapsed, setCollapsed] = useState({ deputados: true });
+  const [depBuscaTexto, setDepBuscaTexto] = useState('');
+  const [munNomeBusca, setMunNomeBusca] = useState('');
+  const [chartPopup, setChartPopup] = useState(null);
 
-  function handleBuscar() {
-    setFinSecoes({});
+  function toggleAno(ano) {
+    setAnosSelecionados(prev => {
+      if (prev.includes(ano)) return prev.filter(a => a !== ano);
+      return [...prev, ano];
+    });
+  }
+
+  function recarregarTudo() {
+    setFinCache({});
+    setAnosCarregados(new Set());
     setFinErro(null);
-    finRef.current = {};
-    finConcluidoRef.current = false;
-    setBuscarKey(k => k + 1);
+    setAnoAtualCarregando(null);
   }
 
   function toggleCollapse(secao) {
@@ -491,15 +596,29 @@ export default function ConhecendoEstado() {
 
   useEffect(() => {
     if (!uf) return;
-    setFinSecoes({});
+    setFinCache({});
+    setAnosCarregados(new Set());
+    setAnoAtualCarregando(null);
     setFinErro(null);
-    finRef.current = {};
-    finConcluidoRef.current = false;
+  }, [uf]);
+
+  useEffect(() => {
+    if (!uf) return;
+
+    const anosFaltantes = anosSelecionados.filter(a => !anosCarregados.has(a));
+    if (anosFaltantes.length === 0) return;
+    if (anoAtualCarregando !== null) return;
+
+    const anoParaCarregar = anosFaltantes[0];
+    setAnoAtualCarregando(anoParaCarregar);
+    setFinErro(null);
+
+    const dadosAno = {};
 
     const ws = new WebSocket(`${WS_BASE_URL}/ws`);
 
     ws.onopen = () => {
-      ws.send(JSON.stringify({ channel: 'estado_financeiro', uf, exercicio: anoFiltro }));
+      ws.send(JSON.stringify({ channel: 'estado_financeiro', uf, exercicio: anoParaCarregar }));
     };
 
     ws.onmessage = (e) => {
@@ -507,30 +626,27 @@ export default function ConhecendoEstado() {
         const msg = JSON.parse(e.data);
         switch (msg.type) {
           case 'despesa_pessoal':
-            finRef.current = { ...finRef.current, despesa_pessoal: msg.data };
-            setFinSecoes({ ...finRef.current });
+            dadosAno.despesa_pessoal = msg.data;
             break;
           case 'despesa_categoria':
-            finRef.current = { ...finRef.current, despesa_categoria: msg.data?.dados || [] };
-            setFinSecoes({ ...finRef.current });
+            dadosAno.despesa_categoria = msg.data?.dados || [];
             break;
           case 'gastos_por_funcao':
-            finRef.current = { ...finRef.current, gastos_por_funcao: msg.data?.dados || [] };
-            setFinSecoes({ ...finRef.current });
+            dadosAno.gastos_por_funcao = msg.data?.dados || [];
             break;
           case 'receitas':
-            finRef.current = { ...finRef.current, receitas: msg.data?.dados || [] };
-            setFinSecoes({ ...finRef.current });
+            dadosAno.receitas = msg.data?.dados || [];
             break;
           case 'recursos_federais':
-            finRef.current = { ...finRef.current, recursos_federais: msg.data?.dados || [] };
-            setFinSecoes({ ...finRef.current });
+            dadosAno.recursos_federais = msg.data?.dados || [];
             break;
           case 'erro':
             setFinErro(msg.data?.erro || 'Erro desconhecido');
             break;
           case 'concluido':
-            finConcluidoRef.current = true;
+            setFinCache(prev => ({ ...prev, [anoParaCarregar]: dadosAno }));
+            setAnosCarregados(prev => new Set([...prev, anoParaCarregar]));
+            setAnoAtualCarregando(null);
             ws.close();
             break;
         }
@@ -538,47 +654,52 @@ export default function ConhecendoEstado() {
     };
 
     ws.onerror = () => {
+      setAnoAtualCarregando(null);
       ws.close();
     };
 
     return () => { ws.close(); };
-  }, [uf, buscarKey]);
+  }, [uf, anosSelecionados, anosCarregados, anoAtualCarregando]);
 
-  const recursosFedPag = usePaginacao(finSecoes?.recursos_federais, ITENS_POR_PAGINA);
+  const finSecoes = useMemo(() => {
+    const anos = Object.keys(finCache).map(Number).sort();
+    if (anos.length === 0) return {};
+    const ultimoAno = anos[anos.length - 1];
+    return finCache[ultimoAno] || {};
+  }, [finCache]);
 
-  if (depDetalhe) {
-    return (
-      <div className="estado-page">
-        <ErrorBoundary onFechar={() => setDepDetalhe(null)}>
-          <DetalheDeputado deputado={depDetalhe} onFechar={() => setDepDetalhe(null)} />
-        </ErrorBoundary>
-      </div>
-    );
-  }
+  const recursosFedExibicao = useMemo(() => {
+    let dados = [];
+    anosSelecionados.forEach(ano => {
+      if (finCache[ano]?.recursos_federais) {
+        dados = dados.concat(finCache[ano].recursos_federais);
+      }
+    });
+    if (mesSelecionado !== 0) {
+      dados = dados.filter(d => {
+        const s = String(d.mes_ano || '');
+        return parseInt(s.substring(4, 6), 10) === mesSelecionado;
+      });
+    }
+    return dados;
+  }, [finCache, anosSelecionados, mesSelecionado]);
 
-  if (senDetalhe) {
-    return (
-      <div className="estado-page">
-        <ErrorBoundary onFechar={() => setSenDetalhe(null)}>
-          <DetalheSenador senador={senDetalhe} onFechar={() => setSenDetalhe(null)} />
-        </ErrorBoundary>
-      </div>
-    );
-  }
+  const recursosFedPag = usePaginacao(recursosFedExibicao, ITENS_POR_PAGINA);
 
-  if (municipioDetalhe) {
-    return (
-      <div className="estado-page">
-        <ErrorBoundary onFechar={() => setMunicipioDetalhe(null)}>
-          <DetalheMunicipio
-            municipio={municipioDetalhe}
-            uf={uf}
-            onFechar={() => setMunicipioDetalhe(null)}
-          />
-        </ErrorBoundary>
-      </div>
-    );
-  }
+  const chartData = useMemo(() => {
+    if (!recursosFedExibicao.length) return null;
+    return {
+      tipoPessoa: aggregateBy(recursosFedExibicao, 'tipo_pessoa'),
+      porOrgao: topN(aggregateBy(recursosFedExibicao, 'nome_orgao')),
+      porOrgaoSuperior: topN(aggregateBy(recursosFedExibicao, 'nome_orgao_superior')),
+      porMesAno: topN(aggregateBy(recursosFedExibicao, 'mes_ano'), 12),
+    };
+  }, [recursosFedExibicao]);
+
+  const anoExibicao = useMemo(() => {
+    const anos = Object.keys(finCache).map(Number).sort();
+    return anos.length > 0 ? anos[anos.length - 1] : null;
+  }, [finCache]);
 
   const nome = basico?.nome || uf;
   const ufSigla = basico?.uf || uf;
@@ -591,6 +712,21 @@ export default function ConhecendoEstado() {
 
   const listaDeputados = deputados || [];
   const listaSenadores = senadores || [];
+
+  const depFiltrados = useMemo(() => {
+    if (!depBuscaTexto) return listaDeputados;
+    const q = depBuscaTexto.toLowerCase();
+    return listaDeputados.filter(d =>
+      (d.nome || '').toLowerCase().includes(q) ||
+      (d.sigla_partido || '').toLowerCase().includes(q)
+    );
+  }, [listaDeputados, depBuscaTexto]);
+
+  const munFiltrados = useMemo(() => {
+    if (!munNomeBusca) return municipios;
+    const q = munNomeBusca.toLowerCase();
+    return municipios.filter(m => (m.nome || '').toLowerCase().includes(q));
+  }, [municipios, munNomeBusca]);
 
   const {
     despesa_pessoal: finDespesaPessoal,
@@ -611,9 +747,44 @@ export default function ConhecendoEstado() {
     );
   }
 
+  if (depDetalhe) {
+    return (
+      <div className="estado-page">
+        <ErrorBoundary onFechar={() => setDepDetalhe(null)}>
+          <DeputadoDetailView deputadoId={depDetalhe.id} onFechar={() => setDepDetalhe(null)} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
+  if (senDetalhe) {
+    return (
+      <div className="estado-page">
+        <ErrorBoundary onFechar={() => setSenDetalhe(null)}>
+          <SenadorDetailView senadorCodigo={senDetalhe.codigo} onFechar={() => setSenDetalhe(null)} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
+  if (municipioDetalhe) {
+    return (
+      <div className="estado-page">
+        <ErrorBoundary onFechar={() => setMunicipioDetalhe(null)}>
+          <DetalheMunicipio
+            municipio={municipioDetalhe}
+            uf={uf}
+            onFechar={() => setMunicipioDetalhe(null)}
+          />
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
   return (
     <div className="estado-page">
-      <div className="estado-header">
+      <PageNav />
+      <div className="estado-header" id="estado-inicio">
         <h1>Conhecendo {nome}</h1>
         <span className="uf-badge">{ufSigla}</span>
         {populacao > 0 && <span className="pop-badge">Pop: {fmtNum(populacao)} hab.</span>}
@@ -628,66 +799,116 @@ export default function ConhecendoEstado() {
         pequenos={municipios.filter(m => m.populacao > 0 && m.populacao < 10000).length}
       />
 
-      {candidatos ? (
-        <div className="estado-section">
-          <div className="estado-section-header" onClick={() => toggleCollapse('candidatos')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Candidatos Eleitos <span className="count">({listaVereadores.length + listaPrefeitos.length + listaVice.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
-            <span>{collapsed.candidatos ? '▶' : '▼'}</span>
+      {/* ── Linha 1: Prefeitos + Vice ── */}
+      <div className="politicos-grid">
+        <div className="estado-section" id="estado-prefeitos">
+          <div className="estado-section-header" onClick={() => toggleCollapse('prefeitos')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0 }}>Prefeitos Eleitos <span className="count">({listaPrefeitos.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
+            <span>{collapsed.prefeitos ? '▶' : '▼'}</span>
           </div>
-          {!collapsed.candidatos && (
+          {!collapsed.prefeitos && (
+            candidatos ? (
+              listaPrefeitos.length > 0 ? (
+                <TabelaCandidatos dados={listaPrefeitos} titulo="" semSecao />
+              ) : (
+                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum prefeito encontrado</p>
+              )
+            ) : (
+              <div className="municipios-loading">Carregando prefeitos...</div>
+            )
+          )}
+        </div>
+
+        <div className="estado-section" id="estado-vice">
+          <div className="estado-section-header" onClick={() => toggleCollapse('vice')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0 }}>Vice-Prefeitos Eleitos <span className="count">({listaVice.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
+            <span>{collapsed.vice ? '▶' : '▼'}</span>
+          </div>
+          {!collapsed.vice && (
+            candidatos ? (
+              listaVice.length > 0 ? (
+                <TabelaCandidatos dados={listaVice} titulo="" semSecao />
+              ) : (
+                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum vice-prefeito encontrado</p>
+              )
+            ) : (
+              <div className="municipios-loading">Carregando vice-prefeitos...</div>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* ── Linha 2: Vereadores + Deputados ── */}
+      <div className="politicos-grid">
+        <div className="estado-section" id="estado-vereadores">
+          <div className="estado-section-header" onClick={() => toggleCollapse('vereadores')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0 }}>Vereadores Eleitos <span className="count">({listaVereadores.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
+            <span>{collapsed.vereadores ? '▶' : '▼'}</span>
+          </div>
+          {!collapsed.vereadores && (
+            candidatos ? (
+              listaVereadores.length > 0 ? (
+                <TabelaCandidatos dados={listaVereadores} titulo="" semSecao />
+              ) : (
+                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum vereador encontrado</p>
+              )
+            ) : (
+              <div className="municipios-loading">Carregando vereadores...</div>
+            )
+          )}
+        </div>
+
+        <div className="estado-section" id="estado-deputados">
+          <div className="estado-section-header" onClick={() => toggleCollapse('deputados')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0 }}>Deputados Federais <span className="count">({depFiltrados.length}/{listaDeputados.length})</span><InfoBadge chave="deputados" onInfoClick={setPopupInfo} /></h2>
+            <span>{collapsed.deputados ? '▶' : '▼'}</span>
+          </div>
+          {!collapsed.deputados && (
             <>
-              {listaVereadores.length > 0 && <TabelaCandidatos dados={listaVereadores} titulo="Vereadores Eleitos" />}
-              {listaPrefeitos.length > 0 && <TabelaCandidatos dados={listaPrefeitos} titulo="Prefeitos Eleitos" />}
-              {listaVice.length > 0 && <TabelaCandidatos dados={listaVice} titulo="Vice-Prefeitos Eleitos" />}
-              {listaVereadores.length === 0 && listaPrefeitos.length === 0 && listaVice.length === 0 && (
-                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum candidato encontrado para esta UF</p>
+              {listaDeputados.length > 0 ? (
+                <>
+                  <SearchAutocomplete
+                    dados={listaDeputados}
+                    placeholder="🔍 Buscar deputado por nome ou partido..."
+                    campoNome="nome"
+                    campoPartido="sigla_partido"
+                    onFilter={setDepBuscaTexto}
+                  />
+                  {depFiltrados.length > 0 ? (
+                    <div className="ad-grid">
+                      {depFiltrados.map(d => (
+                        <div key={d.id} className="ad-card-dep">
+                          <img className="ad-foto" src={d.url_foto} alt={d.nome} onError={(e) => { e.target.style.display = 'none'; }} />
+                          <div className="ad-card-dep-info">
+                            <strong className="ad-card-dep-nome">{d.nome}</strong>
+                            <span className="ad-card-dep-partido">
+                              <span className="tag tag-candidato">{d.sigla_partido}</span>
+                              <span className="ad-card-dep-uf">{d.sigla_uf}</span>
+                            </span>
+                            <span className="ad-card-dep-extra" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                              {d.email ? `📧 ${d.email}` : ''}{d.email && d.nome_eleitoral ? ' · ' : ''}{d.nome_eleitoral ? `🗳 ${d.nome_eleitoral}` : ''}
+                            </span>
+                          </div>
+                          <button className="btn btn-sm btn-outline-accent" onClick={() => setDepDetalhe(d)}>Detalhes</button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum deputado encontrado para os filtros atuais</p>
+                  )}
+                </>
+              ) : deputados !== null ? (
+                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum deputado encontrado</p>
+              ) : (
+                <div className="municipios-loading">Carregando deputados...</div>
               )}
             </>
           )}
         </div>
-      ) : (
-        <div className="estado-section">
-          <h2>Candidatos Eleitos <span className="count">(...)</span></h2>
-          <div className="municipios-loading">Carregando vereadores, prefeitos e vice-prefeitos...</div>
-        </div>
-      )}
-
-      <div className="estado-section">
-        <div className="estado-section-header" onClick={() => toggleCollapse('deputados')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}>Deputados Federais <span className="count">({listaDeputados.length})</span><InfoBadge chave="deputados" onInfoClick={setPopupInfo} /></h2>
-          <span>{collapsed.deputados ? '▶' : '▼'}</span>
-        </div>
-        {!collapsed.deputados && (
-          <>
-            {listaDeputados.length > 0 ? (
-              <div className="ad-grid">
-                {listaDeputados.map(d => (
-                  <div key={d.id} className="ad-card-dep">
-                    <img className="ad-foto" src={d.url_foto} alt={d.nome} onError={(e) => { e.target.style.display = 'none'; }} />
-                    <div className="ad-card-dep-info">
-                      <strong className="ad-card-dep-nome">{d.nome}</strong>
-                      <span className="ad-card-dep-partido">
-                        <span className="tag tag-candidato">{d.sigla_partido}</span>
-                        <span className="ad-card-dep-uf">{d.sigla_uf}</span>
-                      </span>
-                      <span className="ad-card-dep-extra" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                        {d.email ? `📧 ${d.email}` : ''}{d.email && d.nome_eleitoral ? ' · ' : ''}{d.nome_eleitoral ? `🗳 ${d.nome_eleitoral}` : ''}
-                      </span>
-                    </div>
-                    <button className="btn btn-sm btn-outline-accent" onClick={() => setDepDetalhe(d)}>Detalhes</button>
-                  </div>
-                ))}
-              </div>
-            ) : deputados !== null ? (
-              <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum deputado encontrado</p>
-            ) : (
-              <div className="municipios-loading">Carregando deputados...</div>
-            )}
-          </>
-        )}
       </div>
 
-      <div className="estado-section">
+      {/* ── Senadores Full Width ── */}
+      <div className="estado-section" id="estado-senadores" style={{ marginBottom: 24 }}>
         <div className="estado-section-header" onClick={() => toggleCollapse('senadores')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>Senadores <span className="count">({listaSenadores.length})</span><InfoBadge chave="senadores" onInfoClick={setPopupInfo} /></h2>
           <span>{collapsed.senadores ? '▶' : '▼'}</span>
@@ -697,37 +918,58 @@ export default function ConhecendoEstado() {
             {listaSenadores.length > 0 ? (
               <div className="ad-grid">
                 {listaSenadores.map(s => (
-                  <div key={s.codigo} className="ad-card-dep">
-                    <img className="ad-foto" src={s.url_foto} alt={s.nome_parlamentar} onError={(e) => { e.target.style.display = 'none'; }} />
-                    <div className="ad-card-dep-info">
-                      <strong className="ad-card-dep-nome">{s.nome_parlamentar}</strong>
-                      <span className="ad-card-dep-partido">
-                        <span className="tag tag-candidato">{s.partido}</span>
-                        <span className="ad-card-dep-uf">{s.uf}</span>
-                      </span>
-                      {s.nome_completo && (
-                        <span className="ad-card-dep-extra" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                          {s.nome_completo}
-                        </span>
-                      )}
-                    </div>
-                    <button className="btn btn-sm btn-outline-accent" onClick={() => setSenDetalhe(s)}>Detalhes</button>
+                      <div key={s.codigo} className="ad-card-dep">
+                        <img className="ad-foto" src={s.url_foto} alt={s.nome_parlamentar} onError={(e) => { e.target.style.display = 'none'; }} />
+                        <div className="ad-card-dep-info">
+                          <strong className="ad-card-dep-nome">{s.nome_parlamentar}</strong>
+                          <span className="ad-card-dep-partido">
+                            <span className="tag tag-candidato">{s.partido}</span>
+                            <span className="ad-card-dep-uf">{s.uf}</span>
+                          </span>
+                          {s.nome_completo && (
+                            <span className="ad-card-dep-extra" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                              {s.nome_completo}
+                            </span>
+                          )}
+                        </div>
+                        <button className="btn btn-sm btn-outline-accent" onClick={() => setSenDetalhe(s)}>Detalhes</button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : senadores !== null ? (
-              <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum senador encontrado</p>
-            ) : (
-              <div className="municipios-loading">Carregando senadores...</div>
-            )}
+                ) : senadores !== null ? (
+                  <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum senador encontrado</p>
+                ) : (
+                  <div className="municipios-loading">Carregando senadores...</div>
+                )}
           </>
         )}
       </div>
 
-      <div className="estado-section" style={{ padding: '8px 12px', marginBottom: 8, background: 'var(--card-bg)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Ano exercício:</span>
-        <input type="number" min="2010" max={new Date().getFullYear()} value={anoFiltro} onChange={(e) => setAnoFiltro(Number(e.target.value))} style={{ width: 80, padding: '4px 8px', fontSize: '0.85rem' }} />
-        <button className="btn btn-sm" onClick={handleBuscar}>Buscar Dados Financeiros</button>
+      <div className="estado-section" id="estado-financas" style={{ padding: '12px', marginBottom: 8, background: 'var(--card-bg)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Anos:</span>
+        {Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - 1 - i).reverse().map(ano => (
+          <button
+            key={ano}
+            className={`ano-btn ${anosSelecionados.includes(ano) ? 'ativo' : ''}`}
+            onClick={() => toggleAno(ano)}
+          >
+            {ano}{anoAtualCarregando === ano ? ' ⟳' : ''}
+          </button>
+        ))}
+        <span style={{ fontSize: '0.85rem', fontWeight: 600, marginLeft: 16 }}>Mês:</span>
+        <select value={mesSelecionado} onChange={e => setMesSelecionado(Number(e.target.value))}
+          style={{ padding: '6px 8px', fontSize: '0.78rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}>
+          <option value={0}>Todos</option>
+          {['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'].map((nome, i) => (
+            <option key={i+1} value={i+1}>{nome}</option>
+          ))}
+        </select>
+        {Object.keys(finCache).length > 0 && (
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: 8 }}>
+            {Object.keys(finCache).length} ano(s) carregado(s)
+          </span>
+        )}
+        <button className="btn btn-sm" onClick={recarregarTudo} style={{ marginLeft: 'auto' }}>Recarregar</button>
       </div>
 
       {finErro && (
@@ -737,7 +979,7 @@ export default function ConhecendoEstado() {
       {finDespesaPessoal && (
         <div className="estado-section">
           <div className="estado-section-header" onClick={() => toggleCollapse('despesa_pessoal')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Despesa com Pessoal <span className="count">(Executivo)</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoFiltro}</span><InfoBadge chave="despesa_pessoal" onInfoClick={setPopupInfo} /></h2>
+            <h2 style={{ margin: 0 }}>Despesa com Pessoal <span className="count">(Executivo)</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="despesa_pessoal" onInfoClick={setPopupInfo} /></h2>
             <span>{collapsed.despesa_pessoal ? '▶' : '▼'}</span>
           </div>
           {!collapsed.despesa_pessoal && (
@@ -753,7 +995,7 @@ export default function ConhecendoEstado() {
       {finDespesaCategoria && finDespesaCategoria.length > 0 && (
         <div className="estado-section">
           <div className="estado-section-header" onClick={() => toggleCollapse('despesa_categoria')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Despesa com Pessoal por Categoria <span className="count">({finDespesaCategoria.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoFiltro}</span><InfoBadge chave="despesa_categoria" onInfoClick={setPopupInfo} /></h2>
+            <h2 style={{ margin: 0 }}>Despesa com Pessoal por Categoria <span className="count">({finDespesaCategoria.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="despesa_categoria" onInfoClick={setPopupInfo} /></h2>
             <span>{collapsed.despesa_categoria ? '▶' : '▼'}</span>
           </div>
           {!collapsed.despesa_categoria && (
@@ -784,7 +1026,7 @@ export default function ConhecendoEstado() {
       {finGastosFuncao && finGastosFuncao.length > 0 && (
         <div className="estado-section">
           <div className="estado-section-header" onClick={() => toggleCollapse('gastos_por_funcao')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Gastos por Função <span className="count">({finGastosFuncao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoFiltro}</span><InfoBadge chave="gastos_por_funcao" onInfoClick={setPopupInfo} /></h2>
+            <h2 style={{ margin: 0 }}>Gastos por Função <span className="count">({finGastosFuncao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="gastos_por_funcao" onInfoClick={setPopupInfo} /></h2>
             <span>{collapsed.gastos_por_funcao ? '▶' : '▼'}</span>
           </div>
           {!collapsed.gastos_por_funcao && (
@@ -815,7 +1057,7 @@ export default function ConhecendoEstado() {
       {finReceitas && finReceitas.length > 0 && (
         <div className="estado-section">
           <div className="estado-section-header" onClick={() => toggleCollapse('receitas')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Receitas <span className="count">({finReceitas.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoFiltro}</span><InfoBadge chave="receitas" onInfoClick={setPopupInfo} /></h2>
+            <h2 style={{ margin: 0 }}>Receitas <span className="count">({finReceitas.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="receitas" onInfoClick={setPopupInfo} /></h2>
             <span>{collapsed.receitas ? '▶' : '▼'}</span>
           </div>
           {!collapsed.receitas && (
@@ -843,13 +1085,33 @@ export default function ConhecendoEstado() {
         </div>
       )}
 
-      {finRecursosFed && finRecursosFed.length > 0 && (
+      {recursosFedExibicao.length > 0 && (
         <div className="estado-section">
           <div className="estado-section-header" onClick={() => toggleCollapse('recursos_federais')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Recursos Federais Recebidos <span className="count">({finRecursosFed.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoFiltro}</span><InfoBadge chave="recursos_federais" onInfoClick={setPopupInfo} /></h2>
+            <h2 style={{ margin: 0 }}>Recursos Federais Recebidos <span className="count">({recursosFedExibicao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anosSelecionados.sort().join(', ')}</span><InfoBadge chave="recursos_federais" onInfoClick={setPopupInfo} /></h2>
             <span>{collapsed.recursos_federais ? '▶' : '▼'}</span>
           </div>
           {!collapsed.recursos_federais && (<>
+            {chartData && (
+              <div className="chart-row">
+                <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Tipo Pessoa', data: chartData.tipoPessoa })}>
+                  <div className="chart-card-title">Tipo Pessoa</div>
+                  <PieChart data={chartData.tipoPessoa} size={240} />
+                </div>
+                <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Órgão', data: chartData.porOrgao })}>
+                  <div className="chart-card-title">Por Órgão</div>
+                  <PieChart data={chartData.porOrgao} size={240} />
+                </div>
+                <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Órgão Superior', data: chartData.porOrgaoSuperior })}>
+                  <div className="chart-card-title">Órgão Superior</div>
+                  <PieChart data={chartData.porOrgaoSuperior} size={240} />
+                </div>
+                <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Mês/Ano', data: chartData.porMesAno })}>
+                  <div className="chart-card-title">Por Mês/Ano</div>
+                  <PieChart data={chartData.porMesAno} size={240} />
+                </div>
+              </div>
+            )}
             <table className="estado-table">
               <thead>
                 <tr>
@@ -881,35 +1143,48 @@ export default function ConhecendoEstado() {
         </div>
       )}
 
-      <div className="estado-section">
+      <div className="estado-section" id="estado-municipios">
         <div className="estado-section-header" onClick={() => toggleCollapse('municipios')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}>Municípios <span className="count">({municipios.length} no total)</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
+          <h2 style={{ margin: 0 }}>Municípios <span className="count">({munFiltrados.length}/{municipios.length} no total)</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
           <span>{collapsed.municipios ? '▶' : '▼'}</span>
         </div>
         {!collapsed.municipios && (
           basico ? (
             <>
+              <div className="search-filter-bar">
+                <input
+                  className="search-input"
+                  type="text"
+                  placeholder="🔍 Buscar município por nome..."
+                  value={munNomeBusca}
+                  onChange={(e) => setMunNomeBusca(e.target.value)}
+                />
+              </div>
               <div className="municipios-loading">
                 {municipios.length > 0
-                  ? `${municipios.length} municípios • do menor para o maior`
+                  ? `${munFiltrados.length} de ${municipios.length} municípios • do menor para o maior`
                   : 'Carregando municípios...'}
               </div>
-              <div className="estado-cards">
-                {municipios.map(m => (
-                  <div key={m.id} className="estado-card">
-                    <div className="municipio-nome">{m.nome}</div>
-                    <div className="municipio-pop">
-                      {m.populacao ? `Pop: ${fmtNum(m.populacao)} hab.` : ''}
+              {munFiltrados.length > 0 ? (
+                <div className="estado-cards">
+                  {munFiltrados.map(m => (
+                    <div key={m.id} className="estado-card">
+                      <div className="municipio-nome">{m.nome}</div>
+                      <div className="municipio-pop">
+                        {m.populacao ? `Pop: ${fmtNum(m.populacao)} hab.` : ''}
+                      </div>
+                      <button
+                        className="btn btn-sm btn-outline-accent"
+                        onClick={() => setMunicipioDetalhe(m)}
+                      >
+                        Detalhes
+                      </button>
                     </div>
-                    <button
-                      className="btn btn-sm btn-outline-accent"
-                      onClick={() => setMunicipioDetalhe(m)}
-                    >
-                      Detalhes
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum município encontrado para o filtro</p>
+              )}
             </>
           ) : (
             <div className="municipios-loading">Carregando municípios...</div>
@@ -918,6 +1193,20 @@ export default function ConhecendoEstado() {
       </div>
 
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
+
+      {chartPopup && (
+        <div className="dm-modal-overlay" onClick={() => setChartPopup(null)}>
+          <div className="dm-modal chart-popup-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <div className="dm-modal-header">
+              <h3>{chartPopup.titulo}</h3>
+              <button className="dm-modal-close" onClick={() => setChartPopup(null)}>×</button>
+            </div>
+            <div className="dm-modal-body" style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
+              <PieChart data={chartPopup.data} size={420} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

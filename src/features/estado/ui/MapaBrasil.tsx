@@ -64,7 +64,7 @@ export default function MapaBrasil() {
   };
 
   return (
-    <div className="mapa-container">
+    <div className="mapa-container" id="mapa-container">
       <div className="mapa-titulo">SELECIONE UM ESTADO</div>
       <div className="mapa-info-card">
         <div className="mapa-info-item">
@@ -97,9 +97,9 @@ export default function MapaBrasil() {
                     key={`outline-${geo.rsmKey}`}
                     geography={geo}
                     style={{
-                      default: { fill: 'none', stroke: '#eab308', strokeWidth: 3.5, outline: 'none' },
-                      hover: { fill: 'none', stroke: '#eab308', strokeWidth: 3.5, outline: 'none' },
-                      pressed: { fill: 'none', stroke: '#eab308', strokeWidth: 3.5, outline: 'none' },
+                      default: { fill: 'none', stroke: 'var(--accent-secondary)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                      hover: { fill: 'none', stroke: 'var(--accent-secondary)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                      pressed: { fill: 'none', stroke: 'var(--accent-secondary)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
                     }}
                   />
                 ))}
@@ -113,9 +113,9 @@ export default function MapaBrasil() {
                       geography={geo}
                       className="estado-geography"
                       style={{
-                        default: { fill: 'transparent', stroke: '#eab308', strokeWidth: 1.8, outline: 'none' },
-                        hover: { fill: 'rgba(57,255,20,0.08)', stroke: '#39ff14', strokeWidth: 2.2, outline: 'none' },
-                        pressed: { fill: 'rgba(57,255,20,0.12)', stroke: '#39ff14', strokeWidth: 2.2, outline: 'none' },
+                        default: { fill: 'transparent', stroke: 'var(--accent-tertiary)', strokeWidth: 1.5, outline: 'none' },
+                        hover: { fill: 'rgba(95,145,127,0.08)', stroke: 'var(--accent)', strokeWidth: 2.2, outline: 'none' },
+                        pressed: { fill: 'rgba(95,145,127,0.12)', stroke: 'var(--accent)', strokeWidth: 2.2, outline: 'none' },
                       }}
                       onMouseEnter={() => setTooltip({ name: nome })}
                       onMouseLeave={() => setTooltip(null)}

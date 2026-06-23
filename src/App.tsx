@@ -40,22 +40,24 @@ function AppLayout() {
     <div className="app">
       <Sidebar />
       <main className="app-main">
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route index element={<HomePage />} />
-            <Route path="licitacoes" element={<LicitacoesPage />} />
-            <Route path="tse" element={<TsePage />} />
-            <Route path="portal" element={<PortalTransparenciaPage />} />
-            <Route path="deputados" element={<DeputadosPage />} />
-            <Route path="senadores" element={<SenadoresPage />} />
-            <Route path="tcu" element={<TcuPage />} />
-            <Route path="ligacao-politica" element={<LigacaoPoliticaPage />} />
-            <Route path="investigar" element={<InvestigativePanelPage />} />
-            <Route path="estado" element={<EstadoPage />} />
-            <Route path="wiki" element={<WikiPage />} />
-            <Route path="*" element={<HomePage />} />
-          </Routes>
-        </Suspense>
+        <div className="app-main-inner">
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route index element={<HomePage />} />
+              <Route path="licitacoes" element={<LicitacoesPage />} />
+              <Route path="tse" element={<TsePage />} />
+              <Route path="portal" element={<PortalTransparenciaPage />} />
+              <Route path="deputados" element={<DeputadosPage />} />
+              <Route path="senadores" element={<SenadoresPage />} />
+              <Route path="tcu" element={<TcuPage />} />
+              <Route path="ligacao-politica" element={<LigacaoPoliticaPage />} />
+              <Route path="investigar" element={<InvestigativePanelPage />} />
+              <Route path="estado" element={<EstadoPage />} />
+              <Route path="wiki" element={<WikiPage />} />
+              <Route path="*" element={<HomePage />} />
+            </Routes>
+          </Suspense>
+        </div>
       </main>
     </div>
   );
