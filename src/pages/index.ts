@@ -1,0 +1,10 @@
+export { default as HomePage } from './HomePage/HomePage';
+export { default as LicitacoesPage } from './LicitacoesPage/LicitacoesPage';
+export { default as TsePage } from './TsePage/TsePage';
+export { default as PortalTransparenciaPage } from './PortalTransparenciaPage/PortalTransparenciaPage';
+export { default as DeputadosPage } from './DeputadosPage/DeputadosPage';
+export { default as SenadoresPage } from './SenadoresPage/SenadoresPage';
+export { default as TcuPage } from './TcuPage/TcuPage';
+export { default as LigacaoPoliticaPage } from './LigacaoPoliticaPage/LigacaoPoliticaPage';
+export { default as EstadoPage } from './EstadoPage/EstadoPage';
+export { default as WikiPage } from './WikiPage/WikiPage';
