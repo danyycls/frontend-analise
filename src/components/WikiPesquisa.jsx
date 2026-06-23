@@ -164,6 +164,16 @@ export default function WikiPesquisa() {
         <section id="pncp" className="wiki-section">
           <h2>PNCP — Portal Nacional de Contratações Públicas</h2>
 
+          <div className="wiki-entidade-header">
+            <p><strong>Dados disponibilizados:</strong> contratos e contratações públicas centralizados de todas as esferas de governo, incluindo atas, editais e resultados de licitações.</p>
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/clientes/pncp.md" target="_blank" rel="noopener noreferrer">docs/clientes/pncp.md</a>
+            </p>
+            <p><strong>API oficial:</strong>{' '}
+              <a href="https://pncp.gov.br/api/consulta/swagger-ui/index.html#/" target="_blank" rel="noopener noreferrer">Swagger PNCP</a>
+            </p>
+          </div>
+
           <h3>O que é</h3>
           <p>
             O PNCP centraliza todas as licitações do país desde 2024. É a fonte primária de dados
@@ -206,6 +216,16 @@ export default function WikiPesquisa() {
 
         <section id="tcu" className="wiki-section">
           <h2>TCU — Tribunal de Contas da União</h2>
+
+          <div className="wiki-entidade-header">
+            <p><strong>Dados disponibilizados:</strong> sanções e condenações do TCU, incluindo contas julgadas irregulares (CADIRREG), contas com implicação eleitoral, responsáveis inabilitados para cargo em comissão e licitantes inidôneos.</p>
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/clientes/tcu.md" target="_blank" rel="noopener noreferrer">docs/clientes/tcu.md</a>
+            </p>
+            <p><strong>API oficial:</strong>{' '}
+              <a href="https://sites.tcu.gov.br/dados-abertos/webservices-tcu/#sancoes-e-condenacoes/" target="_blank" rel="noopener noreferrer">Webservices TCU</a>
+            </p>
+          </div>
 
           <h3>O que é</h3>
           <p>
@@ -263,6 +283,15 @@ export default function WikiPesquisa() {
 
         <section id="tse-arquitetura" className="wiki-section">
           <h2>TSE — Arquitetura de Dados</h2>
+
+          <div className="wiki-entidade-header">
+            <p><strong>Dados disponibilizados:</strong> dados eleitorais históricos desde 2006, incluindo candidatos, partidos, doadores, fornecedores de campanha, prestação de contas (receitas e despesas) e bens declarados.</p>
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/db-tse.md" target="_blank" rel="noopener noreferrer">docs/db-tse.md</a>
+              {' | '}
+              <a href="https://github.com/danyycls/backend-analise/docs/tse-importacao.md" target="_blank" rel="noopener noreferrer">docs/tse-importacao.md</a>
+            </p>
+          </div>
 
           <h3>Visão Geral</h3>
           <p>
@@ -327,6 +356,14 @@ export default function WikiPesquisa() {
         <section id="tse-consultas" className="wiki-section">
           <h2>TSE — Consultas</h2>
 
+          <div className="wiki-entidade-header">
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/db-tse.md" target="_blank" rel="noopener noreferrer">docs/db-tse.md</a>
+              {' | '}
+              <a href="https://github.com/danyycls/backend-analise/docs/tse-importacao.md" target="_blank" rel="noopener noreferrer">docs/tse-importacao.md</a>
+            </p>
+          </div>
+
           <h3>APIs de consulta</h3>
           <p>O PODP expõe as seguintes APIs para consulta aos dados do TSE:</p>
           <table>
@@ -356,6 +393,17 @@ export default function WikiPesquisa() {
 
         <section id="portal-transparencia" className="wiki-section">
           <h2>Portal da Transparência</h2>
+
+          <div className="wiki-entidade-header">
+            <p><strong>Dados disponibilizados:</strong> órgãos públicos federais (SIAPE/SIAFI), pessoas físicas e jurídicas, despesas federais, cartões corporativos, emendas parlamentares e servidores públicos (cadastro, remuneração, cargos e PEPs).</p>
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/clientes/portal-da-transparencia.md" target="_blank" rel="noopener noreferrer">docs/clientes/portal-da-transparencia.md</a>
+            </p>
+            <p><strong>API oficial:</strong>{' '}
+              <a href="https://api.portaldatransparencia.gov.br" target="_blank" rel="noopener noreferrer">api.portaldatransparencia.gov.br</a>
+              {' '}(requer chave de API)
+            </p>
+          </div>
 
           <h3>O que é</h3>
           <p>
@@ -404,6 +452,16 @@ export default function WikiPesquisa() {
 
         <section id="camara-deputados" className="wiki-section">
           <h2>Câmara dos Deputados</h2>
+
+          <div className="wiki-entidade-header">
+            <p><strong>Dados disponibilizados:</strong> deputados federais, despesas da cota parlamentar, frentes parlamentares, blocos partidários, grupos, legislaturas, votações e referências.</p>
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/clientes/camara-dos-deputados.md" target="_blank" rel="noopener noreferrer">docs/clientes/camara-dos-deputados.md</a>
+            </p>
+            <p><strong>API oficial:</strong>{' '}
+              <a href="https://dadosabertos.camara.leg.br/swagger/api.html" target="_blank" rel="noopener noreferrer">Swagger Câmara</a>
+            </p>
+          </div>
 
           <h3>O que é</h3>
           <p>
@@ -469,6 +527,16 @@ export default function WikiPesquisa() {
         <section id="senado" className="wiki-section">
           <h2>Senado Federal</h2>
 
+          <div className="wiki-entidade-header">
+            <p><strong>Dados disponibilizados:</strong> senadores, comissões, processos legislativos, votações em plenário e comissões, matérias em tramitação, agenda do plenário e emendas orçamentárias.</p>
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/clientes/senado-federal.md" target="_blank" rel="noopener noreferrer">docs/clientes/senado-federal.md</a>
+            </p>
+            <p><strong>API oficial:</strong>{' '}
+              <a href="https://legis.senado.leg.br/dadosabertos/api-docs/swagger-ui/index.html#/" target="_blank" rel="noopener noreferrer">Swagger Senado</a>
+            </p>
+          </div>
+
           <h3>O que é</h3>
           <p>
             O Senado Federal representa os estados e o Distrito Federal, com 81 senadores (3 por
@@ -525,6 +593,16 @@ export default function WikiPesquisa() {
         <section id="opencnpj" className="wiki-section">
           <h2>OpenCNPJ</h2>
 
+          <div className="wiki-entidade-header">
+            <p><strong>Dados disponibilizados:</strong> cadastro nacional de pessoas jurídicas, incluindo razão social, nome fantasia, situação cadastral (ativa/inapta/baixada), capital social e quadro de sócios e administradores (QSA).</p>
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/clientes/opencnpj.md" target="_blank" rel="noopener noreferrer">docs/clientes/opencnpj.md</a>
+            </p>
+            <p><strong>API oficial:</strong>{' '}
+              <a href="https://opencnpj.org" target="_blank" rel="noopener noreferrer">opencnpj.org</a>
+            </p>
+          </div>
+
           <h3>O que é</h3>
           <p>
             O OpenCNPJ é uma API pública que disponibiliza dados cadastrais de CNPJs. O PODP a
@@ -562,6 +640,16 @@ export default function WikiPesquisa() {
         <section id="ibge" className="wiki-section">
           <h2>IBGE — Localidades e População</h2>
 
+          <div className="wiki-entidade-header">
+            <p><strong>Dados disponibilizados:</strong> localidades brasileiras (estados e municípios) com hierarquia administrativa (microrregião, mesorregião, UF) e estimativas populacionais dos municípios.</p>
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/clientes/ibge.md" target="_blank" rel="noopener noreferrer">docs/clientes/ibge.md</a>
+            </p>
+            <p><strong>API oficial:</strong>{' '}
+              <a href="https://servicodados.ibge.gov.br/api/docs/" target="_blank" rel="noopener noreferrer">API IBGE</a>
+            </p>
+          </div>
+
           <h3>O que é</h3>
           <p>
             O IBGE disponibiliza dados de localidades (estados e municípios) e estimativas
@@ -587,6 +675,18 @@ export default function WikiPesquisa() {
 
         <section id="siconfi" className="wiki-section">
           <h2>SICONFI — Tesouro Nacional</h2>
+
+          <div className="wiki-entidade-header">
+            <p><strong>Dados disponibilizados:</strong> dados contábeis e fiscais do setor público brasileiro, incluindo Declaração de Contas Anuais (DCA), Relatório de Gestão Fiscal (RGF), Relatório Resumido de Execução Orçamentária (RREO), Matriz de Saldos Contábeis (MSC) e extrato de entregas.</p>
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/clientes/siconfi.md" target="_blank" rel="noopener noreferrer">docs/clientes/siconfi.md</a>
+              {' | '}
+              <a href="https://github.com/danyycls/backend-analise/docs/detalhes-municipio.md" target="_blank" rel="noopener noreferrer">docs/detalhes-municipio.md</a>
+            </p>
+            <p><strong>API oficial:</strong>{' '}
+              <a href="https://apidatalake.tesouro.gov.br/docs/siconfi/" target="_blank" rel="noopener noreferrer">docs SICONFI</a>
+            </p>
+          </div>
 
           <h3>O que é</h3>
           <p>
@@ -617,6 +717,19 @@ export default function WikiPesquisa() {
 
         <section id="ligacao-politica" className="wiki-section">
           <h2>Ligação Política</h2>
+
+          <div className="wiki-entidade-header">
+            <p><strong>Dados disponibilizados:</strong> cruzamento de documentos de licitações com dados eleitorais do TSE (fornecedores e doadores de campanha), cadastrais do OpenCNPJ (QSA e situação CNPJ) e sanções do TCU (contas irregulares, inabilitados, inidôneos).</p>
+            <p><strong>Documentação:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/ligacao-politica.md" target="_blank" rel="noopener noreferrer">docs/ligacao-politica.md</a>
+              {' | '}
+              <a href="https://github.com/danyycls/backend-analise/docs/db-tse.md" target="_blank" rel="noopener noreferrer">docs/db-tse.md</a>
+              {' | '}
+              <a href="https://github.com/danyycls/backend-analise/docs/clientes/tcu.md" target="_blank" rel="noopener noreferrer">docs/clientes/tcu.md</a>
+              {' | '}
+              <a href="https://github.com/danyycls/backend-analise/docs/clientes/opencnpj.md" target="_blank" rel="noopener noreferrer">docs/clientes/opencnpj.md</a>
+            </p>
+          </div>
 
           <h3>O que é</h3>
           <p>
@@ -671,6 +784,16 @@ export default function WikiPesquisa() {
 
         <section id="repositorios" className="wiki-section">
           <h2>Repositórios do Projeto</h2>
+
+          <div className="wiki-entidade-header">
+            <p><strong>Documentação geral:</strong>{' '}
+              <a href="https://github.com/danyycls/backend-analise/docs/dev-roadmap.md" target="_blank" rel="noopener noreferrer">docs/dev-roadmap.md</a>
+              {' (status das integrações) | '}
+              <a href="https://github.com/danyycls/backend-analise/docs/mapeamento-de-rotas.md" target="_blank" rel="noopener noreferrer">docs/mapeamento-de-rotas.md</a>
+              {' (84 rotas mapeadas)'}
+            </p>
+          </div>
+
           <p>O PODP é dividido em dois repositórios principais:</p>
           <ul>
             <li>
