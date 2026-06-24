@@ -33,7 +33,7 @@
 
 .progresso-preenchimento {
   height: 100%;
-  background: #39ff14;
+  background: var(--accent);
   transition: width 0.3s ease;
 }
 
@@ -112,6 +112,6 @@
 }
 
 .progresso-mensagem.accent {
-  color: #a855f7;
+  color: var(--accent);
   font-weight: 600;
 }

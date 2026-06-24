@@ -501,11 +501,11 @@
 
 .card {
   position: relative;
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--accent-tertiary-glow);
   border-radius: 0;
-  padding: 20px;
+  padding: 28px;
   margin-bottom: 16px;
 }
 
@@ -514,10 +514,10 @@
   position: absolute;
   top: -1px;
   right: -1px;
-  width: 12px;
-  height: 12px;
-  border-top: 1px solid var(--accent-glow);
-  border-right: 1px solid var(--accent-glow);
+  width: 16px;
+  height: 16px;
+  border-top: 2px solid var(--accent-tertiary-glow);
+  border-right: 2px solid var(--accent-tertiary-glow);
   pointer-events: none;
 }
 
@@ -604,6 +604,25 @@
 .btn-danger:hover {
   background: var(--error-bg);
   border-color: var(--error);
+}
+
+.btn-accent {
+  color: var(--accent);
+  border-color: var(--accent-glow);
+  background: var(--accent-subtle);
+}
+
+.btn-accent:hover {
+  color: var(--accent-secondary);
+  border-color: var(--accent-secondary);
+  background: var(--accent-secondary-subtle);
+  box-shadow: 0 0 6px var(--accent-secondary-glow);
+}
+
+.btn-accent:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-ghost {

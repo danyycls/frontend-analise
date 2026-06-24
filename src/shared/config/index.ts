@@ -3,3 +3,5 @@ export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || 'http:/
 export const WS_BASE_URL: string = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8080';
 
 export const TOPO_URL: string = import.meta.env.VITE_TOPO_URL || '';
+
+export const COUNTRY_TOPO_URL: string = import.meta.env.VITE_COUNTRY_TOPO_URL || 'https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/json';

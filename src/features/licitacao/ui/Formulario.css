@@ -15,7 +15,7 @@
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .form-group.required label::after {
@@ -35,11 +35,13 @@
 .form-group textarea,
 .form-group input,
 .form-group select {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
   padding: 10px 12px;
   font-family: var(--font-mono);
   font-size: 0.82rem;
-  background: var(--bg-surface);
+  background: var(--bg-primary);
   color: var(--text-primary);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -47,25 +49,26 @@
 .form-group select {
   font-family: inherit;
   cursor: pointer;
-  background: var(--bg-surface);
+  background: var(--bg-primary);
 }
 
 .form-group textarea:focus,
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #39ff14;
-  box-shadow: 0 0 0 2px rgba(57, 255, 20, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
 }
 
 .form-group textarea {
   resize: vertical;
+  max-height: 96px;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 32px;
 }
 
 .form-status {
@@ -86,4 +89,47 @@
   padding: 8px 12px;
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.card h2 {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.card h2::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 40px;
+  height: 1px;
+  background: var(--accent);
+}
+
+.card .btn,
+.card .btn-accent {
+  margin-top: 20px;
+  width: 100%;
+  justify-content: center;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.form-actions .btn,
+.form-actions .btn-accent {
+  flex: 1;
+  width: auto;
 }

@@ -27,11 +27,12 @@ export default function Progresso({ jobId, total, meta, onFinalizar, onCancelar,
     pct,
     cancelar,
     batchEnabled,
+    batchPath: resolvedBatchPath,
   } = useAnaliseProgress(jobId, tipo, total, onCancelar);
 
   const batchPathOverride = batchPath || '/orgao/analise/batch';
 
-  useBatchResults(jobId, batchEnabled && !cancelado);
+  useBatchResults(jobId, batchEnabled && !cancelado, resolvedBatchPath);
 
   useEffect(() => {
     if (concluido && !cancelado) {
@@ -47,7 +48,7 @@ export default function Progresso({ jobId, total, meta, onFinalizar, onCancelar,
 
   async function carregarResultados() {
     try {
-      const resp = await fetch(`${API_BASE_URL}${batchPathOverride}/${jobId}`);
+      const resp = await fetch(`${API_BASE_URL}${resolvedBatchPath}/${jobId}`);
       const data = await resp.json();
       if (data.status === 'completed' && data.results) {
         onFinalizar(data.results, meta, data.paginasErro || []);

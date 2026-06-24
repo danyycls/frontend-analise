@@ -109,20 +109,18 @@
 }
 
 .estado-geography {
-  fill: transparent !important;
-  stroke: var(--accent-tertiary) !important;
-  stroke-width: 1.5 !important;
-  stroke-linejoin: round;
-  stroke-linecap: round;
+  outline: none;
   transition: fill 0.2s, stroke 0.2s;
   cursor: pointer;
-  outline: none;
 }
 
 .estado-geography:hover {
-  fill: var(--accent-subtle) !important;
-  stroke: var(--accent) !important;
-  stroke-width: 2 !important;
+  cursor: pointer;
+}
+
+.pais-contorno {
+  outline: none;
+  pointer-events: none;
 }
 
 .mapa-dot {

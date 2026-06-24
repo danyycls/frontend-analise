@@ -9,6 +9,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { PieChart } from '@/features/estado/ui/chart-utils';
 import './Resultados.css';
 
 // ═══════════════════════════════════════════════════
@@ -378,6 +379,35 @@ function OrgaoCard({ resultado, pncpDestacado, onAnaliseDetalhada, pncpComMatch,
     return cats;
   }, [contratos]);
 
+  const chartCategorias = useMemo(() => {
+    return Object.entries(categorias)
+      .map(([nome, valor]) => ({ nome, valor: Number(valor) }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [categorias]);
+
+  const chartFaixaValor = useMemo(() => {
+    if (!contratos.length) return null;
+    const faixas = {
+      'Até R$ 5 mil': 0,
+      'R$ 5 mil - R$ 20 mil': 0,
+      'R$ 20 mil - R$ 50 mil': 0,
+      'R$ 50 mil - R$ 100 mil': 0,
+      'Acima de R$ 100 mil': 0,
+    };
+    contratos.forEach(c => {
+      const v = valorNumerico(c.valorGlobal ?? c.valorTotalEstimado);
+      if (v < 5000) faixas['Até R$ 5 mil'] += v;
+      else if (v < 20000) faixas['R$ 5 mil - R$ 20 mil'] += v;
+      else if (v < 50000) faixas['R$ 20 mil - R$ 50 mil'] += v;
+      else if (v < 100000) faixas['R$ 50 mil - R$ 100 mil'] += v;
+      else faixas['Acima de R$ 100 mil'] += v;
+    });
+    return Object.entries(faixas)
+      .filter(([_, v]) => v > 0)
+      .map(([nome, valor]) => ({ nome, valor }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [contratos]);
+
   // Filtra contratos por categoria e aplica ordenacao
   const contratosFiltrados = useMemo(() => {
     let lista = [...contratos];
@@ -453,6 +483,24 @@ function OrgaoCard({ resultado, pncpDestacado, onAnaliseDetalhada, pncpComMatch,
               <div className="resumo-label">Valor Total</div>
             </div>
           </div>
+
+          {/* Charts: Valor por Categoria + Faixa de Valores */}
+          {(chartCategorias.length > 0 || chartFaixaValor) && (
+            <div className="resumo-chart-row">
+              {chartCategorias.length > 0 && (
+                <div className="chart-card-sm">
+                  <div className="chart-card-title">Valor por Categoria</div>
+                  <PieChart data={chartCategorias} size={220} />
+                </div>
+              )}
+              {chartFaixaValor && (
+                <div className="chart-card-sm">
+                  <div className="chart-card-title">Valor por Faixa (R$)</div>
+                  <PieChart data={chartFaixaValor} size={220} />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Breakdown por categoria */}
           {categoriasList.length > 0 && (

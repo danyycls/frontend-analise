@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
 import { api } from '@/shared/api/client';
-import { TOPO_URL } from '@/shared/config';
+import { TOPO_URL, COUNTRY_TOPO_URL } from '@/shared/config';
 import './MapaBrasil.css';
 
 const IBGE_TO_UF = {
@@ -89,44 +89,47 @@ export default function MapaBrasil() {
           projectionConfig={projectionConfig}
           style={{ width: '100%', height: '100%' }}
         >
+          <Geographies geography={COUNTRY_TOPO_URL}>
+            {({ geographies }) =>
+              geographies.map(geo => (
+                <Geography
+                  key={`country-${geo.rsmKey}`}
+                  geography={geo}
+                  className="pais-contorno"
+                  style={{
+                    default: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                    hover: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                    pressed: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                  }}
+                />
+              ))
+            }
+          </Geographies>
           <Geographies geography={TOPO_URL}>
-            {({ geographies }) => (
-              <>
-                {geographies.map(geo => (
+            {({ geographies }) =>
+              geographies.map(geo => {
+                const cod = geo.properties?.codarea || '';
+                const sigla = IBGE_TO_UF[cod] || cod;
+                const nome = nomeMap[sigla] || sigla;
+                return (
                   <Geography
-                    key={`outline-${geo.rsmKey}`}
+                    key={geo.rsmKey}
                     geography={geo}
+                    className="estado-geography"
                     style={{
-                      default: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
-                      hover: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
-                      pressed: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 4, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                      default: { fill: 'transparent', stroke: 'var(--accent-tertiary)', strokeWidth: 0.8, outline: 'none' },
+                      hover: { fill: 'rgba(95,145,127,0.08)', stroke: 'var(--accent)', strokeWidth: 1.5, outline: 'none' },
+                      pressed: { fill: 'rgba(95,145,127,0.12)', stroke: 'var(--accent)', strokeWidth: 1.5, outline: 'none' },
+                    }}
+                    onMouseEnter={() => setTooltip({ name: nome })}
+                    onMouseLeave={() => setTooltip(null)}
+                    onClick={() => {
+                      if (sigla && sigla.length === 2) window.open(`/estado/${sigla}`, '_blank');
                     }}
                   />
-                ))}
-                {geographies.map(geo => {
-                  const cod = geo.properties?.codarea || '';
-                  const sigla = IBGE_TO_UF[cod] || cod;
-                  const nome = nomeMap[sigla] || sigla;
-                  return (
-                    <Geography
-                      key={geo.rsmKey}
-                      geography={geo}
-                      className="estado-geography"
-                      style={{
-                        default: { fill: 'transparent', stroke: 'var(--accent-tertiary)', strokeWidth: 1.5, outline: 'none' },
-                        hover: { fill: 'rgba(95,145,127,0.08)', stroke: 'var(--accent)', strokeWidth: 2.2, outline: 'none' },
-                        pressed: { fill: 'rgba(95,145,127,0.12)', stroke: 'var(--accent)', strokeWidth: 2.2, outline: 'none' },
-                      }}
-                      onMouseEnter={() => setTooltip({ name: nome })}
-                      onMouseLeave={() => setTooltip(null)}
-                      onClick={() => {
-                        if (sigla && sigla.length === 2) window.open(`/estado/${sigla}`, '_blank');
-                      }}
-                    />
-                  );
-                })}
-              </>
-            )}
+                );
+              })
+            }
           </Geographies>
 
           {Object.entries(STATE_COORDS).map(([sigla, coords]) => {

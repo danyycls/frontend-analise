@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useStartOrgaoAnalise } from '../api/hooks';
 import { fmtDoc } from '@/shared/lib/formatters';
+import './Formulario.css';
 
 function toAPI(d: string) {
   return d.replace(/-/g, '');
@@ -73,7 +74,7 @@ export default function Formulario({ onIniciar }: FormularioProps) {
         <label htmlFor="cnpjs">CNPJs (um por linha)</label>
         <textarea
           id="cnpjs"
-          rows={6}
+          rows={3}
           placeholder="00000000000000&#10;00000000000000"
           value={cnpjsTexto}
           onChange={(e) => setCnpjsTexto(e.target.value)}

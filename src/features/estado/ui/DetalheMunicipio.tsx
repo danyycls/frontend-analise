@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { WS_BASE_URL } from '@/shared/config';
+import { API_BASE_URL } from '@/shared/config';
 import { ContratoDetalhes, JanelaPopup } from '../../ligacao-politica/ui/Resultados';
 import { PieChart } from './chart-utils';
 
@@ -97,7 +97,7 @@ export default function DetalheMunicipio({ municipio, uf, onFechar }) {
   const [licitacaoPopup, setLicitacaoPopup] = useState(null);
   const [chartPopup, setChartPopup] = useState(null);
   const licCancelRef = useRef(false);
-  const wsRef = useRef(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   function licBuscar() {
     const ano = licAnoInput.trim();
@@ -114,15 +114,15 @@ export default function DetalheMunicipio({ municipio, uf, onFechar }) {
     setLicErro(null);
     licCancelRef.current = false;
 
-    processarFilaWS(fila);
+    processarFilaHTTP(fila);
   }
 
-  async function processarFilaWS(fila) {
+  async function processarFilaHTTP(fila) {
     for (const ano of fila) {
       if (licCancelRef.current) break;
 
       try {
-        const data = await buscaAnoWS(ano);
+        const data = await buscarAnoHTTP(ano);
 
         if (licCancelRef.current) break;
 
@@ -137,67 +137,29 @@ export default function DetalheMunicipio({ municipio, uf, onFechar }) {
     }
 
     setLicEmAndamento(false);
-    wsRef.current = null;
+    abortRef.current = null;
   }
 
-  function buscaAnoWS(ano) {
-    return new Promise((resolve, reject) => {
-      if (licCancelRef.current) return reject('cancelado');
+  async function buscarAnoHTTP(ano) {
+    if (licCancelRef.current) throw new Error('cancelado');
 
-      const ws = new WebSocket(`${WS_BASE_URL}/ws`);
-      wsRef.current = ws;
-      const contratos = [];
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-      const timeout = setTimeout(() => {
-        try { ws.close(); } catch (_) {}
-        reject('Timeout ao buscar dados do município');
-      }, 120000);
+    const res = await fetch(
+      `${API_BASE_URL}/estado/${uf}/licitacoes/municipio/${municipio.id}?ano=${ano}`,
+      { signal: controller.signal }
+    );
 
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          channel: 'municipio_detalhes',
-          codigo_ibge: municipio.id,
-          exercicio: parseInt(ano),
-        }));
-      };
-
-      ws.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data);
-
-          if (msg.type === 'contratos') {
-            contratos.push(...(msg.data?.dados || []));
-          } else if (msg.type === 'concluido') {
-            clearTimeout(timeout);
-            ws.close();
-            resolve(contratos);
-          } else if (msg.type === 'erro') {
-            clearTimeout(timeout);
-            ws.close();
-            reject(msg.data?.erro || 'Erro desconhecido');
-          }
-        } catch (_) {}
-      };
-
-      ws.onerror = () => {
-        clearTimeout(timeout);
-        reject('Erro na conexão WebSocket');
-      };
-
-      ws.onclose = (e) => {
-        clearTimeout(timeout);
-        if (!e.wasClean && !licCancelRef.current) {
-          reject('Conexão WebSocket fechada inesperadamente');
-        }
-      };
-    });
+    if (!res.ok) throw new Error(`Erro ${res.status} ao buscar licitacoes`);
+    return res.json();
   }
 
   function licCancelar() {
     licCancelRef.current = true;
-    if (wsRef.current) {
-      try { wsRef.current.close(); } catch (_) {}
-      wsRef.current = null;
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
     }
     setLicEmAndamento(false);
   }
