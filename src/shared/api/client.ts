@@ -54,8 +54,8 @@ export const api = {
   get: <T>(endpoint: string, params?: Record<string, string | number | undefined>) =>
     request<T>(endpoint, { method: 'GET', params }),
 
-  post: <T>(endpoint: string, body?: unknown) =>
-    request<T>(endpoint, { method: 'POST', body }),
+  post: <T>(endpoint: string, body?: unknown, options?: Omit<RequestInit, 'body' | 'method'>) =>
+    request<T>(endpoint, { method: 'POST', body, ...options }),
 
   put: <T>(endpoint: string, body?: unknown) =>
     request<T>(endpoint, { method: 'PUT', body }),

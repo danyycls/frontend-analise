@@ -1,23 +1,25 @@
 // @ts-nocheck
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { setAbaAtiva } from '@/app/store/slices/navigationSlice';
+import { clearInspectionDoc, addEntities as addInvEntities, setLpEdges, updateEntityData } from '@/app/store/slices/investigationSlice';
 import {
   setSubTabAtiva, addSubTab, removeSubTab, reorderSubTabs,
   setLigPoliticaAberta, addLigPoliticaCache, updateLigPoliticaCache,
   removeLigPoliticaCache, setLpResultados, setLpDataCache,
-  setAdTabAtiva, addAdAnalise, removeAdAnalise, setSubTabs,
+  setSubTabs,
+  setLpFromPanel,
 } from '@/app/store/slices/ligacaoPoliticaSlice';
 import LigacaoPolitica from '@/features/ligacao-politica/ui/LigacaoPolitica';
+import { processLpResults } from '@/features/investigative-panel/lib/processLpResults';
 import { JanelaPopup, ContratoDetalhes } from '@/features/ligacao-politica/ui/Resultados';
 import EntityPopup from '@/features/ligacao-politica/ui/EntityPopup';
-import { api } from '@/shared/api/client';
+import InspectionView from '@/features/ligacao-politica/ui/InspectionView';
 import { fmtDoc } from '@/shared/lib/formatters';
-import { ENDPOINTS } from '@/shared/api/endpoints';
 import { useDiscoveryReporter } from '@/shared/lib/entity-discovery';
 
 let lpUid = 0;
-let adUid = 0;
 
 const KEY_TO_TIPO = {
   sq_candidato: 'candidato',
@@ -31,6 +33,7 @@ const KEY_TO_TIPO = {
 
 export default function LigacaoPoliticaPage() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const consultas = useAppSelector((s) => s.consulta.consultas);
   const subTabs = useAppSelector((s) => s.ligacaoPolitica.subTabs);
   const subTabAtiva = useAppSelector((s) => s.ligacaoPolitica.subTabAtiva);
@@ -38,18 +41,18 @@ export default function LigacaoPoliticaPage() {
   const ligPoliticaCache = useAppSelector((s) => s.ligacaoPolitica.ligPoliticaCache);
   const lpResultados = useAppSelector((s) => s.ligacaoPolitica.lpResultados);
   const lpDataCache = useAppSelector((s) => s.ligacaoPolitica.lpDataCache);
-  const adTabAtiva = useAppSelector((s) => s.ligacaoPolitica.adTabAtiva);
-  const adAnalises = useAppSelector((s) => s.ligacaoPolitica.adAnalises);
+  const inspectionDoc = useAppSelector((s) => s.investigation.inspectionDoc);
+  const panelLicitacoes = useAppSelector((s) => s.ligacaoPolitica.panelLicitacoes);
+  const lpFromPanel = useAppSelector((s) => s.ligacaoPolitica.lpFromPanel);
+  const invEntities = useAppSelector((s) => s.investigation.entities as Record<string, any>);
+  const invEntityOrder = useAppSelector((s) => s.investigation.entityOrder as string[]);
 
   const [popup, setPopup] = useState(null);
   const [entidadeCache, setEntidadeCache] = useState({});
   const [pncpDestacado, setPncpDestacado] = useState(null);
-  const [analiseDetalhadaLoading, setAnaliseDetalhadaLoading] = useState(false);
   const subTabsRef = useRef(subTabs);
-  const adAnalisesRef = useRef(adAnalises);
   const reportDiscovery = useDiscoveryReporter();
   useEffect(() => { subTabsRef.current = subTabs; }, [subTabs]);
-  useEffect(() => { adAnalisesRef.current = adAnalises; }, [adAnalises]);
 
   useEffect(() => {
     if (pncpDestacado) {
@@ -102,8 +105,31 @@ export default function LigacaoPoliticaPage() {
         }
       });
       reportDiscovery(discoveries);
+
+      if (lpFromPanel) {
+        const panelEnts = invEntityOrder.map((id: string) => ({
+          id,
+          document: (invEntities[id] as any)?.document,
+        }));
+        const { politicalEntities, lpResultEdges, docLinkedEntities } = processLpResults(
+          data,
+          panelEnts,
+          invEntityOrder,
+          invEntities as Record<string, { id: string; document?: string } | undefined>
+        );
+        if (politicalEntities.length > 0) {
+          dispatch(addInvEntities(politicalEntities as any));
+        }
+        if (lpResultEdges.length > 0) {
+          dispatch(setLpEdges(lpResultEdges));
+        }
+        for (const dle of docLinkedEntities) {
+          dispatch(updateEntityData({ id: dle.entityId, data: { parent_id: dle.parentId }, context: dle.context }));
+        }
+        dispatch(setLpFromPanel(false));
+      }
     }
-  }, [dispatch, reportDiscovery]);
+  }, [dispatch, reportDiscovery, lpFromPanel, invEntities, invEntityOrder]);
 
   const handleLPResults = useCallback((consultaId, data, licitacoes) => {
     const key = consultaId || 'all';
@@ -140,79 +166,8 @@ export default function LigacaoPoliticaPage() {
   const handleNavigateToLicitacao = useCallback((pncp) => {
     setPncpDestacado(pncp);
     dispatch(setAbaAtiva('licitacoes'));
-  }, [dispatch]);
-
-  const handleAnaliseDetalhada = useCallback(async (contrato) => {
-    setAnaliseDetalhadaLoading(true);
-    const licitacoes = [];
-    const seen = new Set();
-    const mainDoc = contrato.fornecedor?.cnpj || contrato.niFornecedor || contrato.orgaoEntidade?.cnpj;
-    if (mainDoc && mainDoc.length >= 3) {
-      const key = `${contrato.numeroControlePNCP || ''}_${mainDoc}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        licitacoes.push({ numero_controle_pncp: contrato.numeroControlePNCP || '', cpf_cnpj: mainDoc, socios: (contrato.fornecedor?.qsa || []).map(s => ({ nome: s.nome_socio || '', documento: s.cnpj_cpf_socio || '' })) });
-      }
-    }
-    if (contrato.niFornecedor && contrato.niFornecedor !== mainDoc && contrato.niFornecedor.length >= 3) {
-      const key = `${contrato.numeroControlePNCP || ''}_ni_${contrato.niFornecedor}`;
-      if (!seen.has(key)) { seen.add(key); licitacoes.push({ numero_controle_pncp: contrato.numeroControlePNCP || '', cpf_cnpj: contrato.niFornecedor, socios: [] }); }
-    }
-    (contrato.fornecedor?.qsa || []).forEach(s => {
-      const sd = s.cnpj_cpf_socio;
-      if (sd && sd.length >= 3 && sd !== mainDoc && sd !== contrato.niFornecedor && !seen.has(`${contrato.numeroControlePNCP || ''}_socio_${sd}`)) {
-        seen.add(`${contrato.numeroControlePNCP || ''}_socio_${sd}`);
-        licitacoes.push({ numero_controle_pncp: contrato.numeroControlePNCP || '', cpf_cnpj: sd, socios: [] });
-      }
-    });
-    if (licitacoes.length === 0) { setAnaliseDetalhadaLoading(false); return; }
-    try {
-      const json = await api.post<any>(ENDPOINTS.BUSCA_CONTEXTO, { licitacoes });
-      const discoveries: any[] = [];
-      const seen = new Set();
-      (json.resultados || []).forEach((item: any) => {
-        const doc = item.cpf_cnpj;
-        if (doc && doc.length >= 3 && !seen.has(doc)) {
-          seen.add(doc);
-          discoveries.push({
-            id: doc,
-            type: doc.length <= 11 ? 'pessoa_fisica' : 'empresa',
-            label: doc.length > 11 ? 'Empresa' : doc,
-            document: doc,
-            source: 'pncp',
-            originalData: {},
-            context: 'Análise Detalhada',
-          });
-        }
-        (item.socios || []).forEach((s: any) => {
-          const sd = s.documento;
-          if (sd && sd.length >= 3 && !seen.has(sd)) {
-            seen.add(sd);
-            discoveries.push({
-              id: sd, type: sd.length <= 11 ? 'pessoa_fisica' : 'empresa',
-              label: s.nome || sd, document: sd, source: 'pncp',
-              originalData: {}, context: 'Análise Detalhada (Sócio)',
-            });
-          }
-        });
-      });
-      reportDiscovery(discoveries);
-      const id = ++adUid;
-      const analise = { id, licitacao: { numeroControlePNCP: contrato.numeroControlePNCP, fornecedor: contrato.fornecedor?.razaoSocial || contrato.niFornecedor || '-' }, data: json, licitacoes, timestamp: new Date().toISOString() };
-      dispatch(addAdAnalise(analise));
-      dispatch(addSubTab({ kind: 'ad', id }));
-      dispatch(setSubTabAtiva('ad'));
-      dispatch(setAbaAtiva('ligacao-politica'));
-    } catch (err) { console.error('Erro na analise detalhada:', err); }
-    setAnaliseDetalhadaLoading(false);
-  }, [dispatch]);
-
-  const handleAbrirTodasAnalisesDetalhadas = useCallback(async (itens) => {
-    for (const item of itens) {
-      const contrato = { numeroControlePNCP: item.numero_controle_pncp, fornecedor: { razaoSocial: item.cpf_cnpj || '-', cnpj: item.cpf_cnpj, qsa: (item.socios || []).map(s => ({ nome_socio: s.nome, cnpj_cpf_socio: s.documento })) }, niFornecedor: null };
-      await handleAnaliseDetalhada(contrato);
-    }
-  }, [handleAnaliseDetalhada]);
+    navigate('/licitacoes');
+  }, [dispatch, navigate]);
 
   const handleAbrirLigacaoPolitica = useCallback((consultaId) => {
     dispatch(setLigPoliticaAberta(null));
@@ -229,14 +184,9 @@ export default function LigacaoPoliticaPage() {
     dispatch(removeSubTab(key));
   }, [dispatch]);
 
-  const handleFecharADAnalise = useCallback((id) => {
-    dispatch(removeAdAnalise(Number(id)));
-    dispatch(setAdTabAtiva('geral'));
-  }, [dispatch]);
-
-  const getAtivaKind = () => subTabAtiva === 'geral' ? 'geral' : subTabAtiva === 'ad' ? 'ad' : 'consulta';
+  const getAtivaKind = () => subTabAtiva === 'geral' ? 'geral' : 'consulta';
   const getAtivaId = () => {
-    if (subTabAtiva === 'geral' || subTabAtiva === 'ad') return null;
+    if (subTabAtiva === 'geral') return null;
     return Number(subTabAtiva.split('-')[1]);
   };
 
@@ -259,6 +209,13 @@ export default function LigacaoPoliticaPage() {
   return (
     <div className="tab-page">
       <div className="tab-content">
+        {inspectionDoc ? (
+          <InspectionView
+            document={inspectionDoc}
+            onClose={() => dispatch(clearInspectionDoc())}
+          />
+        ) : (
+          <>
         <div className="tab-header">
           <h2 className="tab-title">Ligação Política</h2>
           <p className="tab-desc">Cruzamento de dados entre fornecedores e agentes políticos.</p>
@@ -273,9 +230,6 @@ export default function LigacaoPoliticaPage() {
               const c = consultas.find(c => c.id === tab.id);
               const ci = c ? consultas.indexOf(c) : -1;
               label = ci >= 0 ? `Consulta #${ci + 1}` : `ID ${tab.id}`;
-            } else {
-              const analise = adAnalises.find(a => a.id === tab.id);
-              label = analise ? `${analise.licitacao.fornecedor} (${analise.licitacao.numeroControlePNCP?.slice(0, 12)}...)` : `AD #${tab.id}`;
             }
             return (
               <button key={key} className={`lp-sub-tab ${subTabAtiva === key ? 'ativo' : ''}`}
@@ -294,7 +248,7 @@ export default function LigacaoPoliticaPage() {
           <LigacaoPolitica
             consultas={consultas}
             consultaId={getAtivaKind() === 'geral' ? null : lpConsultaIdAtual}
-            onFechar={() => dispatch(setAbaAtiva('licitacoes'))}
+            onFechar={() => { dispatch(setAbaAtiva('licitacoes')); navigate('/licitacoes'); }}
             onSave={handleSalvarLP} onEdit={handleEditarLP} onApagar={handleApagarLP}
             cachedItem={ligPoliticaAberta}
             cachedResult={lpInitialData}
@@ -304,9 +258,8 @@ export default function LigacaoPoliticaPage() {
             savedList={ligPoliticaCache}
             onLoadSaved={handleAbrirSalvoLP}
             onDadosAtualizados={handleLPDadosAtualizados}
-            onAnaliseDetalhada={handleAnaliseDetalhada}
-            onAbrirTodasAD={handleAbrirTodasAnalisesDetalhadas}
             onIdClick={handleIdClickFromAnalise}
+            panelLicitacoes={panelLicitacoes}
           />
         </div>
 
@@ -316,7 +269,7 @@ export default function LigacaoPoliticaPage() {
             <div key={key} style={{ display: subTabAtiva === key ? '' : 'none' }}>
               <LigacaoPolitica
                 consultas={consultas} consultaId={tab.id}
-                onFechar={() => dispatch(setAbaAtiva('licitacoes'))}
+                onFechar={() => { dispatch(setAbaAtiva('licitacoes')); navigate('/licitacoes'); }}
                 onSave={handleSalvarLP} onEdit={handleEditarLP} onApagar={handleApagarLP}
                 cachedItem={null} cachedResult={lpDataCache[tab.id] || null}
                 onResultsReady={handleLPResults}
@@ -324,29 +277,14 @@ export default function LigacaoPoliticaPage() {
                 onLicitacaoClick={handleLicitacaoPopup}
                 savedList={ligPoliticaCache} onLoadSaved={handleAbrirSalvoLP}
                 onDadosAtualizados={handleLPDadosAtualizados}
-                onAnaliseDetalhada={handleAnaliseDetalhada}
-                onAbrirTodasAD={handleAbrirTodasAnalisesDetalhadas}
                 onIdClick={handleIdClickFromAnalise}
+                panelLicitacoes={panelLicitacoes}
               />
             </div>
           );
         })}
-
-        <div style={{ display: subTabAtiva === 'ad' ? '' : 'none' }}>
-          {adAnalises.length > 0 && (
-            <div>
-              <div className="lp-sub-tabs ad-internal-tabs">
-                <button className={`lp-sub-tab ${adTabAtiva === 'geral' ? 'ativo' : ''}`} onClick={() => dispatch(setAdTabAtiva('geral'))}>Geral</button>
-                {adAnalises.map(a => (
-                  <button key={a.id} className={`lp-sub-tab ${adTabAtiva === String(a.id) ? 'ativo' : ''}`} onClick={() => dispatch(setAdTabAtiva(String(a.id)))}>
-                    {a.licitacao.fornecedor}
-                    <span className="lp-sub-tab-fechar" onClick={(e) => { e.stopPropagation(); handleFecharADAnalise(a.id); }}>×</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       {popup && popup.tipo === 'contrato' && (

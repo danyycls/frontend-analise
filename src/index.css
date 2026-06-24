@@ -87,6 +87,8 @@
   --doador-bg: rgba(58, 88, 89, 0.12);
   --fornecedor: #4d7375;
   --fornecedor-bg: rgba(77, 115, 117, 0.12);
+  --servidor_publico: #7D3C98;
+  --servidor_publico-bg: rgba(125, 60, 152, 0.12);
   --despesa: #ef4444;
   --despesa-bg: rgba(239, 68, 68, 0.12);
   --receita: #10b981;
@@ -96,6 +98,7 @@
   --partido-hover: rgba(95, 145, 127, 0.2);
   --doador-hover: rgba(58, 88, 89, 0.2);
   --fornecedor-hover: rgba(77, 115, 117, 0.2);
+  --servidor_publico-hover: rgba(125, 60, 152, 0.2);
   --despesa-hover: rgba(239, 68, 68, 0.2);
   --receita-hover: rgba(16, 185, 129, 0.2);
 }
@@ -173,6 +176,8 @@
   --doador-bg: rgba(166, 196, 197, 0.12);
   --fornecedor: #8ab0b2;
   --fornecedor-bg: rgba(138, 176, 178, 0.12);
+  --servidor_publico: #7D3C98;
+  --servidor_publico-bg: rgba(125, 60, 152, 0.12);
   --despesa: #dc2626;
   --despesa-bg: rgba(220, 38, 38, 0.12);
   --receita: #16a34a;
@@ -182,6 +187,7 @@
   --partido-hover: rgba(0, 210, 134, 0.2);
   --doador-hover: rgba(166, 196, 197, 0.2);
   --fornecedor-hover: rgba(138, 176, 178, 0.2);
+  --servidor_publico-hover: rgba(125, 60, 152, 0.2);
   --despesa-hover: rgba(220, 38, 38, 0.2);
   --receita-hover: rgba(22, 163, 74, 0.2);
 }

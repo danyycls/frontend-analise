@@ -5,9 +5,13 @@ export type NodeType =
   | 'candidato'
   | 'deputado'
   | 'senador'
-  | 'partido'
+  | 'servidor_publico'
   | 'contrato'
-  | 'tcu_record'
+  | 'fornecedor'
+  | 'doador'
+  | 'socio'
+  | 'consulta'
+  | 'ligacao_politica'
 
 export interface GraphNode {
   id: string
@@ -23,18 +27,18 @@ export interface GraphEdge {
   type: RelationType
   label: string
   weight?: number
+  metadata?: Record<string, unknown>
 }
 
 export type RelationType =
   | 'mesmo_documento'
   | 'socio'
-  | 'contrato'
   | 'doacao_campanha'
   | 'despesa_cota'
   | 'tcu_irregular'
   | 'mesmo_partido'
   | 'orgao_lotacao'
-  | 'nome_similar'
+  | 'pertence'
 
 export interface GraphData {
   nodes: GraphNode[]

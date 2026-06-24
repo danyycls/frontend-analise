@@ -6,6 +6,5 @@ export { default as DeputadosPage } from './DeputadosPage/DeputadosPage';
 export { default as SenadoresPage } from './SenadoresPage/SenadoresPage';
 export { default as TcuPage } from './TcuPage/TcuPage';
 export { default as LigacaoPoliticaPage } from './LigacaoPoliticaPage/LigacaoPoliticaPage';
-export { default as InvestigativePanelPage } from './InvestigativePanelPage/InvestigativePanelPage';
 export { default as EstadoPage } from './EstadoPage/EstadoPage';
 export { default as WikiPage } from './WikiPage/WikiPage';

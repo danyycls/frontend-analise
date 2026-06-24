@@ -33,7 +33,6 @@ export default function MapaBrasil() {
 
   useEffect(() => {
     api.get(`/ibge/estados`)
-      .then(r => r.json())
       .then(data => {
         if (data.dados) setEstados(data.dados);
       })

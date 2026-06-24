@@ -9,6 +9,7 @@ const TIPO_LABEL = {
   doador: 'Doador',
   receita: 'Receita',
   despesa: 'Despesa',
+  prestador_contas: 'Prestador de Contas',
 };
 
 export function EntidadeView({ dados, tipo }) {
@@ -39,6 +40,22 @@ export function EntidadeView({ dados, tipo }) {
       </div>
     );
   }
+  if (tipo === 'prestador_contas') {
+    const pc = dados.prestacao_contas || {};
+    return (
+      <div className="ev-grid">
+        <CampoEV rotulo="SQ Prestador" valor={pc.sq_prestador_contas} />
+        <CampoEV rotulo="Tipo Prestador" valor={pc.tipo_prestador} />
+        <CampoEV rotulo="CNPJ Prestador" valor={pc.cnpj_prestador_conta} />
+        <CampoEV rotulo="Tipo Prestação" valor={pc.tipo_prestacao} />
+        <CampoEV rotulo="UF" valor={pc.sg_uf} />
+        <CampoEV rotulo="Turno" valor={pc.turno} />
+        <CampoEV rotulo="Data Prestação" valor={pc.data_prestacao} />
+        {dados.eleicao && <CampoEV rotulo="Eleição" valor={`${dados.eleicao.descricao_eleicao || ''} (${dados.eleicao.ano || ''})`} />}
+        {dados.partido && <CampoEV rotulo="Partido" valor={`${dados.partido.sigla || ''} - ${dados.partido.nome || ''}`} />}
+      </div>
+    );
+  }
   return <ObjCard data={dados} titulo={TIPO_LABEL[tipo] || tipo} open />;
 }
 
@@ -63,12 +80,7 @@ export default function EntityPopup({ tipo, chave, cachedData, onLoaded }) {
     setErro(null);
     setDados(null);
 
-    api.get(`/entidade`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo, chave }),
-    })
-      .then(res => res.json())
+    api.post(`/entidade`, { tipo, chave })
       .then(json => {
         if (cancelled) return;
         if (json.erro) {

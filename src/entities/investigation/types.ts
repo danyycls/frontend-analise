@@ -14,6 +14,8 @@ export interface InvestigationEntity {
   originalData: Record<string, unknown>
   addedAt: string
   context?: string
+  batchId?: string
+  batchLabel?: string
 }
 
 export interface InvestigationSnapshot {
@@ -28,12 +30,20 @@ export interface InvestigationFilters {
   nodeTypes: NodeType[]
   sources: string[]
   relationTypes: RelationType[]
+  contexts: string[]
   minWeight: number
+  highlightAnomalies: boolean
+  showOnlyAnomalies: boolean
+  showOnlyLp: boolean
 }
 
 export const DEFAULT_FILTERS: InvestigationFilters = {
   nodeTypes: [],
   sources: [],
   relationTypes: [],
+  contexts: [],
   minWeight: 0.3,
+  highlightAnomalies: true,
+  showOnlyAnomalies: false,
+  showOnlyLp: false,
 }

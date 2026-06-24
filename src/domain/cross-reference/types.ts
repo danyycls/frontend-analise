@@ -17,6 +17,7 @@ export interface EntityDocument {
   document?: string
   source: string
   originalData: Record<string, unknown>
+  context?: string
 }
 
 export interface MatchResult {

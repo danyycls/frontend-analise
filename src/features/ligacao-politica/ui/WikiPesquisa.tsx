@@ -82,8 +82,7 @@ export default function WikiPesquisa() {
             e dados fiscais (SICONFI/IBGE) em uma única plataforma com APIs REST e WebSocket.
           </p>
           <p>
-            Nosso objetivo é permitir que qualquer pessoa — jornalistas, pesquisadores, órgãos de
-            controle ou cidadãos comuns — consiga:
+            O objetivo do projeto é facilitar a qualquer pessoa comum o acesso e analise a dados publicos, atraves das ferramentas:
           </p>
           <ul>
             <li>
@@ -93,22 +92,18 @@ export default function WikiPesquisa() {
             </li>
             <li>
               <strong>Analisar conexões políticas</strong> cruzando CNPJs de empresas vencedoras de
-              licitações com bancos de dados do TSE (doadores de campanha, candidatos, partidos) e
+              licitações com bancos de dados do TSE (doadores de campanha, candidatos, partidos), dado de servidores do Portal transparência e
               sanções do TCU.
             </li>
             <li>
               <strong>Integrar múltiplos serviços públicos</strong> em um único local: TCU, TSE,
-              Portal da Transparência, Câmara dos Deputados, Senado Federal, OpenCNPJ, IBGE e
+              Portal da Transparência, Câmara dos Deputados, Senado Federal, IBGE e
               SICONFI.
-            </li>
-            <li>
-              <strong>Utilizar inteligência artificial</strong> para gerar análises automáticas,
-              planos de investigação e relatórios detalhados.
             </li>
           </ul>
           <p>
-            Em vez de abrir 8 sites diferentes e fazer cruzamentos manuais, o PODP automatiza esse
-            trabalho e apresenta tudo de forma estruturada e visual.
+            Em vez de abrir varios sites diferentes e fazer cruzamentos manuais, o PODP automatiza esse
+            trabalho e apresenta tudo de forma organizada e visual.
           </p>
         </section>
 
@@ -143,8 +138,7 @@ export default function WikiPesquisa() {
               concorrência ou serem favorecidas por agentes públicos.
             </li>
             <li>
-              <strong>Conexões políticas ocultas</strong>: empresas doadoras de campanha frequentemente
-              vencem licitações — o cruzamento desses dados revela potenciais conflitos de interesse.
+              <strong>Conexões políticas ocultas</strong>: ao cruzar os dados de varias fontes de informação, revela potenciais conflitos de interesse ou relações politicas ocultas.
             </li>
             <li>
               <strong>Sobrepreço e irregularidades</strong>: contratos superfaturados desviam recursos que
@@ -168,10 +162,7 @@ export default function WikiPesquisa() {
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> contratos e contratações públicas centralizados de todas as esferas de governo, incluindo atas, editais e resultados de licitações.</p>
             <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/clientes/pncp.md" target="_blank" rel="noopener noreferrer">docs/clientes/pncp.md</a>
-            </p>
-            <p><strong>API oficial:</strong>{' '}
-              <a href="https://pncp.gov.br/api/consulta/swagger-ui/index.html#/" target="_blank" rel="noopener noreferrer">Swagger PNCP</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/pncp.md" target="_blank" rel="noopener noreferrer">docs/clientes/pncp.md</a>
             </p>
           </div>
 
@@ -182,36 +173,10 @@ export default function WikiPesquisa() {
             de governo.
           </p>
 
-          <h3>APIs consumidas</h3>
-          <p>
-            O cliente <strong>PNCP</strong> (<code>internal/shared/clients/pncp/</code>) consome os
-            endpoints da API pública do PNCP (<code>https://pncp.gov.br/pncp-consulta/v1</code>):
-          </p>
-          <ul>
-            <li>
-              <strong>BuscarContratos</strong> — contratos por CNPJ do órgão, data inicial/final,
-              com paginação.
-            </li>
-            <li>
-              <strong>BuscarContratacoesPorMunicipio</strong> — contratações filtradas por código
-              IBGE do município.
-            </li>
-            <li>
-              <strong>BuscarContratacoesPorUF</strong> — contratações filtradas por UF.
-            </li>
-          </ul>
-
-          <h3>Streaming SSE</h3>
-          <p>
-            Além das consultas REST, o PNCP também é consumido via <strong>Server-Sent Events (SSE)</strong>
-            para streaming de dados em tempo real nas análises de órgãos e publicações.
-          </p>
-
           <h3>Por que é relevante</h3>
           <p>
-            O PNCP é a base de todo o fluxo de análise: a partir de uma licitação suspeita, o PODP
-            cruza os CNPJs vencedores com as bases do TSE (doadores e fornecedores de campanha),
-            TCU (sanções) e OpenCNPJ (sócios e situação cadastral).
+            O PNCP é uma das bases de todo o fluxo de análise: a partir de uma licitação suspeita, o PODP
+            cruza os CNPJs vencedores com as bases do TSE, TCU, Portal transferencia e etc...
           </p>
         </section>
 
@@ -221,10 +186,7 @@ export default function WikiPesquisa() {
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> sanções e condenações do TCU, incluindo contas julgadas irregulares (CADIRREG), contas com implicação eleitoral, responsáveis inabilitados para cargo em comissão e licitantes inidôneos.</p>
             <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/clientes/tcu.md" target="_blank" rel="noopener noreferrer">docs/clientes/tcu.md</a>
-            </p>
-            <p><strong>API oficial:</strong>{' '}
-              <a href="https://sites.tcu.gov.br/dados-abertos/webservices-tcu/#sancoes-e-condenacoes/" target="_blank" rel="noopener noreferrer">Webservices TCU</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/tcu.md" target="_blank" rel="noopener noreferrer">docs/clientes/tcu.md</a>
             </p>
           </div>
 
@@ -233,21 +195,6 @@ export default function WikiPesquisa() {
             O TCU é o órgão de controle externo do governo federal, responsável por fiscalizar a
             aplicação dos recursos públicos federais. Ele julga contas, verifica legalidade de
             contratos e mantém listas de pessoas e empresas com irregularidades.
-          </p>
-
-          <h3>Interface de integração</h3>
-          <p>
-            O cliente TCU (<code>internal/shared/clients/tcu/</code>) é baseado em uma
-            <strong>interface Go</strong> com implementação real e mock para testes:
-          </p>
-          <pre>{`type Client interface {
-    BuscarContasIrregulares(ctx, filter) ([]ContasIrregulares, error)
-    BuscarInabilitados(ctx, filter) ([]Sancoes, error)
-    BuscarInidoneos(ctx, filter) ([]Sancoes, error)
-    BuscarFinsEleitorais(ctx, filter) ([]FinsEleitorais, error)
-}`}</pre>
-          <p>
-            Base URL: <code>https://certidoes.apps.gov.br/api/publico</code>
           </p>
 
           <h3>Dados consultados pelo PODP</h3>
@@ -270,10 +217,6 @@ export default function WikiPesquisa() {
               Administração Pública.
             </li>
           </ul>
-
-          <h3>Parâmetros de consulta</h3>
-          <p>Filtros disponíveis: nome parcial, CPF, CNPJ, UF e município.</p>
-
           <h3>Por que é relevante</h3>
           <p>
             Se uma empresa vencedora de licitação aparece como inidônea no TCU, ou um sócio tem
@@ -288,16 +231,16 @@ export default function WikiPesquisa() {
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> dados eleitorais históricos desde 2006, incluindo candidatos, partidos, doadores, fornecedores de campanha, prestação de contas (receitas e despesas) e bens declarados.</p>
             <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/db-tse.md" target="_blank" rel="noopener noreferrer">docs/db-tse.md</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/db-tse.md" target="_blank" rel="noopener noreferrer">docs/db-tse.md</a>
               {' | '}
-              <a href="https://github.com/danyycls/backend-analise/docs/tse-importacao.md" target="_blank" rel="noopener noreferrer">docs/tse-importacao.md</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/tse-importacao.md" target="_blank" rel="noopener noreferrer">docs/tse-importacao.md</a>
             </p>
           </div>
 
           <h3>Visão Geral</h3>
           <p>
             Os dados do TSE são originalmente disponibilizados como planilhas CSV por ano eleitoral
-            e por UF. O PODP importa esses CSVs para um banco PostgreSQL relacional, normalizando
+            e por UF. O PODP importa esses CSVs para um banco PostgreSQL, normalizando
             as entidades e mantendo a rastreabilidade por arquivo importado.
           </p>
 
@@ -307,81 +250,6 @@ export default function WikiPesquisa() {
             <li><strong>2018 em diante</strong>: também disponíveis dados de prestação de contas
             (receitas e despesas de campanha).</li>
           </ul>
-
-          <h3>Convenções do banco</h3>
-          <ul>
-            <li><strong>Soft delete</strong>: todas as tabelas possuem <code>deleted_at</code>.</li>
-            <li><strong>Auditoria</strong>: <code>created_at</code> e <code>updated_at</code> em
-            todas as tabelas.</li>
-            <li><strong>IDs</strong>: UUID gerados via <code>gen_random_uuid()</code>.</li>
-          </ul>
-
-          <h3>Entidades</h3>
-          <p>O banco TSE é composto por 14 tabelas principais:</p>
-          <table>
-            <thead>
-              <tr><th>Entidade</th><th>Descrição</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><code>eleicao</code></td><td>Processo eleitoral (ex: "Eleições Gerais 2022")</td></tr>
-              <tr><td><code>unidade_eleitoral</code></td><td>UF e municípios no contexto eleitoral</td></tr>
-              <tr><td><code>partido</code></td><td>Partidos, coligações e federações</td></tr>
-              <tr><td><code>candidato</code></td><td>Candidatos a cargos eletivos</td></tr>
-              <tr><td><code>bem_candidato</code></td><td>Bens declarados por candidatos</td></tr>
-              <tr><td><code>fornecedor</code></td><td>Fornecedores de campanha (despesas)</td></tr>
-              <tr><td><code>doador</code></td><td>Doadores de campanha (receitas)</td></tr>
-              <tr><td><code>prestacao_contas</code></td><td>Ponto central que conecta eleições a candidatos ou órgãos partidários</td></tr>
-              <tr><td><code>despesa_candidato</code></td><td>Despesas de campanha de candidatos</td></tr>
-              <tr><td><code>despesa_orgao_partidario</code></td><td>Despesas de órgãos partidários</td></tr>
-              <tr><td><code>receita_candidato</code></td><td>Receitas de campanha de candidatos</td></tr>
-              <tr><td><code>receita_orgao_partidario</code></td><td>Receitas de órgãos partidários</td></tr>
-              <tr><td><code>receita_doador_originario_*</code></td><td>Doadores originários (doações via intermediários)</td></tr>
-              <tr><td><code>arquivo_importado</code></td><td>Rastreabilidade de importação de CSVs</td></tr>
-            </tbody>
-          </table>
-
-          <h3>Fluxo de importação</h3>
-          <table>
-            <thead>
-              <tr><th>Arquivo CSV</th><th>Tabelas destino</th><th>Anos</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><code>consulta_cand_&lt;ano&gt;/</code></td><td>candidato, eleicao, unidade_eleitoral, partido</td><td>2006–2024</td></tr>
-              <tr><td><code>bem_candidato_&lt;ano&gt;/</code></td><td>bem_candidato</td><td>2006–2024</td></tr>
-              <tr><td><code>prestacao_de_contas_eleitorais_candidatos_&lt;ano&gt;/</code></td><td>prestacao_contas, despesa_candidato, receita_candidato, fornecedor, doador</td><td>2018–2024</td></tr>
-              <tr><td><code>prestacao_de_contas_eleitorais_orgaos_partidarios_&lt;ano&gt;/</code></td><td>prestacao_contas, despesa_orgao_partidario, receita_orgao_partidario, fornecedor, doador</td><td>2018–2024</td></tr>
-            </tbody>
-          </table>
-        </section>
-
-        <section id="tse-consultas" className="wiki-section">
-          <h2>TSE — Consultas</h2>
-
-          <div className="wiki-entidade-header">
-            <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/db-tse.md" target="_blank" rel="noopener noreferrer">docs/db-tse.md</a>
-              {' | '}
-              <a href="https://github.com/danyycls/backend-analise/docs/tse-importacao.md" target="_blank" rel="noopener noreferrer">docs/tse-importacao.md</a>
-            </p>
-          </div>
-
-          <h3>APIs de consulta</h3>
-          <p>O PODP expõe as seguintes APIs para consulta aos dados do TSE:</p>
-          <table>
-            <thead>
-              <tr><th>Método</th><th>Rota</th><th>Descrição</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><code>GET</code></td><td><code>/busca/cargos</code></td><td>Lista todos os cargos disponíveis</td></tr>
-              <tr><td><code>GET</code></td><td><code>/busca/partidos</code></td><td>Lista todos os partidos</td></tr>
-              <tr><td><code>POST</code></td><td><code>/busca/candidatos</code></td><td>Busca candidatos com filtros (cargo, partido, UF, eleito)</td></tr>
-              <tr><td><code>POST</code></td><td><code>/busca/doadores</code></td><td>Busca doador por CPF/CNPJ</td></tr>
-              <tr><td><code>POST</code></td><td><code>/busca/fornecedores</code></td><td>Busca fornecedor por CPF/CNPJ</td></tr>
-              <tr><td><code>POST</code></td><td><code>/busca/relacoes</code></td><td>Busca relações (despesas/receitas) de um CNPJ</td></tr>
-              <tr><td><code>POST</code></td><td><code>/entidade</code></td><td>Consulta entidade por tipo + chave</td></tr>
-              <tr><td><code>POST</code></td><td><code>/import</code></td><td>Importa arquivo CSV</td></tr>
-            </tbody>
-          </table>
 
           <h3>Por que é relevante</h3>
           <p>
@@ -398,11 +266,7 @@ export default function WikiPesquisa() {
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> órgãos públicos federais (SIAPE/SIAFI), pessoas físicas e jurídicas, despesas federais, cartões corporativos, emendas parlamentares e servidores públicos (cadastro, remuneração, cargos e PEPs).</p>
             <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/clientes/portal-da-transparencia.md" target="_blank" rel="noopener noreferrer">docs/clientes/portal-da-transparencia.md</a>
-            </p>
-            <p><strong>API oficial:</strong>{' '}
-              <a href="https://api.portaldatransparencia.gov.br" target="_blank" rel="noopener noreferrer">api.portaldatransparencia.gov.br</a>
-              {' '}(requer chave de API)
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/portal-da-transparencia.md" target="_blank" rel="noopener noreferrer">docs/clientes/portal-da-transparencia.md</a>
             </p>
           </div>
 
@@ -444,10 +308,8 @@ export default function WikiPesquisa() {
 
           <h3>Por que é relevante</h3>
           <p>
-            Enquanto o PNCP mostra a licitação (quem contratou e quem venceu), o Portal da
-            Transparência mostra os pagamentos efetivamente realizados. É possível verificar se o
-            dinheiro foi de fato pago, se um servidor público está envolvido, ou se há emendas
-            parlamentares direcionando recursos para contratos específicos.
+            O Portal da
+            Transparência mostra os pagamentos efetivamente realizados, servidores publicos, emendas e outras informações.
           </p>
         </section>
 
@@ -457,10 +319,7 @@ export default function WikiPesquisa() {
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> deputados federais, despesas da cota parlamentar, frentes parlamentares, blocos partidários, grupos, legislaturas, votações e referências.</p>
             <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/clientes/camara-dos-deputados.md" target="_blank" rel="noopener noreferrer">docs/clientes/camara-dos-deputados.md</a>
-            </p>
-            <p><strong>API oficial:</strong>{' '}
-              <a href="https://dadosabertos.camara.leg.br/swagger/api.html" target="_blank" rel="noopener noreferrer">Swagger Câmara</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/camara-dos-deputados.md" target="_blank" rel="noopener noreferrer">docs/clientes/camara-dos-deputados.md</a>
             </p>
           </div>
 
@@ -531,10 +390,7 @@ export default function WikiPesquisa() {
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> senadores, comissões, processos legislativos, votações em plenário e comissões, matérias em tramitação, agenda do plenário e emendas orçamentárias.</p>
             <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/clientes/senado-federal.md" target="_blank" rel="noopener noreferrer">docs/clientes/senado-federal.md</a>
-            </p>
-            <p><strong>API oficial:</strong>{' '}
-              <a href="https://legis.senado.leg.br/dadosabertos/api-docs/swagger-ui/index.html#/" target="_blank" rel="noopener noreferrer">Swagger Senado</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/senado-federal.md" target="_blank" rel="noopener noreferrer">docs/clientes/senado-federal.md</a>
             </p>
           </div>
 
@@ -591,63 +447,13 @@ export default function WikiPesquisa() {
           </p>
         </section>
 
-        <section id="opencnpj" className="wiki-section">
-          <h2>OpenCNPJ</h2>
-
-          <div className="wiki-entidade-header">
-            <p><strong>Dados disponibilizados:</strong> cadastro nacional de pessoas jurídicas, incluindo razão social, nome fantasia, situação cadastral (ativa/inapta/baixada), capital social e quadro de sócios e administradores (QSA).</p>
-            <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/clientes/opencnpj.md" target="_blank" rel="noopener noreferrer">docs/clientes/opencnpj.md</a>
-            </p>
-            <p><strong>API oficial:</strong>{' '}
-              <a href="https://opencnpj.org" target="_blank" rel="noopener noreferrer">opencnpj.org</a>
-            </p>
-          </div>
-
-          <h3>O que é</h3>
-          <p>
-            O OpenCNPJ é uma API pública que disponibiliza dados cadastrais de CNPJs. O PODP a
-            utiliza para enriquecer as análises com dados da Receita Federal.
-          </p>
-
-          <h3>Integração</h3>
-          <p>
-            O cliente (<code>internal/shared/clients/opencnpj/</code>) é baseado em uma
-            <strong>interface Go</strong> com implementação real e mock para testes:
-          </p>
-          <pre>{`type Client interface {
-    Buscar(ctx, cnpj string) (*OpenCNPJResponse, error)
-}`}</pre>
-          <p>Base URL: <code>https://api.opencnpj.org/{'{cnpj}'}</code></p>
-
-          <h3>Dados retornados</h3>
-          <ul>
-            <li><strong>CNPJ</strong> — número completo.</li>
-            <li><strong>Razão Social</strong> e <strong>Nome Fantasia</strong>.</li>
-            <li><strong>Situação Cadastral</strong> — ativa, inapta, baixada, etc.</li>
-            <li><strong>Capital Social</strong>.</li>
-            <li><strong>Sócios (QSA)</strong> — quadro de sócios e administradores.</li>
-          </ul>
-
-          <h3>Por que é relevante</h3>
-          <p>
-            Ao cruzar um CNPJ de empresa vencedora de licitação, o PODP busca automaticamente no
-            OpenCNPJ para identificar os sócios. Esses sócios são então verificados nas bases do
-            TSE (doações de campanha) e do TCU (sanções), criando uma teia de conexões que revela
-            potenciais conflitos de interesse.
-          </p>
-        </section>
-
         <section id="ibge" className="wiki-section">
           <h2>IBGE — Localidades e População</h2>
 
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> localidades brasileiras (estados e municípios) com hierarquia administrativa (microrregião, mesorregião, UF) e estimativas populacionais dos municípios.</p>
             <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/clientes/ibge.md" target="_blank" rel="noopener noreferrer">docs/clientes/ibge.md</a>
-            </p>
-            <p><strong>API oficial:</strong>{' '}
-              <a href="https://servicodados.ibge.gov.br/api/docs/" target="_blank" rel="noopener noreferrer">API IBGE</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/ibge.md" target="_blank" rel="noopener noreferrer">docs/clientes/ibge.md</a>
             </p>
           </div>
 
@@ -680,12 +486,7 @@ export default function WikiPesquisa() {
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> dados contábeis e fiscais do setor público brasileiro, incluindo Declaração de Contas Anuais (DCA), Relatório de Gestão Fiscal (RGF), Relatório Resumido de Execução Orçamentária (RREO), Matriz de Saldos Contábeis (MSC) e extrato de entregas.</p>
             <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/clientes/siconfi.md" target="_blank" rel="noopener noreferrer">docs/clientes/siconfi.md</a>
-              {' | '}
-              <a href="https://github.com/danyycls/backend-analise/docs/detalhes-municipio.md" target="_blank" rel="noopener noreferrer">docs/detalhes-municipio.md</a>
-            </p>
-            <p><strong>API oficial:</strong>{' '}
-              <a href="https://apidatalake.tesouro.gov.br/docs/siconfi/" target="_blank" rel="noopener noreferrer">docs SICONFI</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/siconfi.md" target="_blank" rel="noopener noreferrer">docs/clientes/siconfi.md</a>
             </p>
           </div>
 
@@ -693,8 +494,7 @@ export default function WikiPesquisa() {
           <p>
             O SICONFI (Sistema de Informações Contábeis e Fiscais do Setor Público Brasileiro) é
             mantido pelo Tesouro Nacional. O cliente (<code>internal/shared/clients/siconfi/</code>)
-            consome a API em <code>https://apidatalake.tesouro.gov.br/ords/siconfi/tt</code> com
-            rate limit de 1 requisição por segundo e paginação de 5000 itens.
+            consome a API em <code>https://apidatalake.tesouro.gov.br/ords/siconfi/tt</code>.
           </p>
 
           <h3>APIs integradas</h3>
@@ -722,20 +522,22 @@ export default function WikiPesquisa() {
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> cruzamento de documentos de licitações com dados eleitorais do TSE (fornecedores e doadores de campanha), cadastrais do OpenCNPJ (QSA e situação CNPJ) e sanções do TCU (contas irregulares, inabilitados, inidôneos).</p>
             <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/ligacao-politica.md" target="_blank" rel="noopener noreferrer">docs/ligacao-politica.md</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/ligacao-politica.md" target="_blank" rel="noopener noreferrer">docs/ligacao-politica.md</a>
               {' | '}
-              <a href="https://github.com/danyycls/backend-analise/docs/db-tse.md" target="_blank" rel="noopener noreferrer">docs/db-tse.md</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/db-tse.md" target="_blank" rel="noopener noreferrer">docs/db-tse.md</a>
               {' | '}
-              <a href="https://github.com/danyycls/backend-analise/docs/clientes/tcu.md" target="_blank" rel="noopener noreferrer">docs/clientes/tcu.md</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/tcu.md" target="_blank" rel="noopener noreferrer">docs/clientes/tcu.md</a>
               {' | '}
-              <a href="https://github.com/danyycls/backend-analise/docs/clientes/opencnpj.md" target="_blank" rel="noopener noreferrer">docs/clientes/opencnpj.md</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/portal-da-transparencia.md" target="_blank" rel="noopener noreferrer">docs/clientes/portal-da-transparencia.md</a>
+              {' | '}
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/opencnpj.md" target="_blank" rel="noopener noreferrer">docs/clientes/opencnpj.md</a>
             </p>
           </div>
 
           <h3>O que é</h3>
           <p>
             O serviço de <strong>Ligação Política</strong> cruza documentos de licitações/contratos
-            com dados eleitorais (TSE), cadastrais (OpenCNPJ) e sanções (TCU) para revelar conexões
+            com dados eleitorais (TSE), cadastrais (OpenCNPJ), sanções (TCU) e servidores(Portal Transparencia) para revelar conexões
             entre empresas contratadas e políticos.
           </p>
 
@@ -746,8 +548,9 @@ export default function WikiPesquisa() {
             doador de campanhas eleitorais.</li>
             <li><strong>Enriquecimento OpenCNPJ</strong> — obtém razão social, situação cadastral
             e sócios da empresa.</li>
-            <li><strong>Enriquecimento TCU</strong> — verifica contas irregulares, inidôneos e
+            <li><strong>Validação TCU</strong> — verifica contas irregulares, inidôneos e
             inabilitados.</li>
+            <li><strong>Validação Portal Transparencia</strong> — verifica possiveis servidores publicos..</li>
             <li><strong>Cache Redis</strong> — resultados são armazenados em cache para evitar
             consultas repetidas.</li>
           </ol>
@@ -762,19 +565,6 @@ export default function WikiPesquisa() {
             </tbody>
           </table>
 
-          <h3>Exemplo de request</h3>
-          <pre>{`{
-  "licitacoes": [
-    {
-      "numero_controle_pncp": "pncp-001",
-      "cpf_cnpj": "11222333000181",
-      "socios": [
-        { "nome": "João", "documento": "11122233344" }
-      ]
-    }
-  ]
-}`}</pre>
-
           <h3>Por que é relevante</h3>
           <p>
             Este é o serviço central do PODP. Ele conecta os pontos entre licitações, doações de
@@ -788,9 +578,9 @@ export default function WikiPesquisa() {
 
           <div className="wiki-entidade-header">
             <p><strong>Documentação geral:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/docs/dev-roadmap.md" target="_blank" rel="noopener noreferrer">docs/dev-roadmap.md</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/dev-roadmap.md" target="_blank" rel="noopener noreferrer">docs/dev-roadmap.md</a>
               {' (status das integrações) | '}
-              <a href="https://github.com/danyycls/backend-analise/docs/mapeamento-de-rotas.md" target="_blank" rel="noopener noreferrer">docs/mapeamento-de-rotas.md</a>
+              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/mapeamento-de-rotas.md" target="_blank" rel="noopener noreferrer">docs/mapeamento-de-rotas.md</a>
               {' (84 rotas mapeadas)'}
             </p>
           </div>

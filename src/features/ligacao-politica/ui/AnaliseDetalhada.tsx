@@ -377,15 +377,61 @@ function TCUListView({ items, onIdClick }) {
   );
 }
 
+function ServidorPublicoListView({ items, onIdClick }) {
+  if (!items || items.length === 0) return <p className="ad-empty">Nenhum servidor público encontrado.</p>;
+
+  return (
+    <div className="ad-tcu-section">
+      <div className="ad-array-section">
+        <h4 className="ad-array-title">
+          Servidor Público Federal
+          <span className="ad-s-cnt">{items.length}</span>
+        </h4>
+        <div className="tcu-cards">
+          {items.map((item, i) => {
+            const serv = item.servidor || {};
+            const pes = serv.pessoa || {};
+            const orgaoLot = serv.orgaoServidorLotacao || {};
+            const orgaoExe = serv.orgaoServidorExercicio || {};
+            const func = serv.funcao || {};
+            return (
+              <div key={i} className="tcu-card">
+                <div className="tcu-card-topo">
+                  <span className="tcu-card-tipo" style={{ background: '#7D3C98' }}>SERVIDOR</span>
+                  <span className="tcu-card-nome">{pes.nome || '-'}</span>
+                  {pes.cpfFormatado && (
+                    <span className="tcu-card-doc">{pes.cpfFormatado}</span>
+                  )}
+                </div>
+                <div className="tcu-card-corpo">
+                  <div className="tcu-card-grid">
+                    <div className="tcu-card-campo"><span className="tcu-card-label">Tipo</span><span>{serv.tipoServidor || '-'}</span></div>
+                    <div className="tcu-card-campo"><span className="tcu-card-label">Situação</span><span>{serv.situacao || '-'}</span></div>
+                    <div className="tcu-card-campo"><span className="tcu-card-label">Órgão Lotação</span><span>{orgaoLot.nome || orgaoLot.sigla || '-'}</span></div>
+                    <div className="tcu-card-campo"><span className="tcu-card-label">Órgão Exercício</span><span>{orgaoExe.nome || orgaoExe.sigla || '-'}</span></div>
+                    <div className="tcu-card-campo"><span className="tcu-card-label">Função/Cargo</span><span>{func.descricaoFuncaoCargo || '-'}</span></div>
+                    <div className="tcu-card-campo"><span className="tcu-card-label">Matrícula</span><span>{serv.codigoMatriculaFormatado || '-'}</span></div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const SUB_LABELS = {
   servicos_candidatos: 'serviços prestados a candidatos',
   servicos_partidos: 'serviços prestados a partidos',
   doacoes_candidatos: 'doações feitas a candidatos',
   doacoes_partidos: 'doações feitas a partidos',
   tcu: 'TCU',
+  servidores_publicos: 'servidor público federal',
 };
 
-const CATEGORIAS = ['servicos_candidatos', 'servicos_partidos', 'doacoes_candidatos', 'doacoes_partidos', 'tcu'];
+const CATEGORIAS = ['servicos_candidatos', 'servicos_partidos', 'doacoes_candidatos', 'doacoes_partidos', 'tcu', 'servidores_publicos'];
 
 export default function AnaliseDetalhada({
   data, licitacao, adId, onFechar, onIdClick,
@@ -412,6 +458,7 @@ export default function AnaliseDetalhada({
         let doacoesCand = [];
         let doacoesPart = [];
         let tcuItems = [];
+        let servPubItems = [];
 
         (doc.vinculos || []).forEach(v => {
           if (v.tipo === 'fornecedor' && v.detalhes?.fornecedor) {
@@ -452,13 +499,18 @@ export default function AnaliseDetalhada({
               v.detalhes.inidoneos.map(item => ({ ...item, _tcu_tipo: 'Inidôneo', _origem_vinculo: v.descricao }))
             );
           }
+          if (v.tipo === 'servidor_publico' && v.detalhes?.servidores_publicos) {
+            servPubItems = servPubItems.concat(
+              v.detalhes.servidores_publicos.map(item => ({ ...item, _origem_vinculo: v.descricao }))
+            );
+          }
         });
 
         secs.push({
           key: `doc_${secs.length}`,
           docMeta,
-          items: { servicos_candidatos: servicosCand, servicos_partidos: servicosPart, doacoes_candidatos: doacoesCand, doacoes_partidos: doacoesPart, tcu: tcuItems },
-          hasAny: servicosCand.length > 0 || servicosPart.length > 0 || doacoesCand.length > 0 || doacoesPart.length > 0 || tcuItems.length > 0,
+          items: { servicos_candidatos: servicosCand, servicos_partidos: servicosPart, doacoes_candidatos: doacoesCand, doacoes_partidos: doacoesPart, tcu: tcuItems, servidores_publicos: servPubItems },
+          hasAny: servicosCand.length > 0 || servicosPart.length > 0 || doacoesCand.length > 0 || doacoesPart.length > 0 || tcuItems.length > 0 || servPubItems.length > 0,
         });
       });
     });
@@ -580,6 +632,8 @@ export default function AnaliseDetalhada({
                           <h3 className="ad-view-title">{SUB_LABELS[selectedTipo]}</h3>
                           {selectedTipo === 'tcu' ? (
                             <TCUListView items={activeItems} onIdClick={onIdClick} />
+                          ) : selectedTipo === 'servidores_publicos' ? (
+                            <ServidorPublicoListView items={activeItems} onIdClick={onIdClick} />
                           ) : (
                             <ItemListView items={activeItems} titulo={SUB_LABELS[selectedTipo]} onIdClick={onIdClick} />
                           )}

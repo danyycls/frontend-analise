@@ -6,8 +6,13 @@ interface NodeDetailPanelProps {
   entity: InvestigationEntity | null
   node: GraphNode | null
   graphEdges: GraphEdge[]
+  allNodes: GraphNode[]
   onClose: () => void
   onRemove: (id: string) => void
+  onContractClick?: (metadata: Record<string, unknown>) => void
+  onInspectClick?: (document: string) => void
+  onLpNavigate?: () => void
+  politicallyConnectedNodeIds?: string[]
 }
 
 function fmtDoc(d: string | undefined): string {
@@ -22,8 +27,13 @@ export default function NodeDetailPanel({
   entity,
   node,
   graphEdges,
+  allNodes,
   onClose,
   onRemove,
+  onContractClick,
+  onInspectClick,
+  onLpNavigate,
+  politicallyConnectedNodeIds,
 }: NodeDetailPanelProps) {
   if (!entity && !node) {
     return (
@@ -74,6 +84,18 @@ export default function NodeDetailPanel({
             }}
           />
           <span style={{ color: '#AAA' }}>{node.type.replace(/_/g, ' ')}</span>
+          {entity?.type === 'fornecedor' && politicallyConnectedNodeIds?.includes(entity.id) && (
+            <span style={{
+              fontSize: 10,
+              color: '#1ABC9C',
+              background: 'rgba(26,188,156,0.15)',
+              padding: '1px 6px',
+              borderRadius: 3,
+              marginLeft: 4,
+            }}>
+              Prestador Serv. Político
+            </span>
+          )}
         </div>
       )}
 
@@ -119,9 +141,16 @@ export default function NodeDetailPanel({
         {connectedEdges.map((edge) => {
           const meta = RELATION_META[edge.type]
           const otherId = edge.source === node?.id ? edge.target : edge.source
+          const otherNode = allNodes.find((n) => n.id === otherId)
+          const isContrato = !!edge.metadata?.contrato_pncp
           return (
             <div
               key={edge.id}
+              onClick={() => {
+                if (isContrato && onContractClick && edge.metadata) {
+                  onContractClick(edge.metadata)
+                }
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -129,9 +158,12 @@ export default function NodeDetailPanel({
                 padding: '6px 8px',
                 marginBottom: 4,
                 borderRadius: 4,
-                background: '#1a1a2e',
+                background: isContrato ? '#1e2a1a' : '#1a1a2e',
                 fontSize: 12,
+                cursor: isContrato ? 'pointer' : 'default',
+                border: isContrato ? '1px solid #2a4a2a' : 'none',
               }}
+              title={isContrato ? 'Clique para ver detalhes do contrato' : undefined}
             >
               <div
                 style={{
@@ -142,12 +174,48 @@ export default function NodeDetailPanel({
                   flexShrink: 0,
                 }}
               />
-              <span style={{ color: '#CCC' }}>{meta?.label || edge.type}</span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <span style={{ color: isContrato ? '#27AE60' : '#CCC' }}>{meta?.label || edge.type}</span>
+                {otherNode && (
+                  <span style={{ color: '#888', marginLeft: 6 }}>
+                    → {otherNode.label}
+                  </span>
+                )}
+                {edge.label && edge.label !== (meta?.label || edge.type) && (
+                  <div style={{ fontSize: 10, color: '#666', marginTop: 2, lineHeight: 1.3 }}>
+                    {edge.label}
+                  </div>
+                )}
+              </div>
+              {isContrato && (
+                <span style={{ color: '#27AE60', fontSize: 14 }}>ⓘ</span>
+              )}
             </div>
           )
         })}
       </div>
 
+      {(entity?.type === 'ligacao_politica' || node?.type === 'ligacao_politica') && onLpNavigate && (
+        <button
+          className="btn btn-accent"
+          onClick={() => onLpNavigate()}
+          style={{ fontSize: 11, width: '100%', marginBottom: 8 }}
+        >
+          Ver Análise de Ligação Política
+        </button>
+      )}
+      {entity && entity.document && (
+        entity.type === 'fornecedor' || entity.type === 'doador' ||
+        (entity.type === 'empresa' && ((entity.originalData as any)?.orgao_documento != null))
+      ) && (
+        <button
+          className="btn btn-accent"
+          onClick={() => onInspectClick?.(entity.document!)}
+          style={{ fontSize: 11, width: '100%', marginBottom: 8 }}
+        >
+          Inspecionar {entity.type === 'doador' ? 'Doador' : 'Fornecedor PNCP'}
+        </button>
+      )}
       {entity && (
         <button
           className="btn btn-sm btn-outline-danger"

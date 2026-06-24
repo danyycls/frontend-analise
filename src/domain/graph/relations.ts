@@ -19,14 +19,7 @@ export const RELATION_META: Record<RelationType, RelationMeta> = {
   socio: {
     type: 'socio',
     label: 'Sócio',
-    color: '#27AE60',
-    dash: true,
-    width: 2,
-  },
-  contrato: {
-    type: 'contrato',
-    label: 'Contrato',
-    color: '#E67E22',
+    color: '#888888',
     dash: false,
     width: 2,
   },
@@ -65,14 +58,16 @@ export const RELATION_META: Record<RelationType, RelationMeta> = {
     dash: true,
     width: 1.5,
   },
-  nome_similar: {
-    type: 'nome_similar',
-    label: 'Nome Similar',
-    color: '#7F8C8D',
+  pertence: {
+    type: 'pertence',
+    label: 'Pertence',
+    color: '#5D6D7E',
     dash: true,
     width: 1,
   },
 }
+
+export const ANOMALY_EDGE_COLOR = '#E74C3C'
 
 export const NODE_COLORS: Record<string, string> = {
   pessoa_fisica: '#4A90D9',
@@ -81,7 +76,10 @@ export const NODE_COLORS: Record<string, string> = {
   candidato: '#8E44AD',
   deputado: '#E91E63',
   senador: '#C2185B',
-  partido: '#F1C40F',
-  contrato: '#7F8C8D',
-  tcu_record: '#E74C3C',
+  servidor_publico: '#7D3C98',
+  fornecedor: '#F39C12',
+  doador: '#D35400',
+  socio: '#3498DB',
+  consulta: '#95A5A6',
+  ligacao_politica: '#1ABC9C',
 }

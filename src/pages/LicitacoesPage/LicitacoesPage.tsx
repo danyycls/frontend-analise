@@ -1,9 +1,11 @@
 // @ts-nocheck
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { setAbaAtiva, setFormAberto, setTipoBusca } from '@/app/store/slices/navigationSlice';
 import { addConsulta, removeConsulta as removeConsultaAction, setConsultas, setActiveJob } from '@/app/store/slices/consultaSlice';
+import { addSubTab, setSubTabAtiva } from '@/app/store/slices/ligacaoPoliticaSlice';
 import Formulario from '@/features/licitacao/ui/Formulario';
 import FormularioPublicacao from '@/features/licitacao/ui/FormularioPublicacao';
 import Progresso from '@/features/licitacao/ui/Progresso';
@@ -18,6 +20,7 @@ let uid = 0;
 
 export default function LicitacoesPage() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const formAberto = useAppSelector((s) => s.navigation.formAberto);
   const tipoBusca = useAppSelector((s) => s.navigation.tipoBusca);
 
@@ -43,7 +46,6 @@ export default function LicitacoesPage() {
 
   const handleIniciar = useCallback((jobId, meta) => {
     dispatch(setActiveJob({ jobId, meta: { ...meta, tipo: 'orgao' } }));
-    dispatch(setFormAberto(false));
   }, [dispatch]);
 
   const handleFinalizar = useCallback((resultados, meta, paginasErro) => {
@@ -60,6 +62,13 @@ export default function LicitacoesPage() {
   const handleApagar = useCallback((id) => {
     dispatch(removeConsultaAction(id));
   }, [dispatch]);
+
+  const handleLigacaoPoliticaConsulta = useCallback((consultaId: number) => {
+    dispatch(addSubTab({ kind: 'consulta', id: consultaId }));
+    dispatch(setSubTabAtiva(`consulta-${consultaId}`));
+    dispatch(setAbaAtiva('ligacao-politica'));
+    navigate('/ligacao-politica');
+  }, [dispatch, navigate]);
 
   const handleCancelarJob = useCallback(() => {
     dispatch(setActiveJob(null));
@@ -213,6 +222,7 @@ export default function LicitacoesPage() {
                   pncpDestacado={pncpDestacado}
                   onIdClick={handleIdClickFromAnalise}
                   onClose={() => handleApagar(consulta.id)}
+                  onLigacaoPolitica={() => handleLigacaoPoliticaConsulta(consulta.id)}
                 />
               ))}
             </div>
@@ -234,7 +244,7 @@ export default function LicitacoesPage() {
   );
 }
 
-function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose }) {
+function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose, onLigacaoPolitica }) {
   const [minimizado, setMinimizado] = useState(false);
   const [maximizado, setMaximizado] = useState(false);
 
@@ -263,6 +273,9 @@ function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose }) {
           </div>
           <div className="consulta-header-right">
             <span className="consulta-sumario">{resumo}</span>
+            <button className="btn btn-sm btn-outline-accent" onClick={(e) => { e.stopPropagation(); onLigacaoPolitica?.(); }} title="Análise de Ligação Política">
+              Lig. Política
+            </button>
             <button className="btn btn-sm" onClick={() => setMaximizado(false)} title="Restaurar">{'\ud83d\udd97'}</button>
             <button className="btn-apagar" onClick={onClose} title="Fechar">{'\u2715'}</button>
           </div>
@@ -291,6 +304,9 @@ function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose }) {
           </div>
           <div className="consulta-header-right">
             <span className="consulta-sumario">{resumo}</span>
+            <button className="btn btn-sm btn-outline-accent" onClick={(e) => { e.stopPropagation(); onLigacaoPolitica?.(); }} title="Análise de Ligação Política">
+              Lig. Política
+            </button>
             <button
               className="consulta-restore-btn"
               onClick={(e) => { e.stopPropagation(); setMinimizado(false); }}
@@ -317,6 +333,9 @@ function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose }) {
         </div>
         <div className="consulta-header-right">
           <span className="consulta-sumario">{resumo}</span>
+          <button className="btn btn-sm btn-outline-accent" onClick={(e) => { e.stopPropagation(); onLigacaoPolitica?.(); }} title="Análise de Ligação Política">
+            Lig. Política
+          </button>
           <button className="consulta-restore-btn" onClick={() => setMinimizado(true)} title="Minimizar">{'\ud83d\udd55'}</button>
           <button className="consulta-restore-btn" onClick={() => setMaximizado(true)} title="Maximizar">{'\ud83d\udd56'}</button>
           <button className="btn-apagar" onClick={onClose} title="Fechar">{'\u2715'}</button>

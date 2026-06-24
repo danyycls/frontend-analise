@@ -5,7 +5,7 @@ import type {
   InvestigationFilters,
 } from '@/entities/investigation'
 import { DEFAULT_FILTERS } from '@/entities/investigation'
-import type { GraphData, NodeType } from '@/domain'
+import type { GraphData, GraphEdge, NodeType } from '@/domain'
 import type { DiscoveredEntity } from '@/shared/lib/entity-discovery'
 
 interface InvestigationState {
@@ -23,6 +23,19 @@ interface InvestigationState {
 
   snapshots: InvestigationSnapshot[]
   currentSnapshotIndex: number
+
+  lpLoading: boolean
+  lpError: string | null
+  lpEdges: GraphEdge[]
+
+  anomalousNodeIds: string[]
+  anomalousEdgeIds: string[]
+
+  lpConnectedNodeIds: string[]
+
+  politicallyConnectedNodeIds: string[]
+
+  inspectionDoc: string | null
 }
 
 const initialState: InvestigationState = {
@@ -35,6 +48,14 @@ const initialState: InvestigationState = {
   filters: { ...DEFAULT_FILTERS },
   snapshots: [],
   currentSnapshotIndex: -1,
+  lpLoading: false,
+  lpError: null,
+  lpEdges: [],
+  anomalousNodeIds: [],
+  anomalousEdgeIds: [],
+  lpConnectedNodeIds: [],
+  politicallyConnectedNodeIds: [],
+  inspectionDoc: null,
 }
 
 let entityCounter = 0
@@ -211,15 +232,40 @@ const investigationSlice = createSlice({
       state.filters = { ...DEFAULT_FILTERS }
       state.snapshots = []
       state.currentSnapshotIndex = -1
+      state.anomalousNodeIds = []
+      state.anomalousEdgeIds = []
+      state.lpConnectedNodeIds = []
+      state.politicallyConnectedNodeIds = []
+      state.inspectionDoc = null
     },
 
-    addEntities(state, action: PayloadAction<Omit<InvestigationEntity, 'id' | 'addedAt'>[]>) {
+    addEntities(state, action: PayloadAction<Array<Partial<InvestigationEntity> & Omit<InvestigationEntity, 'id' | 'addedAt'> & { id?: string }>>) {
+      const existingDocs = new Set<string>()
+      for (const eid of state.entityOrder) {
+        const ent = state.entities[eid]
+        if (ent?.document) {
+          existingDocs.add(ent.document.replace(/\D/g, ''))
+        }
+      }
+
       for (const e of action.payload) {
-        const id = nextId()
+        if (e.document) {
+          const norm = e.document.replace(/\D/g, '')
+          if (norm.length >= 3 && existingDocs.has(norm)) continue
+          if (norm.length >= 3) existingDocs.add(norm)
+        }
+        const id = e.id || nextId()
         const entity: InvestigationEntity = {
-          ...e,
-          id,
+          type: e.type,
+          label: e.label,
+          document: e.document,
+          source: e.source,
+          originalData: e.originalData || {},
           addedAt: new Date().toISOString(),
+          context: e.context,
+          batchId: e.batchId,
+          batchLabel: e.batchLabel,
+          id,
         }
         state.entities[id] = entity
         if (!state.entityOrder.includes(id)) {
@@ -230,15 +276,82 @@ const investigationSlice = createSlice({
 
     updateEntityData(
       state,
-      action: PayloadAction<{ id: string; data: Record<string, unknown> }>
+      action: PayloadAction<{ id: string; data: Record<string, unknown>; context?: string }>
     ) {
-      const { id, data } = action.payload
+      const { id, data, context } = action.payload
       if (state.entities[id]) {
         state.entities[id].originalData = {
           ...state.entities[id].originalData,
           ...data,
         }
+        if (context !== undefined) {
+          state.entities[id].context = context
+        }
       }
+    },
+
+    removeEntitiesByBatch(state, action: PayloadAction<string>) {
+      const batchId = action.payload
+      const idsToRemove = Object.keys(state.entities).filter(
+        (id) => state.entities[id].batchId === batchId
+      )
+      for (const id of idsToRemove) {
+        delete state.entities[id]
+      }
+      state.entityOrder = state.entityOrder.filter(
+        (eid) => !idsToRemove.includes(eid)
+      )
+      if (state.selectedNodeId && idsToRemove.includes(state.selectedNodeId)) {
+        state.selectedNodeId = null
+      }
+      state.discoveries = state.discoveries.filter(
+        (d) => d.id !== batchId
+      )
+      state.lpEdges = []
+      state.lpError = null
+      state.anomalousNodeIds = []
+      state.anomalousEdgeIds = []
+      state.lpConnectedNodeIds = []
+      state.politicallyConnectedNodeIds = []
+    },
+
+    setLpLoading(state, action: PayloadAction<boolean>) {
+      state.lpLoading = action.payload
+    },
+
+    setLpError(state, action: PayloadAction<string | null>) {
+      state.lpError = action.payload
+    },
+
+    setLpEdges(state, action: PayloadAction<GraphEdge[]>) {
+      state.lpEdges = action.payload
+    },
+
+    clearLpData(state) {
+      state.lpLoading = false
+      state.lpError = null
+      state.lpEdges = []
+    },
+
+    setAnomalyIds(state, action: PayloadAction<{ nodeIds: string[]; edgeIds: string[] }>) {
+      state.anomalousNodeIds = action.payload.nodeIds
+      state.anomalousEdgeIds = action.payload.edgeIds
+    },
+
+    setLpConnectedIds(state, action: PayloadAction<string[]>) {
+      state.lpConnectedNodeIds = action.payload
+    },
+
+    setPoliticallyConnectedIds(state, action: PayloadAction<string[]>) {
+      state.politicallyConnectedNodeIds = action.payload
+    },
+
+    setInspectionDoc(state, action: PayloadAction<string>) {
+      state.inspectionDoc = action.payload
+    },
+
+    clearInspectionDoc(state) {
+      state.inspectionDoc = null
     },
   },
 })
@@ -262,6 +375,16 @@ export const {
   clearInvestigation,
   addEntities,
   updateEntityData,
+  removeEntitiesByBatch,
+  setLpLoading,
+  setLpError,
+  setLpEdges,
+  clearLpData,
+  setAnomalyIds,
+  setLpConnectedIds,
+  setPoliticallyConnectedIds,
+  setInspectionDoc,
+  clearInspectionDoc,
 } = investigationSlice.actions
 
 export default investigationSlice.reducer

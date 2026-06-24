@@ -99,8 +99,7 @@ function SecaoOrcamento() {
     setLoading(true);
     setErro(null);
     try {
-      const resp = await api.get<any>('/senado/orcamento');
-      const json = await resp.json();
+      const json = await api.get<any>('/senado/orcamento');
       setDados(json.dados || []);
     } catch (err) {
       setErro(err.message);
@@ -267,8 +266,7 @@ function SectionEmendas({ codigoSenador, nomeSenador }) {
     setLoading(true);
     setErro(null);
     try {
-      const resp = await api.get<any>('/senado/processo/emendas', { codigoParlamentarAutor: codigoSenador });
-      const json = await resp.json();
+      const json = await api.get<any>('/senado/processo/emendas', { codigoParlamentarAutor: codigoSenador });
       setDados(json.dados || []);
     } catch (err) {
       setErro(err.message);
@@ -578,8 +576,7 @@ function SecaoAgenda() {
     setLoading(prev => ({ ...prev, [subTabId]: true }));
 
     try {
-      const resp = await api.get<any>(`/senado/agenda/dia/${data}`);
-      const json = await resp.json();
+      const json = await api.get<any>(`/senado/agenda/dia/${data}`);
       setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: json.dados || [], loading: false } }));
     } catch (err) {
       setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: [], loading: false, erro: err.message } }));
@@ -604,8 +601,7 @@ function SecaoAgenda() {
     setLoading(prev => ({ ...prev, [subTabId]: true }));
 
     try {
-      const resp = await api.get<any>(`/senado/agenda/mes/${data}`);
-      const json = await resp.json();
+      const json = await api.get<any>(`/senado/agenda/mes/${data}`);
       setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: json.dados || [], loading: false } }));
     } catch (err) {
       setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: [], loading: false, erro: err.message } }));
@@ -628,8 +624,7 @@ function SecaoAgenda() {
     setLoading(prev => ({ ...prev, [subTabId]: true }));
 
     try {
-      const resp = await api.get<any>(`/senado/encontro/${params.codigo}`);
-      const json = await resp.json();
+      const json = await api.get<any>(`/senado/encontro/${params.codigo}`);
       setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: json, loading: false } }));
     } catch (err) {
       setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: null, loading: false, erro: err.message } }));
@@ -779,8 +774,7 @@ function SecaoComissoes() {
     setLoading(true);
     setErro(null);
     try {
-      const resp = await api.get<any>('/senado/comissoes');
-      const json = await resp.json();
+      const json = await api.get<any>('/senado/comissoes');
       setComissoes(json.dados || []);
     } catch (err) {
       setErro(err.message);
@@ -808,8 +802,7 @@ function SecaoComissoes() {
     if (!comDadosCacheRef.current[id]) {
       setComDetalheLoading(id);
       try {
-        const resp = await api.get<any>(`/senado/comissoes/${id}`);
-        const json = await resp.json();
+      const json = await api.get<any>(`/senado/comissoes/${id}`);
         setComDadosCache(prev => ({ ...prev, [id]: json.dados }));
         setComSecao(prev => ({ ...prev, [id]: 'info' }));
       } catch (err) {
@@ -1141,8 +1134,7 @@ export default function AnaliseSenadores() {
     setListaLoading(true);
     setListaErro(null);
     try {
-      const resp = await api.get<any>('/senado/senadores');
-      const json = await resp.json();
+      const json = await api.get<any>('/senado/senadores');
       setSenadores(json.dados || []);
     } catch (err) {
       setListaErro(err.message);
@@ -1167,8 +1159,7 @@ export default function AnaliseSenadores() {
     if (!dadosCacheRef.current[id]) {
       setDetalheLoading(id);
       try {
-        const resp = await api.get<any>(`/senado/senadores/${id}/completo`);
-        const json = await resp.json();
+      const json = await api.get<any>(`/senado/senadores/${id}/completo`);
         setDadosCache(prev => ({ ...prev, [id]: json }));
         setSenatorSecao(prev => ({ ...prev, [id]: 'geral' }));
       } catch (err) {
@@ -1193,7 +1184,6 @@ export default function AnaliseSenadores() {
       setEmendasCache(prev => ({ ...prev, [depId]: { loading: true } }));
       const tabInfo = senatorTabsRef.current.find(t => t.id === depId);
       api.get<any>('/senado/processo/emendas', { codigoParlamentarAutor: depId })
-        .then(r => r.json())
         .then(json => setEmendasCache(prev => ({ ...prev, [depId]: { dados: json.dados || [], loading: false } })))
         .catch(err => setEmendasCache(prev => ({ ...prev, [depId]: { dados: [], loading: false, erro: err.message } })));
     }

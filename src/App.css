@@ -982,6 +982,7 @@
 .tag-receita { background: var(--receita); }
 .tag-prestador { background: var(--warning); }
 .tag-tcu { background: var(--accent-glow); color: var(--accent); border: 1px solid var(--accent-glow); }
+.tag-servidor { background: rgba(125, 60, 152, 0.2); color: #c39bd3; border: 1px solid #7D3C98; }
 
 /* ── Portal Transparência Sub-Tabs ──────────────── */
 

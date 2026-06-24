@@ -1,17 +1,28 @@
-import { useCallback } from 'react'
+import { useMemo } from 'react'
 import type { InvestigationEntity, InvestigationFilters } from '@/entities/investigation'
 import type { NodeType, RelationType } from '@/domain'
 import type { DiscoveredEntity } from '@/shared/lib/entity-discovery'
+
+interface BatchInfo {
+  batchId: string
+  batchLabel: string
+  count: number
+}
 
 interface SidebarEntitiesProps {
   entities: InvestigationEntity[]
   discoveries: DiscoveredEntity[]
   selectedNodeId: string | null
+  anomalousNodeIds: string[]
+  politicallyConnectedNodeIds: string[]
   onSelect: (id: string) => void
   onRemove: (id: string) => void
   onAddDiscovery: (discoveryId: string) => void
   onDismissDiscovery: (discoveryId: string) => void
   onAddEntityClick: () => void
+  onRemoveBatch?: (batchId: string) => void
+  onLigacaoPolitica?: () => void
+  lpLoading?: boolean
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -21,9 +32,13 @@ const TYPE_LABELS: Record<string, string> = {
   candidato: 'CAND',
   deputado: 'DEP',
   senador: 'SEN',
-  partido: 'PART',
+  servidor_publico: 'SERV',
   contrato: 'CTR',
-  tcu_record: 'TCU',
+  fornecedor: 'FPNCP',
+  doador: 'DOA',
+  socio: 'SOC',
+  consulta: 'CONS',
+  ligacao_politica: 'LP',
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -33,26 +48,66 @@ const TYPE_COLORS: Record<string, string> = {
   candidato: '#8E44AD',
   deputado: '#E91E63',
   senador: '#C2185B',
-  partido: '#F1C40F',
+  servidor_publico: '#7D3C98',
   contrato: '#7F8C8D',
-  tcu_record: '#E74C3C',
+  fornecedor: '#F39C12',
+  doador: '#D35400',
+  socio: '#3498DB',
+  consulta: '#95A5A6',
+  ligacao_politica: '#1ABC9C',
 }
 
 export default function SidebarEntities({
   entities,
   discoveries,
   selectedNodeId,
+  anomalousNodeIds,
+  politicallyConnectedNodeIds,
   onSelect,
   onRemove,
   onAddDiscovery,
   onDismissDiscovery,
   onAddEntityClick,
+  onRemoveBatch,
+  onLigacaoPolitica,
+  lpLoading,
 }: SidebarEntitiesProps) {
+  const anomalousSet = useMemo(() => new Set(anomalousNodeIds), [anomalousNodeIds])
+  const politicallyConnectedSet = useMemo(() => new Set(politicallyConnectedNodeIds), [politicallyConnectedNodeIds])
+
+  const visibleEntities = useMemo(
+    () => entities.filter((e) => e.type === 'consulta' || e.type === 'ligacao_politica' || anomalousSet.has(e.id)),
+    [entities, anomalousSet]
+  )
+
+  const batches = useMemo(() => {
+    const map = new Map<string, { label: string; count: number }>()
+    entities.forEach((e) => {
+      if (e.batchId && e.batchLabel) {
+        const existing = map.get(e.batchId)
+        if (existing) {
+          existing.count++
+        } else {
+          map.set(e.batchId, { label: e.batchLabel, count: 1 })
+        }
+      }
+    })
+    return Array.from(map.entries()).map(([batchId, info]) => ({
+      batchId,
+      batchLabel: info.label,
+      count: info.count,
+    }))
+  }, [entities])
+
+  const hasDocuments = useMemo(() => {
+    return entities.some((e) => e.document && e.document.length >= 3)
+  }, [entities])
+
   return (
     <div style={{ padding: 12, height: '100%', overflowY: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#AAA' }}>
-          ENTIDADES ({entities.length})
+          ENTIDADES ({visibleEntities.length})
         </span>
         <button
           className="btn btn-sm"
@@ -63,13 +118,13 @@ export default function SidebarEntities({
         </button>
       </div>
 
-      {entities.length === 0 && (
+      {visibleEntities.length === 0 && (
         <div style={{ fontSize: 12, color: '#555', padding: '8px 0' }}>
           Nenhuma entidade no grafo
         </div>
       )}
 
-      {entities.map((entity) => (
+      {visibleEntities.map((entity) => (
         <div
           key={entity.id}
           style={{
@@ -103,6 +158,9 @@ export default function SidebarEntities({
             </div>
             <div style={{ fontSize: 10, color: '#666' }}>
               {TYPE_LABELS[entity.type] || entity.type} · {entity.source.toUpperCase()}
+              {entity.type === 'fornecedor' && politicallyConnectedSet.has(entity.id) && (
+                <span style={{ color: '#1ABC9C', marginLeft: 4 }}>· Prest. Serv. Político</span>
+              )}
             </div>
           </div>
           <button
@@ -117,6 +175,49 @@ export default function SidebarEntities({
           </button>
         </div>
       ))}
+
+      {batches.length > 0 && (
+        <>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#AAA', marginTop: 16, marginBottom: 8 }}>
+            CONSULTAS ADICIONADAS ({batches.length})
+          </div>
+          {batches.map((batch) => (
+            <div
+              key={batch.batchId}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '6px 8px',
+                marginBottom: 4,
+                borderRadius: 4,
+                background: '#1a1a2e',
+                border: '1px solid #2a2a4e',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{ fontSize: 12, color: '#CCC', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  title={batch.batchLabel}
+                >
+                  {batch.batchLabel}
+                </div>
+                <div style={{ fontSize: 10, color: '#666' }}>
+                  {batch.count} entidade{batch.count !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <button
+                className="btn btn-sm btn-outline-danger"
+                onClick={() => onRemoveBatch?.(batch.batchId)}
+                style={{ fontSize: 10, padding: '2px 6px' }}
+                title="Remover consulta do painel"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </>
+      )}
 
       {discoveries.length > 0 && (
         <>
@@ -177,6 +278,24 @@ export default function SidebarEntities({
             </div>
           ))}
         </>
+      )}
+
+      {entities.length > 0 && hasDocuments && (
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #2a2a3e' }}>
+          <button
+            className="btn btn-accent"
+            onClick={onLigacaoPolitica}
+            disabled={lpLoading}
+            style={{ width: '100%', fontSize: 12, padding: '8px 12px' }}
+          >
+            {lpLoading ? 'Analisando...' : 'Ligação Política'}
+          </button>
+          {lpLoading && (
+            <div style={{ textAlign: 'center', padding: 8, color: '#888', fontSize: 11 }}>
+              Consultando vínculos políticos...
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

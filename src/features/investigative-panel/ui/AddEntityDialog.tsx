@@ -20,9 +20,13 @@ const TYPE_OPTIONS: { value: NodeType; label: string }[] = [
   { value: 'candidato', label: 'Candidato' },
   { value: 'deputado', label: 'Deputado' },
   { value: 'senador', label: 'Senador' },
-  { value: 'partido', label: 'Partido' },
+  { value: 'servidor_publico', label: 'Servidor Público' },
+  { value: 'fornecedor', label: 'Fornecedor PNCP' },
+  { value: 'doador', label: 'Doador' },
+  { value: 'socio', label: 'Sócio' },
+  { value: 'consulta', label: 'Consulta/Licitação' },
+  { value: 'ligacao_politica', label: 'Ligação Política' },
   { value: 'contrato', label: 'Contrato' },
-  { value: 'tcu_record', label: 'Registro TCU' },
 ]
 
 export default function AddEntityDialog({

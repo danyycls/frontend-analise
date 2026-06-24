@@ -2,7 +2,6 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export const NAV_TABS = [
   { id: 'home',           label: 'Início',                 icon: '▣' },
-  { id: 'investigar',     label: 'Painel Investigativo',   icon: '◉' },
   { id: 'conheca-estado', label: 'Conheça seu Estado',     icon: '■' },
   { id: 'licitacoes',     label: 'Licitações',             icon: '▣' },
   { id: 'relacoes',       label: 'TSE',                    icon: '▣' },
@@ -13,7 +12,7 @@ export const NAV_TABS = [
   { id: 'wiki-pesquisa',  label: 'Entenda a Ferramenta',   icon: '▣' },
 ] as const;
 
-export type TabId = (typeof NAV_TABS)[number]['id'] | 'ligacao-politica' | 'investigar';
+export type TabId = (typeof NAV_TABS)[number]['id'] | 'ligacao-politica';
 
 interface NavigationState {
   abaAtiva: TabId;

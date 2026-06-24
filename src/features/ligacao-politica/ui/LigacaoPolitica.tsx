@@ -18,6 +18,7 @@ const TIPO_ROTULO = {
   tcu_contas_irregulares: 'TCU: Contas Irregulares',
   tcu_inabilitado: 'TCU: Inabilitado',
   tcu_inidoneo: 'TCU: Inidôneo',
+  servidor_publico: 'Servidor Público',
 };
 
 function TextExpand({ text, maxLen = 80 }) {
@@ -44,6 +45,7 @@ const TIPO_COR = {
   tcu_contas_irregulares: 'tag-tcu',
   tcu_inabilitado: 'tag-tcu',
   tcu_inidoneo: 'tag-tcu',
+  servidor_publico: 'tag-servidor',
 };
 
 function fmtVal(v) {
@@ -73,8 +75,10 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
   const tcuCI = detalhes.contas_irregulares || [];
   const tcuINAB = detalhes.inabilitados || [];
   const tcuINID = detalhes.inidoneos || [];
+  const servPub = detalhes.servidores_publicos || [];
   const hasReceitas = rc.length > 0 || rop.length > 0;
   const hasTCU = tcuCI.length > 0 || tcuINAB.length > 0 || tcuINID.length > 0;
+  const hasServPub = servPub.length > 0;
 
   return (
     <div className="lp-vinc-detalhes">
@@ -85,7 +89,7 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
         <span className="seta-small">{aberto ? '▼' : '▶'}</span>
         <span className="lp-vinc-detalhes-label">Detalhes do Vinculo</span>
         <span className="lp-vinc-detalhes-count">
-          {sections.length + (rc.length > 0 ? 1 : 0) + (rop.length > 0 ? 1 : 0) + (hasTCU ? 1 : 0)} secoes
+          {sections.length + (rc.length > 0 ? 1 : 0) + (rop.length > 0 ? 1 : 0) + (hasTCU ? 1 : 0) + (hasServPub ? 1 : 0)} secoes
         </span>
       </div>
       {aberto && (
@@ -225,13 +229,92 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
               )}
             </div>
           )}
+          {hasServPub && (
+            <div className="lp-vinc-secao">
+              <span className="lp-vinc-secao-title">Servidor Público (Portal da Transparência)</span>
+              {servPub.map((s, i) => {
+                const serv = s.servidor || {};
+                const pes = serv.pessoa || {};
+                const orgaoLot = serv.orgaoServidorLotacao || {};
+                const orgaoExe = serv.orgaoServidorExercicio || {};
+                const func = serv.funcao || {};
+                return (
+                  <div key={i} className="lp-vinc-subsec">
+                    <span className="lp-vinc-secao-subtitle">Registro #{i + 1}</span>
+                    <div className="lp-vinc-grid">
+                      <div className="lp-vinc-campo">
+                        <span className="lp-vinc-rotulo">Nome</span>
+                        <span className="lp-vinc-valor">{pes.nome || '-'}</span>
+                      </div>
+                      <div className="lp-vinc-campo">
+                        <span className="lp-vinc-rotulo">CPF</span>
+                        <span className="lp-vinc-valor">{fmtDoc(pes.cpfFormatado || pes.cpf || pes.numeroInscricaoSocial)}</span>
+                      </div>
+                      <div className="lp-vinc-campo">
+                        <span className="lp-vinc-rotulo">Tipo Servidor</span>
+                        <span className="lp-vinc-valor">{serv.tipoServidor || '-'}</span>
+                      </div>
+                      <div className="lp-vinc-campo">
+                        <span className="lp-vinc-rotulo">Situação</span>
+                        <span className="lp-vinc-valor">{serv.situacao || '-'}</span>
+                      </div>
+                      <div className="lp-vinc-campo">
+                        <span className="lp-vinc-rotulo">Órgão Lotação</span>
+                        <span className="lp-vinc-valor">{orgaoLot.nome || orgaoLot.sigla || '-'}</span>
+                      </div>
+                      <div className="lp-vinc-campo">
+                        <span className="lp-vinc-rotulo">Órgão Exercício</span>
+                        <span className="lp-vinc-valor">{orgaoExe.nome || orgaoExe.sigla || '-'}</span>
+                      </div>
+                      <div className="lp-vinc-campo">
+                        <span className="lp-vinc-rotulo">Função / Cargo</span>
+                        <span className="lp-vinc-valor">{func.descricaoFuncaoCargo || '-'}</span>
+                      </div>
+                      <div className="lp-vinc-campo">
+                        <span className="lp-vinc-rotulo">Matrícula</span>
+                        <span className="lp-vinc-valor">{serv.codigoMatriculaFormatado || '-'}</span>
+                      </div>
+                    </div>
+                    {s.fichasCargoEfetivo && s.fichasCargoEfetivo.length > 0 && (
+                      <details className="lp-vinc-subsec" style={{ marginTop: 8 }}>
+                        <summary className="lp-vinc-secao-subtitle" style={{ cursor: 'pointer' }}>
+                          Cargos Efetivos ({s.fichasCargoEfetivo.length})
+                        </summary>
+                        {s.fichasCargoEfetivo.map((fc, j) => (
+                          <div key={j} className="lp-vinc-grid" style={{ marginTop: 4 }}>
+                            <div className="lp-vinc-campo"><span className="lp-vinc-rotulo">Cargo</span><span className="lp-vinc-valor">{fc.cargo || '-'}</span></div>
+                            <div className="lp-vinc-campo"><span className="lp-vinc-rotulo">Órgão</span><span className="lp-vinc-valor">{fc.orgaoServidorLotacao || '-'}</span></div>
+                            <div className="lp-vinc-campo"><span className="lp-vinc-rotulo">Ingresso</span><span className="lp-vinc-valor">{fc.dataIngressoOrgao || '-'}</span></div>
+                          </div>
+                        ))}
+                      </details>
+                    )}
+                    {s.fichasFuncao && s.fichasFuncao.length > 0 && (
+                      <details className="lp-vinc-subsec" style={{ marginTop: 8 }}>
+                        <summary className="lp-vinc-secao-subtitle" style={{ cursor: 'pointer' }}>
+                          Funções ({s.fichasFuncao.length})
+                        </summary>
+                        {s.fichasFuncao.map((ff, j) => (
+                          <div key={j} className="lp-vinc-grid" style={{ marginTop: 4 }}>
+                            <div className="lp-vinc-campo"><span className="lp-vinc-rotulo">Função</span><span className="lp-vinc-valor">{ff.funcao || '-'}</span></div>
+                            <div className="lp-vinc-campo"><span className="lp-vinc-rotulo">Órgão</span><span className="lp-vinc-valor">{ff.orgaoServidorExercicio || '-'}</span></div>
+                            <div className="lp-vinc-campo"><span className="lp-vinc-rotulo">Ingresso</span><span className="lp-vinc-valor">{ff.dataIngressoFuncao || '-'}</span></div>
+                          </div>
+                        ))}
+                      </details>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function CardContexto({ item, onNavigateToLicitacao, onAnaliseDetalhada, onIdClick }) {
+function CardContexto({ item, onNavigateToLicitacao, onIdClick }) {
   const [aberto, setAberto] = useState(true);
   const [sociosAbertos, setSociosAbertos] = useState(false);
   const socios = item.socios || [];
@@ -239,7 +322,7 @@ function CardContexto({ item, onNavigateToLicitacao, onAnaliseDetalhada, onIdCli
   const temMatch = documentos.some(d => (d.vinculos || []).length > 0);
 
   const tagSummary = useMemo(() => {
-    const counts = { servicos_candidatos: 0, servicos_partidos: 0, doacoes_candidatos: 0, doacoes_partidos: 0, tcu: 0 };
+    const counts = { servicos_candidatos: 0, servicos_partidos: 0, doacoes_candidatos: 0, doacoes_partidos: 0, tcu: 0, servidor_publico: 0 };
     (documentos || []).forEach(doc => {
       (doc.vinculos || []).forEach(v => {
         if (v.tipo === 'fornecedor') counts.servicos_candidatos++;
@@ -248,6 +331,7 @@ function CardContexto({ item, onNavigateToLicitacao, onAnaliseDetalhada, onIdCli
         if (v.tipo === 'despesa_candidato') counts.servicos_candidatos++;
         if (v.tipo === 'despesa_orgao_partidario') counts.servicos_partidos++;
         if (v.tipo?.startsWith('tcu_')) counts.tcu++;
+        if (v.tipo === 'servidor_publico') counts.servidor_publico++;
       });
     });
     return counts;
@@ -259,6 +343,7 @@ function CardContexto({ item, onNavigateToLicitacao, onAnaliseDetalhada, onIdCli
     doacoes_candidatos: 'doações feitas a candidatos',
     doacoes_partidos: 'doações feitas a partidos',
     tcu: 'TCU',
+    servidor_publico: 'servidor público federal',
   };
 
   return (
@@ -384,28 +469,6 @@ function CardContexto({ item, onNavigateToLicitacao, onAnaliseDetalhada, onIdCli
           )}
 
           <div className="lp-card-actions">
-            <button
-              className="btn btn-outline-accent"
-              disabled={!temMatch}
-              onClick={() => {
-                if (!onAnaliseDetalhada) return;
-                const contrato = {
-                  numeroControlePNCP: item.numero_controle_pncp,
-                  fornecedor: {
-                    razaoSocial: item.cpf_cnpj || '-',
-                    cnpj: item.cpf_cnpj,
-                    socios: socios.map(s => ({
-                      nome_socio: s.nome,
-                      cnpj_cpf_socio: s.documento
-                    }))
-                  },
-                  niFornecedor: null
-                };
-                onAnaliseDetalhada(contrato);
-              }}
-            >
-              Analise Detalhada
-            </button>
           </div>
         </div>
       )}
@@ -428,9 +491,8 @@ export default function LigacaoPolitica({
   savedList,
   onLoadSaved,
   onDadosAtualizados,
-  onAnaliseDetalhada,
-  onAbrirTodasAD,
   onIdClick,
+  panelLicitacoes,
 }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -441,6 +503,7 @@ export default function LigacaoPolitica({
   const abortRef = useRef(null);
   const perConsultaState = useRef({});
   const currentId = useRef(consultaId || 'all');
+  const isFirstMount = useRef(true);
   const saveCurrentState = useCallback(() => {
     const id = currentId.current;
     if (id && id !== 'cached') {
@@ -481,8 +544,9 @@ export default function LigacaoPolitica({
     }
 
     const id = consultaId || 'all';
-    if (currentId.current !== id) {
-      saveCurrentState();
+    if (currentId.current !== id || isFirstMount.current) {
+      if (!isFirstMount.current) saveCurrentState();
+      else isFirstMount.current = false;
       currentId.current = id;
       if (!restoreState(id, cachedResult)) {
         setData(null);
@@ -586,8 +650,10 @@ export default function LigacaoPolitica({
         });
       });
     });
+    if (lista.length > 0) return lista;
+    if (panelLicitacoes && panelLicitacoes.length > 0) return panelLicitacoes;
     return lista;
-  }, [consultasAlvo, cachedItem]);
+  }, [consultasAlvo, cachedItem, panelLicitacoes]);
 
   const buscar = useCallback(async () => {
     if (loading) return;
@@ -608,17 +674,7 @@ export default function LigacaoPolitica({
     setError(null);
     setEtapa('buscando');
     try {
-      const resp = await api.get(`/busca/contexto`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ licitacoes }),
-        signal: controller.signal,
-      });
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.erro || resp.statusText);
-      }
-      const json = await resp.json();
+      const json = await api.post<any>(`/busca/contexto`, { licitacoes }, { signal: controller.signal });
       if (controller.signal.aborted) return;
 
       const idAtual = currentId.current;
@@ -762,11 +818,6 @@ export default function LigacaoPolitica({
               </button>
             )
           ) : null}
-          {data && etapa === 'completo' && itensComMatch.length > 0 && onAbrirTodasAD && (
-            <button className="btn btn-sm btn-outline-accent" onClick={() => onAbrirTodasAD(itensComMatch)}>
-              Analises Detalhadas ({itensComMatch.length})
-            </button>
-          )}
           {data && !cachedItem && (
             <button className="btn btn-sm" onClick={handleSalvar} disabled={salvo}>
               {salvo ? 'Salvo!' : 'Salvar'}
@@ -862,7 +913,6 @@ export default function LigacaoPolitica({
                         key={idx}
                         item={item}
                         onNavigateToLicitacao={onLicitacaoClick || onNavigateToLicitacao}
-                        onAnaliseDetalhada={onAnaliseDetalhada}
                         onIdClick={onIdClick}
                       />
                     ))}

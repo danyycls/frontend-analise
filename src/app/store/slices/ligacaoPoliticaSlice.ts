@@ -14,6 +14,8 @@ interface LigacaoPoliticaState {
   lpDataCache: Record<string, unknown>;
   adTabAtiva: string;
   adAnalises: unknown[];
+  panelLicitacoes: unknown[];
+  lpFromPanel: boolean;
 }
 
 const initialState: LigacaoPoliticaState = {
@@ -25,6 +27,8 @@ const initialState: LigacaoPoliticaState = {
   lpDataCache: {},
   adTabAtiva: 'geral',
   adAnalises: [],
+  panelLicitacoes: [],
+  lpFromPanel: false,
 };
 
 const ligacaoPoliticaSlice = createSlice({
@@ -98,6 +102,12 @@ const ligacaoPoliticaSlice = createSlice({
     setSubTabs(state, action: PayloadAction<SubTab[]>) {
       state.subTabs = action.payload;
     },
+    setPanelLicitacoes(state, action: PayloadAction<unknown[]>) {
+      state.panelLicitacoes = action.payload;
+    },
+    setLpFromPanel(state, action: PayloadAction<boolean>) {
+      state.lpFromPanel = action.payload;
+    },
   },
 });
 
@@ -118,5 +128,7 @@ export const {
   addAdAnalise,
   removeAdAnalise,
   setSubTabs,
+  setPanelLicitacoes,
+  setLpFromPanel,
 } = ligacaoPoliticaSlice.actions;
 export default ligacaoPoliticaSlice.reducer;
