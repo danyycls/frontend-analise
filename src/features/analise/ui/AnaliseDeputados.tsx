@@ -1,10 +1,12 @@
 // @ts-nocheck
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { api } from '@/shared/api/client';
+import { API_BASE_URL } from '@/shared/config';
 import { fmtDoc, fmtValor } from '@/shared/lib/formatters';
 import SecaoGeralDeputado from '@/entities/deputado/ui/DeputadoSecaoGeral';
 import TabelaDespesasDeputado from '@/entities/deputado/ui/DeputadoDespesas';
 import CardGridOrgaosDeputado from '@/entities/deputado/ui/DeputadoOrgaos';
+import TabelaGen from '@/shared/ui/TabelaGen/TabelaGen';
 import './AnaliseDeputados.css';
 
 const SECOES_ESTATICAS = [
@@ -140,6 +142,208 @@ function GridDeputados({ deputados, detalheLoading, onDetalhes }) {
           >
             {detalheLoading === dep.id ? '...' : 'Detalhes'}
           </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Busca Avançada ───────────────────── */
+
+function SecaoBuscaAvancada() {
+  const [tabAtiva, setTabAtiva] = useState('partidos');
+  const [resultados, setResultados] = useState({});
+  const [loading, setLoading] = useState({});
+  const [subTabs, setSubTabs] = useState({});
+  const [subTabAtiva, setSubTabAtiva] = useState({});
+
+  const campos: Record<string, { name: string; label: string; type?: string; placeholder?: string }[]> = {
+    partidos: [
+      { name: 'sigla', label: 'Sigla', placeholder: 'Ex: PT' },
+      { name: 'dataInicio', label: 'Data Início', type: 'date' },
+      { name: 'dataFim', label: 'Data Fim', type: 'date' },
+      { name: 'itens', label: 'Itens', type: 'number', placeholder: 'Ex: 100' },
+      { name: 'pagina', label: 'Página', type: 'number', placeholder: 'Ex: 1' },
+    ],
+    proposicoes: [
+      { name: 'sigla', label: 'Sigla', placeholder: 'Ex: PL' },
+      { name: 'numero', label: 'Número', type: 'number', placeholder: 'Ex: 1234' },
+      { name: 'ano', label: 'Ano', type: 'number', placeholder: 'Ex: 2024' },
+      { name: 'autor', label: 'Autor', placeholder: 'Nome do autor' },
+      { name: 'tema', label: 'Tema', placeholder: 'Código do tema' },
+      { name: 'dataInicio', label: 'Data Início', type: 'date' },
+      { name: 'dataFim', label: 'Data Fim', type: 'date' },
+      { name: 'itens', label: 'Itens', type: 'number', placeholder: 'Ex: 100' },
+    ],
+    eventos: [
+      { name: 'dataInicio', label: 'Data Início', type: 'date' },
+      { name: 'dataFim', label: 'Data Fim', type: 'date' },
+      { name: 'tipo', label: 'Tipo', placeholder: 'Sigla do evento' },
+      { name: 'itens', label: 'Itens', type: 'number', placeholder: 'Ex: 100' },
+    ],
+    orgaos: [
+      { name: 'dataInicio', label: 'Data Início', type: 'date' },
+      { name: 'dataFim', label: 'Data Fim', type: 'date' },
+      { name: 'itens', label: 'Itens', type: 'number', placeholder: 'Ex: 100' },
+    ],
+    blocos: [
+      { name: 'itens', label: 'Itens', type: 'number', placeholder: 'Ex: 100' },
+    ],
+    frentes: [
+      { name: 'idLegislatura', label: 'Legislatura', type: 'number', placeholder: 'Ex: 57' },
+      { name: 'itens', label: 'Itens', type: 'number', placeholder: 'Ex: 100' },
+    ],
+    grupos: [
+      { name: 'itens', label: 'Itens', type: 'number', placeholder: 'Ex: 100' },
+    ],
+    legislaturas: [
+      { name: 'itens', label: 'Itens', type: 'number', placeholder: 'Ex: 100' },
+    ],
+    votacoes: [
+      { name: 'idProposicao', label: 'ID Proposição', type: 'number', placeholder: 'Ex: 123' },
+      { name: 'idVotacao', label: 'ID Votação', type: 'number', placeholder: 'Ex: 456' },
+      { name: 'itens', label: 'Itens', type: 'number', placeholder: 'Ex: 100' },
+    ],
+  };
+
+  const urls: Record<string, string> = {
+    partidos: '/deputados/partidos',
+    proposicoes: '/deputados/proposicoes',
+    eventos: '/deputados/eventos',
+    orgaos: '/deputados/orgaos',
+    blocos: '/deputados/blocos',
+    frentes: '/deputados/frentes',
+    grupos: '/deputados/grupos',
+    legislaturas: '/deputados/legislaturas',
+    votacoes: '/deputados/votacoes',
+  };
+
+  const colunas: Record<string, { cabecalhos: string[]; chaves: string[]; maxWidthCol?: Record<number, number> }> = {
+    partidos: { cabecalhos: ['ID', 'Sigla', 'Nome'], chaves: ['id', 'sigla', 'nome'] },
+    proposicoes: { cabecalhos: ['ID', 'Sigla', 'Número', 'Ano', 'Ementa'], chaves: ['id', 'sigla', 'numero', 'ano', 'ementa'], maxWidthCol: { 4: 300 } },
+    eventos: { cabecalhos: ['ID', 'Descrição', 'Data Início', 'Data Fim'], chaves: ['id', 'descricao', 'dataInicio', 'dataFim'] },
+    orgaos: { cabecalhos: ['ID', 'Sigla', 'Nome'], chaves: ['id', 'sigla', 'nome'] },
+    blocos: { cabecalhos: ['ID', 'Nome'], chaves: ['id', 'nome'] },
+    frentes: { cabecalhos: ['ID', 'Título', 'Legislatura'], chaves: ['id', 'titulo', 'idLegislatura'] },
+    grupos: { cabecalhos: ['ID', 'Nome', 'Tipo'], chaves: ['id', 'nome', 'tipo'] },
+    legislaturas: { cabecalhos: ['ID', 'Data Início', 'Data Fim'], chaves: ['id', 'dataInicio', 'dataFim'] },
+    votacoes: { cabecalhos: ['ID', 'ID Proposição', 'Data', 'Descrição'], chaves: ['id', 'idProposicao', 'data', 'descricao'] },
+  };
+
+  const buscar = useCallback(async (tipo, params) => {
+    const subTabId = `${tipo}-${Date.now()}`;
+    const filtroStr = Object.entries(params).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join(' ');
+    const label = `${tipo.charAt(0).toUpperCase() + tipo.slice(1)}${filtroStr ? ` (${filtroStr})` : ''}`;
+
+    setResultados(prev => ({ ...prev, [subTabId]: { label, dados: null, loading: true, tipo } }));
+    setSubTabs(prev => ({
+      ...prev,
+      [tipo]: [...(prev[tipo] || []), { id: subTabId, label, fechavel: true }],
+    }));
+    setSubTabAtiva(prev => ({ ...prev, [tipo]: subTabId }));
+    setLoading(prev => ({ ...prev, [subTabId]: true }));
+
+    try {
+      const url = urls[tipo];
+      const paramsObj = Object.fromEntries(Object.entries(params).filter(([, v]) => v)) as Record<string, string>;
+      const json = await api.get<any>(url, paramsObj);
+      setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: json.dados || [], loading: false } }));
+    } catch (err: any) {
+      setResultados(prev => ({ ...prev, [subTabId]: { ...prev[subTabId], dados: [], loading: false, erro: err.message } }));
+    }
+    setLoading(prev => ({ ...prev, [subTabId]: false }));
+  }, []);
+
+  const fecharSubTab = useCallback((parentTab, subTabId) => {
+    setResultados(prev => { const n = { ...prev }; delete n[subTabId]; return n; });
+    setSubTabs(prev => ({
+      ...prev,
+      [parentTab]: (prev[parentTab] || []).filter(t => t.id !== subTabId),
+    }));
+    setSubTabAtiva(prev => {
+      const n = { ...prev };
+      if (n[parentTab] === subTabId) {
+        const remaining = (subTabs[parentTab] || []).filter(t => t.id !== subTabId);
+        n[parentTab] = remaining.length > 0 ? remaining[remaining.length - 1].id : null;
+      }
+      return n;
+    });
+  }, [subTabs]);
+
+  const renderResultado = (id) => {
+    const r = resultados[id];
+    if (!r) return null;
+    if (r.loading) return <div className="ad-loading">Buscando...</div>;
+    if (r.erro) return <p className="ad-error">Erro: {r.erro}</p>;
+    if (!r.dados || r.dados.length === 0) return <p className="ad-empty">Nenhum resultado encontrado.</p>;
+    const c = colunas[r.tipo];
+    if (!c) return null;
+    return (
+      <TabelaGen
+        cabecalhos={c.cabecalhos}
+        maxWidthCol={c.maxWidthCol}
+        linhas={r.dados.map(d => c.chaves.map(ch => {
+          const val = ch.split('.').reduce((o, k) => o?.[k], d);
+          return val != null ? String(val) : '-';
+        }))}
+      />
+    );
+  };
+
+  const recursos = [
+    { id: 'partidos', label: 'Partidos' },
+    { id: 'proposicoes', label: 'Proposições' },
+    { id: 'eventos', label: 'Eventos' },
+    { id: 'orgaos', label: 'Órgãos' },
+    { id: 'blocos', label: 'Blocos' },
+    { id: 'frentes', label: 'Frentes' },
+    { id: 'grupos', label: 'Grupos' },
+    { id: 'legislaturas', label: 'Legislaturas' },
+    { id: 'votacoes', label: 'Votações' },
+  ];
+
+  return (
+    <div>
+      <h3 className="ad-section-title">Busca Avançada</h3>
+      <p className="ad-query-form-desc">Selecione um recurso para consultar dados da Câmara dos Deputados. Os resultados abrem em novas sub-abas.</p>
+      <div className="ad-query-form-grid ad-query-form-grid-tabs">
+        {recursos.map(r => (
+          <button
+            key={r.id}
+            className={`btn ${tabAtiva === r.id ? 'btn-accent' : 'btn-outline-accent'}`}
+            style={{ fontSize: '0.8rem' }}
+            onClick={() => setTabAtiva(r.id)}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+      <hr className="ad-divider" />
+      {recursos.map(r => (
+        <div key={r.id} style={{ display: tabAtiva === r.id ? '' : 'none' }}>
+          <h4 className="ad-section-title">{r.label}</h4>
+          <QueryForm campos={campos[r.id]} loading={Object.values(loading).some(Boolean)} onBuscar={(p) => buscar(r.id, p)} />
+          {subTabs[r.id] && subTabs[r.id].length > 0 && (
+            <>
+              <div className="ad-query-sub-tabs" style={{ marginTop: 12 }}>
+                {subTabs[r.id].map(t => (
+                  <button
+                    key={t.id}
+                    className={`ad-query-sub-tab ${subTabAtiva[r.id] === t.id ? 'ativo' : ''}`}
+                    onClick={() => setSubTabAtiva(prev => ({ ...prev, [r.id]: t.id }))}
+                  >
+                    {t.label}
+                    <span className="lp-sub-tab-fechar" onClick={(e) => { e.stopPropagation(); fecharSubTab(r.id, t.id); }}>×</span>
+                  </button>
+                ))}
+              </div>
+              {subTabs[r.id].map(t => (
+                <div key={t.id} style={{ display: subTabAtiva[r.id] === t.id ? '' : 'none' }}>
+                  {renderResultado(t.id)}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       ))}
     </div>
@@ -352,6 +556,12 @@ export default function AnaliseDeputados({ onFechar }) {
         >
           Lista
         </button>
+        <button
+          className={`lp-sub-tab ${subTabAtiva === 'busca-avancada' ? 'ativo' : ''}`}
+          onClick={() => setSubTabAtiva('busca-avancada')}
+        >
+          Busca Avançada
+        </button>
         {subTabs.map(t => {
           const key = String(t.id);
           return (
@@ -467,6 +677,10 @@ export default function AnaliseDeputados({ onFechar }) {
         {!deputadosLoading && deputados.length === 0 && !deputadosErro && (
           <p className="ad-empty">Nenhum deputado encontrado.</p>
         )}
+      </div>
+
+      <div style={{ display: isTabAtiva('busca-avancada') ? '' : 'none' }}>
+        <SecaoBuscaAvancada />
       </div>
 
       {subTabs.map(t => {

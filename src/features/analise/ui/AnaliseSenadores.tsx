@@ -17,7 +17,7 @@ function InfoItem({ label, value }) {
   return (
     <div className="ad-info-item">
       <span className="ad-info-label">{label}</span>
-      <span className="ad-info-value">{String(value)}</span>
+      <span className="ad-info-value" title={String(value)}>{String(value)}</span>
     </div>
   );
 }
@@ -27,7 +27,7 @@ function InfoItemFull({ label, value }) {
   return (
     <div className="ad-info-item ad-info-item-full">
       <span className="ad-info-label">{label}</span>
-      <span className="ad-info-value">{String(value)}</span>
+      <span className="ad-info-value" title={String(value)}>{String(value)}</span>
     </div>
   );
 }
@@ -456,8 +456,13 @@ function SecaoProcessos() {
     if (!r.dados || r.dados.length === 0) return <p className="ad-empty">Nenhum resultado encontrado.</p>;
     if (r.tipo === 'processos')
       return <TabelaGen cabecalhos={['ID', 'Identificação', 'Ementa', 'Data Apresentação', 'Situação']} maxWidthCol={{ 2: 300 }} linhas={r.dados.map(d => [d.id ?? d.Id, d.identificacao || d.Identificacao, d.ementa || d.Ementa, d.dataApresentacao || d.DataApresentacao, d.situacao || d.Situacao])} />;
-    if (r.tipo === 'emendas')
-      return <TabelaGen cabecalhos={['ID', 'Identificação', 'Autoria', 'Comissão', 'Tipo', 'Data', 'Descrição', 'Documento']} maxWidthCol={{ 1: 250, 2: 200, 6: 300 }} linhas={r.dados.map(d => [d.id || d.Id, d.identificacao || d.Identificacao, d.autoria || d.Autoria, d.siglaColegiado || '-', d.tipo || d.Tipo || '-', d.dataApresentacao || d.DataApresentacao || '-', d.descricaoDocumentoEmenda || '-', d.urlDocumentoEmenda || d.UrlDocumentoEmenda ? <a href={d.urlDocumentoEmenda || d.UrlDocumentoEmenda} target="_blank" rel="noopener noreferrer" className="ad-link">Abrir</a> : '-'])} />;
+      if (r.tipo === 'emendas')
+      return <TabelaGen cabecalhos={['ID', 'Identificação', 'Autoria', 'Comissão', 'Tipo', 'Data', 'Descrição', 'Documento']} maxWidthCol={{ 1: 250, 2: 200, 6: 300 }} linhas={r.dados.map(d => {
+        const urlDoc = d.urlDocumentoEmenda || d.UrlDocumentoEmenda;
+        const docMatch = urlDoc?.match(/[?&]dm=(\d+)/);
+        const docId = docMatch ? docMatch[1] : null;
+        return [d.id || d.Id, d.identificacao || d.Identificacao, d.autoria || d.Autoria, d.siglaColegiado || '-', d.tipo || d.Tipo || '-', d.dataApresentacao || d.DataApresentacao || '-', d.descricaoDocumentoEmenda || '-', docId ? <a href={`/senado/emendas/${docId}/documento`} target="_blank" rel="noopener noreferrer" className="ad-link">Abrir</a> : '-'];
+      })} />;
     if (r.tipo === 'votacoes')
       return <TabelaGen cabecalhos={['Data Sessão', 'Identificação', 'Descrição', 'Ementa']} maxWidthCol={{ 2: 250, 3: 250 }} linhas={r.dados.map(d => [d.dataSessao || d.DataSessao, d.identificacao || d.Identificacao, d.descricaoVotacao || d.DescricaoVotacao, d.ementa || d.Ementa])} />;
     return null;

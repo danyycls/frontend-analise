@@ -8,16 +8,12 @@ import { useAppSelector } from '@/app/store/hooks';
 
 const FAQ_DATA = [
   {
-    q: 'É gratuito?',
-    a: 'Sim, o Projeto Observatório de Dados Públicos é completamente gratuito. Nosso objetivo é democratizar o acesso à informação pública e facilitar o controle social.',
-  },
-  {
     q: 'De onde vêm os dados?',
-    a: 'Todos os dados são obtidos diretamente de fontes oficiais do governo brasileiro: Portal da Transparência, TSE, PNCP (Compras Governamentais), Câmara dos Deputados, Senado Federal, TCU e portais estaduais/municipais de transparência.',
+    a: 'Todos os dados são obtidos diretamente de fontes oficiais do governo brasileiro.',
   },
   {
     q: 'Os dados são confiáveis?',
-    a: 'Sim. Nós apenas agregamos e facilitamos a consulta de dados já publicados oficialmente. Você pode auditar a fonte de cada informação — nenhum dado é inventado ou gerado por inteligência artificial.',
+    a: 'Sim, a consulta é de dados já publicados oficialmente. Você pode auditar a fonte de cada informação enquanto consulta, nenhum dado é inventado ou gerado por inteligência artificial.',
   },
   {
     q: 'Preciso de cadastro?',
@@ -100,19 +96,19 @@ export default function HomePage() {
       <section className="hero" id="home-hero">
         <div className="hero-bg" />
         <div className="hero-content">
-          <div className="hero-badge">// PLATAFORMA DE DADOS PÚBLICOS //</div>
+          <div className="hero-badge">// PODP - PROJETO OBSERVATORIO DE DADOS PUBLICOS //</div>
           <h1 className="hero-title">
-            Projeto Observatório<br />
+            Projeto Observatório de<br />
             <span className="hero-highlight">Dados Públicos</span>
           </h1>
           <p className="hero-desc">
-            Saiba o que acontece na sua cidade. Pesquise sobre qualquer estado ou
+            Pesquise sobre qualquer estado ou
             município do Brasil com dados reais, auditáveis e de fontes oficiais.
           </p>
 
           <div className="home-stats">
             <div className="stat-card">
-              <div className="stat-number">10+</div>
+              <div className="stat-number">9</div>
               <div className="stat-label">Fontes oficiais integradas</div>
             </div>
             <div className="stat-card">
@@ -120,12 +116,12 @@ export default function HomePage() {
               <div className="stat-label">Anos de dados eleitorais</div>
             </div>
             <div className="stat-card">
-              <div className="stat-number">100%</div>
-              <div className="stat-label">Dados auditáveis, nada gerado por IA</div>
-            </div>
-            <div className="stat-card">
               <div className="stat-number">5.570</div>
               <div className="stat-label">Municípios brasileiros</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-number">100%</div>
+              <div className="stat-label">Dados auditáveis, nada gerado por IA</div>
             </div>
           </div>
 
@@ -154,7 +150,7 @@ export default function HomePage() {
           <div className="feature-card" onClick={() => { dispatch(setAbaAtiva('conheca-estado')); navigate('/estado'); }}>
             <div className="feature-icon">■</div>
             <h3 className="feature-title">Conheça seu Estado</h3>
-            <p className="feature-desc">Explore dados de todos os estados do Brasil: prefeitos, vereadores, deputados e senadores eleitos.</p>
+            <p className="feature-desc">Explore dados de todos os estados do Brasil: politicos, recursos recebidos, licitações.</p>
           </div>
           <div className="feature-card" onClick={() => { dispatch(setAbaAtiva('relacoes')); navigate('/tse'); }}>
             <div className="feature-icon">▣</div>
@@ -183,7 +179,7 @@ export default function HomePage() {
           </div>
           <div className="feature-card" onClick={() => { dispatch(setAbaAtiva('wiki-pesquisa')); navigate('/wiki'); }}>
             <div className="feature-icon">▣</div>
-            <h3 className="feature-title">Entenda a Ferramenta</h3>
+            <h3 className="feature-title">Conheça a Ferramenta</h3>
             <p className="feature-desc">Entenda como usar a plataforma, suas fontes de dados e como interpretar os resultados.</p>
           </div>
           {showLpNavBtn && (

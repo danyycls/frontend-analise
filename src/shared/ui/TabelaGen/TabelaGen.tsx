@@ -16,7 +16,7 @@ export default function TabelaGen({ cabecalhos, linhas, maxWidthCol }: TabelaGen
           {linhas.map((linha, i) => (
             <tr key={i}>
               {linha.map((val, j) => (
-                <td key={j} style={maxWidthCol?.[j] ? { maxWidth: maxWidthCol[j], overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } : {}}>
+                <td key={j} style={maxWidthCol?.[j] ? { maxWidth: maxWidthCol[j], overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } : {}} title={maxWidthCol?.[j] ? String(val ?? '') : undefined}>
                   {val ?? '-'}
                 </td>
               ))}

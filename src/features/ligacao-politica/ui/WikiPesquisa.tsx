@@ -78,82 +78,33 @@ export default function WikiPesquisa() {
             O <strong>PODP</strong> — <strong>P</strong>rojeto <strong>O</strong>bservatório de
             <strong> D</strong>ados <strong>P</strong>úblicos — é um painel unificado para análise
             de dados públicos brasileiros. Consolida informações eleitorais (TSE), parlamentares
-            (Câmara, Senado), gastos públicos (Portal da Transparência, TCU), contratações (PNCP)
-            e dados fiscais (SICONFI/IBGE) em uma única plataforma com APIs REST e WebSocket.
+            (Deputados, Senado), gastos públicos (Portal da Transparência, TCU), contratações (PNCP)
+            e dados fiscais (SICONFI/IBGE) em uma única plataforma.
           </p>
           <p>
-            O objetivo do projeto é facilitar a qualquer pessoa comum o acesso e analise a dados publicos, atraves das ferramentas:
+            O objetivo do projeto é construir um sistema opensource unificado que facilita o acesso a dados publicos.
           </p>
           <ul>
             <li>
-              <strong>Consultar licitações</strong> de forma rápida e eficiente, usando CNPJ do órgão
+              <strong>Consulte licitações</strong> de forma rápida e eficiente, usando CNPJ do órgão
               público ou por estado/município, obtendo dados direto do PNCP (Portal Nacional de
               Contratações Públicas).
             </li>
             <li>
-              <strong>Analisar conexões políticas</strong> cruzando CNPJs de empresas vencedoras de
+              <strong>Analise conexões políticas</strong> cruzando CNPJs de empresas vencedoras de
               licitações com bancos de dados do TSE (doadores de campanha, candidatos, partidos), dado de servidores do Portal transparência e
               sanções do TCU.
             </li>
             <li>
-              <strong>Integrar múltiplos serviços públicos</strong> em um único local: TCU, TSE,
+              <strong>Integre múltiplos serviços públicos</strong> em um único local: TCU, TSE,
               Portal da Transparência, Câmara dos Deputados, Senado Federal, IBGE e
-              SICONFI.
+              SICONFI, e encontre informações em um clique.
             </li>
           </ul>
           <p>
             Em vez de abrir varios sites diferentes e fazer cruzamentos manuais, o PODP automatiza esse
             trabalho e apresenta tudo de forma organizada e visual.
           </p>
-        </section>
-
-        <section id="licitacao" className="wiki-section">
-          <h2>O que é uma Licitação?</h2>
-
-          <h3>Definição</h3>
-          <p>
-            Licitação é o processo administrativo formal pelo qual a Administração Pública (União,
-            Estados, Municípios, autarquias, fundações, empresas públicas) contrata obras, serviços,
-            compras e alienações. É um procedimento obrigatório previsto na Constituição Federal
-            (art. 37, XXI) e regulamentado pela Lei 14.133/2021 (Nova Lei de Licitações).
-          </p>
-
-          <h3>Quem pode fazer uma licitação?</h3>
-          <p>
-            Todos os órgãos e entidades da Administração Pública direta e indireta dos três poderes
-            (Executivo, Legislativo e Judiciário) em todas as esferas (federal, estadual, distrital e
-            municipal). Isso inclui ministérios, prefeituras, universidades, hospitais públicos,
-            empresas estatais e autarquias.
-          </p>
-
-          <h3>Por que isso importa?</h3>
-          <p>
-            As licitações movimentam centenas de bilhões de reais por ano no Brasil. A transparência
-            e o controle desses processos são fundamentais porque:
-          </p>
-          <ul>
-            <li><strong>É dinheiro público</strong>: cada contrato é pago com impostos dos cidadãos.</li>
-            <li>
-              <strong>Fraudes e direcionamentos</strong>: empresas podem combinar preços, simular
-              concorrência ou serem favorecidas por agentes públicos.
-            </li>
-            <li>
-              <strong>Conexões políticas ocultas</strong>: ao cruzar os dados de varias fontes de informação, revela potenciais conflitos de interesse ou relações politicas ocultas.
-            </li>
-            <li>
-              <strong>Sobrepreço e irregularidades</strong>: contratos superfaturados desviam recursos que
-              deveriam ir para saúde, educação e infraestrutura.
-            </li>
-          </ul>
-
-          <h3>Tipos de licitação (Lei 14.133/2021)</h3>
-          <ul>
-            <li><strong>Pregão</strong>: para bens e serviços comuns (mais comum).</li>
-            <li><strong>Concorrência</strong>: para obras e serviços de engenharia de grande porte.</li>
-            <li><strong>Concurso</strong>: para trabalhos técnicos, científicos ou artísticos.</li>
-            <li><strong>Leilão</strong>: para venda de bens públicos.</li>
-            <li><strong>Diálogo Competitivo</strong>: para contratações complexas e inovadoras.</li>
-          </ul>
         </section>
 
         <section id="pncp" className="wiki-section">
@@ -178,6 +129,52 @@ export default function WikiPesquisa() {
             O PNCP é uma das bases de todo o fluxo de análise: a partir de uma licitação suspeita, o PODP
             cruza os CNPJs vencedores com as bases do TSE, TCU, Portal transferencia e etc...
           </p>
+
+             <section id="licitacao" className="wiki-section">
+          <h2>O que é uma Licitação?</h2>
+
+          <h3>Definição</h3>
+          <p>
+            Licitação é o processo administrativo formal pelo qual a Administração Pública (União,
+            Estados, Municípios, autarquias, fundações, empresas públicas) contrata obras, serviços,
+            compras e alienações. É um procedimento obrigatório previsto na Constituição Federal
+            (art. 37, XXI) e regulamentado pela Lei 14.133/2021 (Nova Lei de Licitações).
+          </p>
+
+          <h3>Quem pode fazer uma licitação?</h3>
+          <p>
+            Todos os órgãos e entidades da Administração Pública direta e indireta dos três poderes
+            (Executivo, Legislativo e Judiciário) em todas as esferas (federal, estadual, distrital e
+            municipal). Isso inclui ministérios, prefeituras, universidades, hospitais públicos,
+            empresas estatais e autarquias.
+          </p>
+
+          <h3>Por que isso importa?</h3>
+          <p>
+            As licitações movimentam centenas de bilhões de reais por ano no Brasil, a transparência
+            e o controle desses processos são fundamentais.
+          </p>
+          <ul>
+            <li><strong>Licitações = dinheiro público</strong>: cada contrato é pago com impostos dos cidadãos.</li>
+            <li>
+              <strong>Encontre conexões políticas ocultas</strong>: ao cruzar os dados de varias fontes de informação, encontramos potenciais conflitos de interesse ou relações politicas ocultas.
+            </li>
+            <li>
+              <strong>Sobrepreço e irregularidades</strong>: contratos superfaturados desviam recursos que
+              deveriam ir para saúde, educação e infraestrutura, e faz parte do dever do cidadão acompanhar esses gastos.
+            </li>
+          </ul>
+
+          <h3>Tipos de licitação (Lei 14.133/2021)</h3>
+          <ul>
+            <li><strong>Pregão</strong>: para bens e serviços comuns (mais comum).</li>
+            <li><strong>Concorrência</strong>: para obras e serviços de engenharia de grande porte.</li>
+            <li><strong>Concurso</strong>: para trabalhos técnicos, científicos ou artísticos.</li>
+            <li><strong>Leilão</strong>: para venda de bens públicos.</li>
+            <li><strong>Diálogo Competitivo</strong>: para contratações complexas e inovadoras.</li>
+          </ul>
+        </section>
+
         </section>
 
         <section id="tcu" className="wiki-section">
@@ -220,8 +217,7 @@ export default function WikiPesquisa() {
           <h3>Por que é relevante</h3>
           <p>
             Se uma empresa vencedora de licitação aparece como inidônea no TCU, ou um sócio tem
-            contas julgadas irregulares, isso é forte indício de irregularidade. O PODP cruza
-            automaticamente esses dados nas análises de ligação política.
+            contas julgadas irregulares, isso é forte indício de irregularidade.
           </p>
         </section>
 
@@ -255,8 +251,7 @@ export default function WikiPesquisa() {
           <p>
             O cruzamento entre dados eleitorais e licitações é o cerne da análise. Se uma empresa
             doou R$500 mil para a campanha de um prefeito e, meses depois, venceu uma licitação de
-            R$10 milhões na prefeitura, isso configura potencial conflito de interesse. O PODP
-            automatiza exatamente esse tipo de cruzamento.
+            R$10 milhões na prefeitura, isso configura potencial conflito de interesse.
           </p>
         </section>
 
@@ -379,8 +374,7 @@ export default function WikiPesquisa() {
           <p>
             Deputados federais influenciam o orçamento através de emendas parlamentares. Se um
             deputado destinou emendas para um município e uma empresa doadora de sua campanha
-            venceu a licitação correspondente, isso pode indicar favorecimento. O PODP cruza dados
-            de doadores do TSE com despesas e órgãos da Câmara.
+            venceu a licitação correspondente, isso pode indicar favorecimento.
           </p>
         </section>
 
@@ -567,7 +561,7 @@ export default function WikiPesquisa() {
 
           <h3>Por que é relevante</h3>
           <p>
-            Este é o serviço central do PODP. Ele conecta os pontos entre licitações, doações de
+            Este é o serviço central de analises do PODP. Ele conecta os pontos entre licitações, doações e fornecedores de
             campanha e sanções, automatizando o que antes exigia horas de pesquisa manual em
             múltiplos sistemas.
           </p>
@@ -592,7 +586,7 @@ export default function WikiPesquisa() {
               <a href="https://github.com/danyycls/backend-analise" target="_blank" rel="noopener noreferrer">
                 github.com/danyycls/backend-analise
               </a>
-              — API REST e WebSocket em Go, integração com 8 serviços externos,
+              — API REST e WebSocket em Go, integração com serviços externos,
               banco PostgreSQL, cache Redis, análise de ligação política.
             </li>
             <li>

@@ -221,6 +221,8 @@
   font-size: 0.78rem;
   color: var(--text-primary);
   font-weight: 500;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .ad-table-wrap {
@@ -514,4 +516,17 @@
   font-family: var(--font-mono);
   color: var(--text-secondary);
   font-size: 0.78rem;
+}
+
+.ad-query-form-grid-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ad-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 16px 0;
 }
