@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import FeedbackPage from './pages/FeedbackPage/FeedbackPage';
 import { Routes, Route } from 'react-router-dom';
 import { Sidebar } from './widgets/Sidebar/Sidebar';
 import ConhecendoEstado from './features/estado/ui/ConhecendoEstado';
@@ -52,6 +53,7 @@ function AppLayout() {
               <Route path="ligacao-politica" element={<LigacaoPoliticaPage />} />
               <Route path="estado" element={<EstadoPage />} />
               <Route path="wiki" element={<WikiPage />} />
+                <Route path="feedback" element={<FeedbackPage />} />
               <Route path="*" element={<HomePage />} />
             </Routes>
           </Suspense>

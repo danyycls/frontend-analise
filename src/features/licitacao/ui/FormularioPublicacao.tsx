@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useAppDispatch } from '@/app/store/hooks';
+import { setTipoBusca } from '@/app/store/slices/navigationSlice';
 import { api } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import { API_BASE_URL } from '@/shared/config';
@@ -80,6 +82,7 @@ interface FormularioPublicacaoProps {
 }
 
 export default function FormularioPublicacao({ onIniciar, onResultados }: FormularioPublicacaoProps) {
+  const dispatch = useAppDispatch();
   const [tipo, setTipo] = useState<string>('uf');
   const [uf, setUf] = useState('DF');
   const [codigoMunicipio, setCodigoMunicipio] = useState('');
@@ -320,6 +323,21 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
   return (
     <div style={{ width: '100%' }}>
       <form className="card" onSubmit={(e) => { e.preventDefault(); buscar(); }}>
+        <div className="tipo-busca-bar">
+          <button
+            type="button"
+            className="tipo-busca-btn"
+            onClick={() => dispatch(setTipoBusca('orgao'))}
+          >
+            Por CNPJ do Órgão
+          </button>
+          <button
+            type="button"
+            className="tipo-busca-btn ativo"
+          >
+            Por Estado/Município
+          </button>
+        </div>
         <h2>Busca por Estado/Município</h2>
 
         <div className="form-row">

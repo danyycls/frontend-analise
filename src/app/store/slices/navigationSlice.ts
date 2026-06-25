@@ -12,7 +12,7 @@ export const NAV_TABS = [
   { id: 'wiki-pesquisa',  label: 'Entenda a Ferramenta',   icon: '▣' },
 ] as const;
 
-export type TabId = (typeof NAV_TABS)[number]['id'] | 'ligacao-politica';
+export type TabId = (typeof NAV_TABS)[number]['id'] | 'ligacao-politica' | 'feedback';
 
 interface NavigationState {
   abaAtiva: TabId;

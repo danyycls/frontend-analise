@@ -15,6 +15,7 @@ const TAB_ROUTES: Record<string, string> = {
   'tcu': '/tcu',
   'wiki-pesquisa': '/wiki',
   'ligacao-politica': '/ligacao-politica',
+  'feedback': '/feedback',
 };
 
 function useActiveTab(): TabId {
@@ -74,6 +75,13 @@ export function Sidebar() {
             <span className="nav-tab-label">Ligações Políticas</span>
           </button>
         )}
+        <button
+          className={`nav-tab ${abaAtiva === 'feedback' ? 'ativo' : ''}`}
+          onClick={() => { dispatch(setAbaAtiva('feedback')); navigate('/feedback'); }}
+        >
+          <span className="nav-tab-icon">✉</span>
+          <span className="nav-tab-label">Feedback</span>
+        </button>
       </nav>
 
       <div className="sidebar-footer">

@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
-import { setAbaAtiva, setFormAberto, setTipoBusca } from '@/app/store/slices/navigationSlice';
+import { setAbaAtiva, setFormAberto } from '@/app/store/slices/navigationSlice';
 import { addConsulta, removeConsulta as removeConsultaAction, setConsultas, setActiveJob } from '@/app/store/slices/consultaSlice';
 import { addSubTab, setSubTabAtiva } from '@/app/store/slices/ligacaoPoliticaSlice';
 import Formulario from '@/features/licitacao/ui/Formulario';
@@ -173,20 +173,6 @@ export default function LicitacoesPage() {
             />
           ) : (
             <div className="licitacoes-form-inner" style={{ display: formAberto ? 'block' : 'none' }}>
-              <div className="tipo-busca-bar">
-                <button
-                  className={`tipo-busca-btn ${tipoBusca === 'orgao' ? 'ativo' : ''}`}
-                  onClick={() => dispatch(setTipoBusca('orgao'))}
-                >
-                  Por CNPJ do Órgão
-                </button>
-                <button
-                  className={`tipo-busca-btn ${tipoBusca === 'publicacao' ? 'ativo' : ''}`}
-                  onClick={() => dispatch(setTipoBusca('publicacao'))}
-                >
-                  Por Estado/Município
-                </button>
-              </div>
               <div style={{ display: tipoBusca === 'orgao' ? 'block' : 'none', width: '100%' }}>
                 <Formulario onIniciar={handleIniciar} />
               </div>

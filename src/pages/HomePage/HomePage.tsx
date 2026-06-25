@@ -90,7 +90,9 @@ export default function HomePage() {
 
   return (
     <div className="tab-page">
-      <PageNav />
+      <div className="hero-alerta">
+          ⚠️ Ambiente de Desenvolvimento — O TSE está desativado neste ambiente de desenvolvimento
+        </div>
 
       {/* ── Hero Section ── */}
       <section className="hero" id="home-hero">

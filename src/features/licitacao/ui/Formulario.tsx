@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react';
+import { useAppDispatch } from '@/app/store/hooks';
+import { setTipoBusca } from '@/app/store/slices/navigationSlice';
 import { useStartOrgaoAnalise } from '../api/hooks';
 import { fmtDoc } from '@/shared/lib/formatters';
 import './Formulario.css';
@@ -27,6 +29,7 @@ interface FormularioProps {
 }
 
 export default function Formulario({ onIniciar }: FormularioProps) {
+  const dispatch = useAppDispatch();
   const [cnpjsTexto, setCnpjsTexto] = useState('');
   const [dataInicial, setDataInicial] = useState(tresMesesAtras);
   const [dataFinal, setDataFinal] = useState(hoje);
@@ -68,6 +71,21 @@ export default function Formulario({ onIniciar }: FormularioProps) {
 
   return (
     <form className="card" onSubmit={handleSubmit}>
+      <div className="tipo-busca-bar">
+        <button
+          type="button"
+          className="tipo-busca-btn ativo"
+        >
+          Por CNPJ do Órgão
+        </button>
+        <button
+          type="button"
+          className="tipo-busca-btn"
+          onClick={() => dispatch(setTipoBusca('publicacao'))}
+        >
+          Por Estado/Município
+        </button>
+      </div>
       <h2>Parâmetros da Consulta</h2>
 
       <div className="form-group full required">

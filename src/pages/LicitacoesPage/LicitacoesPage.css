@@ -81,10 +81,6 @@
   align-items: center;
 }
 
-.licitacoes-form-inner .tipo-busca-bar {
-  margin-bottom: 24px;
-}
-
 .licitacoes-form-inner form.card,
 .licitacoes-form-inner > div > form.card {
   width: 100%;

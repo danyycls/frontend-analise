@@ -114,6 +114,11 @@
   background: var(--accent);
 }
 
+.card .tipo-busca-bar {
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
 .card .btn,
 .card .btn-accent {
   margin-top: 20px;

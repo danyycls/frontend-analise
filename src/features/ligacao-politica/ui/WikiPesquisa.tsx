@@ -224,6 +224,10 @@ export default function WikiPesquisa() {
         <section id="tse-arquitetura" className="wiki-section">
           <h2>TSE — Arquitetura de Dados</h2>
 
+          <div className="hero-alerta">
+            ⚠️ Ambiente de Desenvolvimento — O TSE está desativado neste ambiente de desenvolvimento
+          </div>
+
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> dados eleitorais históricos desde 2006, incluindo candidatos, partidos, doadores, fornecedores de campanha, prestação de contas (receitas e despesas) e bens declarados.</p>
             <p><strong>Documentação:</strong>{' '}

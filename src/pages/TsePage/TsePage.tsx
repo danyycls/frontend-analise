@@ -97,6 +97,9 @@ export default function TsePage() {
   return (
     <div className="tab-page">
       <div className="tab-content">
+        <div className="hero-alerta">
+          ⚠️ Ambiente de Desenvolvimento — O TSE está desativado neste ambiente de desenvolvimento
+        </div>
         <div className="tab-header">
           <h2 className="tab-title">TSE</h2>
           <p className="tab-desc">Consulta de dados eleitorais, doações e conexões partidárias.</p>
