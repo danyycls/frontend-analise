@@ -3,6 +3,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { setAbaAtiva } from '@/app/store/slices/navigationSlice';
 import { setPtTopAba, setPtMetodoAtiva, addPtSubTab, removePtSubTab, setPtMetodoState } from '@/app/store/slices/portalSlice';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 import PortalOrgaos from '@/features/portal-transparencia/ui/PortalOrgaos';
 import PortalPessoas from '@/features/portal-transparencia/ui/PortalPessoas';
 import PortalCartoes from '@/features/portal-transparencia/ui/PortalCartoes';
@@ -13,12 +14,12 @@ import PortalEmendas from '@/features/portal-transparencia/ui/PortalEmendas';
 let ptUid = 0;
 
 const PT_METODOS = [
-  { key: 'orgaos', label: 'Órgãos', desc: 'Consulta de órgãos públicos federais por código ou nome', Component: PortalOrgaos },
-  { key: 'pessoas', label: 'Pessoas', desc: 'Busca de pessoas físicas com vínculos públicos por CPF ou nome', Component: PortalPessoas },
-  { key: 'cartoes', label: 'Cartões', desc: 'Gastos com cartões corporativos por órgão ou portador', Component: PortalCartoes },
-  { key: 'servidores', label: 'Servidores', desc: 'Servidores públicos federais por CPF, nome ou órgão', Component: PortalServidores },
-  { key: 'despesas', label: 'Despesas', desc: 'Despesas do governo federal por órgão, ano ou favorecido', Component: PortalDespesas },
-  { key: 'emendas', label: 'Emendas', desc: 'Emendas parlamentares por código, autor ou ano', Component: PortalEmendas },
+  { key: 'orgaos', label: 'Órgãos', desc: 'Consulta órgãos públicos federais cadastrados no SIAPE/SIAFI por código ou nome. Exibe código, nome, sigla e CNPJ.', Component: PortalOrgaos },
+  { key: 'pessoas', label: 'Pessoas', desc: 'Busca pessoas físicas ou jurídicas com vínculos na administração pública federal por CPF, CNPJ ou nome.', Component: PortalPessoas },
+  { key: 'cartoes', label: 'Cartões', desc: 'Consulta gastos com cartões de pagamento do governo federal por órgão, portador ou período.', Component: PortalCartoes },
+  { key: 'servidores', label: 'Servidores', desc: 'Busca servidores públicos federais ativos e inativos por CPF, nome ou órgão. Exibe cargo, lotação e remuneração.', Component: PortalServidores },
+  { key: 'despesas', label: 'Despesas', desc: 'Consulta despesas governamentais executadas pela administração federal por órgão, ano, UF ou favorecido.', Component: PortalDespesas },
+  { key: 'emendas', label: 'Emendas', desc: 'Consulta emendas parlamentares ao orçamento federal por código, autor, ano ou tipo.', Component: PortalEmendas },
 ];
 
 export default function PortalTransparenciaPage() {
@@ -30,6 +31,7 @@ export default function PortalTransparenciaPage() {
   useEffect(() => { ptDataCacheRef.current = ptDataCache; }, [ptDataCache]);
 
   const handleIdClick = () => {};
+  const { popupInfo, setPopupInfo } = useEntityInfo();
 
   const handlePTSearchComplete = useCallback((method, searchParams, data) => {
     const id = ++ptUid;
@@ -55,7 +57,7 @@ export default function PortalTransparenciaPage() {
       <div className="tab-content">
         <div className="tab-header">
           <h2 className="tab-title">Portal Transparência</h2>
-          <p className="tab-desc">Consulte dados do Portal da Transparência do Governo Federal.</p>
+          <p className="tab-desc">Dados oficiais do Portal da Transparência: consulta de órgãos públicos, pessoas com vínculos públicos, servidores federais, despesas governamentais, cartões corporativos e emendas parlamentares.</p>
         </div>
 
         <div className="lp-sub-tabs">
@@ -73,6 +75,7 @@ export default function PortalTransparenciaPage() {
             {PT_METODOS.map(m => (
               <button key={m.key} className="rp-metodo-btn" onClick={() => handleAbrirMetodoPT(m.key)}>
                 <strong>{m.label}</strong>
+                <InfoBadge chave={`portal_${m.key}`} onInfoClick={setPopupInfo} />
                 <span className="rp-metodo-desc">{m.desc}</span>
               </button>
             ))}
@@ -126,6 +129,7 @@ export default function PortalTransparenciaPage() {
           );
         })}
       </div>
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

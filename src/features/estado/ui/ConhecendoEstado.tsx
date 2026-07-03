@@ -5,10 +5,12 @@ import { API_BASE_URL, WS_BASE_URL } from '@/shared/config';
 import DetalheMunicipio from './DetalheMunicipio';
 import RecursosMunicipioDetalhe from './RecursosMunicipioDetalhe';
 import ErrorBoundary from '@/shared/ui/ErrorBoundary/ErrorBoundary';
-import { PieChart, aggregateBy, topN, CHART_COLORS, fmtMoneyCompact } from './chart-utils';
+import DevBanner from '@/shared/ui/DevBanner/DevBanner';
+import { PieChart, aggregateBy, topN, CHART_COLORS, fmtMoneyCompact, CHART_SIZE_MD, CHART_SIZE_LG } from './chart-utils';
 import DeputadoDetailView from '@/features/analise/ui/DeputadoDetailView';
 import SenadorDetailView from '@/features/analise/ui/SenadorDetailView';
 import { JanelaPopup, ContratoDetalhes } from '../../ligacao-politica/ui/Resultados';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 import './ConhecendoEstado.css';
 import '../../analise/ui/AnaliseDeputados.css';
 
@@ -32,64 +34,7 @@ function Paginacao({ pagina, totalPaginas, onPagina }) {
   );
 }
 
-const DATA_SOURCES = {
-  candidatos: { font: 'TSE - Tribunal Superior Eleitoral', desc: 'Prefeitos, vice-prefeitos e vereadores eleitos na UF (todos os anos disponíveis)', campos: {} },
-  deputados: { font: 'Câmara dos Deputados — Dados Abertos', desc: 'Deputados federais eleitos pela UF na legislatura atual', campos: {} },
-  senadores: { font: 'Senado Federal — Dados Abertos', desc: 'Senadores eleitos pela UF no período atual', campos: {} },
-  despesa_pessoal: { font: 'SICONFI / Tesouro Nacional — RGF (Anexo 01)', desc: 'Demonstrativo da Despesa com Pessoal — limite da LRF', campos: { valor_total: 'Valor total da despesa com pessoal no exercício', percentual_rcl: 'Percentual em relação à Receita Corrente Líquida (RCL)', periodo: 'Período de referência (ano)' } },
-  despesa_categoria: { font: 'SICONFI / Tesouro Nacional — RGF (Anexo 01)', desc: 'Despesa com pessoal por categoria (ativos, inativos, pensionistas, terceirizados)', campos: { categoria: 'Categoria funcional do servidor', quantidade: 'Quantidade de vínculos na categoria', despesa_total: 'Valor total da despesa da categoria', percentual_despesa: 'Percentual em relação à despesa total com pessoal' } },
-  gastos_por_funcao: { font: 'SICONFI / Tesouro Nacional — RREO (Anexo 02)', desc: 'Despesas empenhadas, liquidadas e pagas por função de governo', campos: { funcao: 'Função de governo (ex: Saúde, Educação, Segurança)', empenhado: 'Valor empenhado (reservado orçamentariamente)', liquidado: 'Valor liquidado (bem/serviço entregue)', pago: 'Valor efetivamente pago' } },
-  receitas: { font: 'SICONFI / Tesouro Nacional — RREO (Anexo 03)', desc: 'Receitas arrecadadas por categoria econômica', campos: { conta: 'Classificação da receita orçamentária', coluna: 'Tipo de valor (Previsão Inicial, Previsão Atualizada, Receita Realizada)', valor: 'Valor da receita no exercício', exercicio: 'Ano de referência' } },
-  recursos_federais: { font: 'Info Portal da Transparência — Transferências a Entes', desc: 'Recursos federais transferidos a estados e municípios', campos: { tipo_pessoa: 'Tipo de pessoa (Física ou Jurídica) do favorecido', nome_pessoa: 'Nome do favorecido (pessoa física ou jurídica)', nome_ug: 'Unidade Gestora responsável pelo recurso', nome_orgao: 'Órgão concedente do recurso', nome_orgao_superior: 'Órgão superior do órgão concedente', valor: 'Valor do recurso transferido', mes_ano: 'Mês e ano de referência (formato AAAAMM)' } },
-  contratos: { font: 'PNCP — Portal Nacional de Contratações Públicas', desc: 'Contratos e compras públicas realizadas', campos: {} },
-  licitacoes: { font: 'PNCP — Portal Nacional de Contratações Públicas', desc: 'Licitações e contratos públicos do estado por ano, incluindo tipo, categoria, fornecedor, vigência e valores', campos: { numeroControlePNCP: 'Identificador único do contrato no PNCP', anoContrato: 'Ano do contrato', numeroContrato: 'Número do contrato', tipoContrato: 'Tipo de contrato (ex: Fornecimento, Serviço)', categoriaProcesso: 'Categoria do processo licitatório', modalidadeNome: 'Modalidade da licitação (ex: Pregão, Concorrência)', fornecedor: 'Fornecedor com CNPJ, razão social e QSA', objetoContrato: 'Descrição do objeto contratado', valorGlobal: 'Valor global do contrato', dataVigenciaInicio: 'Início da vigência', dataVigenciaFim: 'Fim da vigência', dataPublicacaoPncp: 'Data de publicação no PNCP' } },
-  servidores: { font: 'SICONFI / Tesouro Nacional — RGF (Anexo 01)', desc: 'Despesa com pessoal por categoria funcional', campos: { categoria: 'Categoria funcional', quantidade: 'Quantidade de servidores na categoria', despesa_total: 'Valor total da despesa da categoria', percentual_despesa: 'Percentual em relação à despesa total com pessoal' } },
-};
 
-function InfoBadge({ chave, onInfoClick }) {
-  const info = DATA_SOURCES[chave];
-  if (!info) return null;
-  return (
-    <span className="info-badge" onClick={() => onInfoClick?.(chave)} title="Clique para ver descrição dos campos" style={{ cursor: 'pointer', fontSize: '0.65rem', color: 'var(--accent)', marginLeft: 8, textDecoration: 'underline dotted' }}>
-      ⓘ {info.font}
-    </span>
-  );
-}
-
-function PopupInfo({ chave, onFechar }) {
-  const info = DATA_SOURCES[chave];
-  if (!info) return null;
-  const campos = Object.entries(info.campos || {});
-  return (
-    <div className="dm-modal-overlay" onClick={onFechar}>
-      <div className="dm-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
-        <div className="dm-modal-header">
-          <h3>Fonte: {info.font}</h3>
-          <button className="dm-modal-close" onClick={onFechar}>×</button>
-        </div>
-        <div className="dm-modal-body">
-          <p style={{ marginBottom: 16, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{info.desc}</p>
-          {campos.length > 0 && (
-            <table className="dm-detalhe-table">
-              <thead>
-                <tr><th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--border)' }}>Campo</th><th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--border)' }}>Descrição</th></tr>
-              </thead>
-              <tbody>
-                {campos.map(([campo, desc]) => (
-                  <tr key={campo}>
-                    <td className="dm-detalhe-label" style={{ whiteSpace: 'nowrap' }}>{campo}</td>
-                    <td className="dm-detalhe-valor">{desc}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {campos.length === 0 && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Detalhamento dos campos não disponível para esta seção.</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function fmtNum(n) {
   if (!n) return '-';
@@ -134,7 +79,7 @@ function FinCard({ label, value }) {
 
 function ContadoresBar({ prefeitos, vices, vereadores, deputados, senadores, municipios, pequenos, populacao }) {
   return (
-    <>
+    <div className="estado-section estado-counters-section">
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
         Quantidades de politicos responsaveis por UF ou municipio dessa UF
       </div>
@@ -172,11 +117,33 @@ function ContadoresBar({ prefeitos, vices, vereadores, deputados, senadores, mun
           <span className="estado-counter-lbl">POPULAÇÃO TOTAL</span>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
 const ITENS_POR_PAGINA = 10;
+const DEP_GRID_ROWS = 4;
+const DEP_COL_MIN = 220;
+const DEP_GRID_GAP = 12;
+
+function useGridItensPorPagina(ref, colMin, gap, rows) {
+  const [itens, setItens] = useState(rows * 2);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth;
+      if (!w) return;
+      const cols = Math.max(1, Math.floor((w + gap) / (colMin + gap)));
+      setItens(cols * rows);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref, colMin, gap, rows]);
+  return itens;
+}
 
 function SearchAutocomplete({ dados, placeholder, campoNome, campoPartido, onFilter }: {
   dados: any[];
@@ -478,8 +445,8 @@ export default function ConhecendoEstado() {
   const [anoAtualCarregando, setAnoAtualCarregando] = useState(null);
   const [anosSelecionados, setAnosSelecionados] = useState([new Date().getFullYear()]);
   const [mesSelecionado, setMesSelecionado] = useState(0);
-  const [popupInfo, setPopupInfo] = useState(null);
-  const [collapsed, setCollapsed] = useState({ deputados: true });
+  const { popupInfo, setPopupInfo } = useEntityInfo();
+  const [collapsed, setCollapsed] = useState({ deputados: true, senadores: true });
   const [depBuscaTexto, setDepBuscaTexto] = useState('');
   const [munNomeBusca, setMunNomeBusca] = useState('');
   const [chartPopup, setChartPopup] = useState(null);
@@ -812,6 +779,9 @@ export default function ConhecendoEstado() {
   const listaDeputados = deputados || [];
   const listaSenadores = senadores || [];
 
+  const depSectionRef = useRef(null);
+  const depItensPorPagina = useGridItensPorPagina(depSectionRef, DEP_COL_MIN, DEP_GRID_GAP, DEP_GRID_ROWS);
+
   const depFiltrados = useMemo(() => {
     if (!depBuscaTexto) return listaDeputados;
     const q = depBuscaTexto.toLowerCase();
@@ -820,6 +790,10 @@ export default function ConhecendoEstado() {
       (d.sigla_partido || '').toLowerCase().includes(q)
     );
   }, [listaDeputados, depBuscaTexto]);
+
+  const depPag = usePaginacao(depFiltrados, depItensPorPagina);
+
+  useEffect(() => { depPag.setPagina(0); }, [depBuscaTexto, depItensPorPagina]);
 
   const munFiltrados = useMemo(() => {
     if (!munNomeBusca) return municipios;
@@ -894,6 +868,7 @@ export default function ConhecendoEstado() {
 
   return (
     <div className="estado-page">
+      <DevBanner />
       <PageNav />
       <div className="estado-header" id="estado-inicio">
         <h1>Conhecendo {nome}</h1>
@@ -917,68 +892,74 @@ export default function ConhecendoEstado() {
       <div id="estado-candidatos">
         <div className="politicos-grid">
           <div className="estado-section" id="estado-prefeitos">
-            <div className="estado-section-header" onClick={() => toggleCollapse('prefeitos')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h2 style={{ margin: 0 }}>Prefeitos Eleitos <span className="count">({listaPrefeitos.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
-              <span>{collapsed.prefeitos ? '▶' : '▼'}</span>
+            <div className="estado-section-header" onClick={() => toggleCollapse('prefeitos')}>
+              <h2>Prefeitos Eleitos <span className="count">({listaPrefeitos.length})</span><InfoBadge chave="tse_candidatos" onInfoClick={setPopupInfo} /></h2>
+              <span className="estado-section-toggle">{collapsed.prefeitos ? '▶' : '▼'}</span>
             </div>
             {!collapsed.prefeitos && (
-              candidatos ? (
-                listaPrefeitos.length > 0 ? (
-                  <TabelaCandidatos dados={listaPrefeitos} titulo="" semSecao />
+              <div className="estado-section-body estado-section-body--scroll">
+                {candidatos ? (
+                  listaPrefeitos.length > 0 ? (
+                    <TabelaCandidatos dados={listaPrefeitos} titulo="" semSecao />
+                  ) : (
+                    <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum prefeito encontrado</p>
+                  )
                 ) : (
-                  <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum prefeito encontrado</p>
-                )
-              ) : (
-                <div className="municipios-loading">Carregando prefeitos...</div>
-              )
+                  <div className="municipios-loading">Carregando prefeitos...</div>
+                )}
+              </div>
             )}
           </div>
 
           <div className="estado-section" id="estado-vice">
-            <div className="estado-section-header" onClick={() => toggleCollapse('vice')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h2 style={{ margin: 0 }}>Vice-Prefeitos Eleitos <span className="count">({listaVice.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
-              <span>{collapsed.vice ? '▶' : '▼'}</span>
+            <div className="estado-section-header" onClick={() => toggleCollapse('vice')}>
+              <h2>Vice-Prefeitos Eleitos <span className="count">({listaVice.length})</span><InfoBadge chave="tse_candidatos" onInfoClick={setPopupInfo} /></h2>
+              <span className="estado-section-toggle">{collapsed.vice ? '▶' : '▼'}</span>
             </div>
             {!collapsed.vice && (
-              candidatos ? (
-                listaVice.length > 0 ? (
-                  <TabelaCandidatos dados={listaVice} titulo="" semSecao />
+              <div className="estado-section-body estado-section-body--scroll">
+                {candidatos ? (
+                  listaVice.length > 0 ? (
+                    <TabelaCandidatos dados={listaVice} titulo="" semSecao />
+                  ) : (
+                    <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum vice-prefeito encontrado</p>
+                  )
                 ) : (
-                  <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum vice-prefeito encontrado</p>
-                )
-              ) : (
-                <div className="municipios-loading">Carregando vice-prefeitos...</div>
-              )
+                  <div className="municipios-loading">Carregando vice-prefeitos...</div>
+                )}
+              </div>
             )}
           </div>
         </div>
 
         <div className="estado-section politicos-grid-full" id="estado-vereadores">
-          <div className="estado-section-header" onClick={() => toggleCollapse('vereadores')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Vereadores Eleitos <span className="count">({listaVereadores.length})</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
-            <span>{collapsed.vereadores ? '▶' : '▼'}</span>
+          <div className="estado-section-header" onClick={() => toggleCollapse('vereadores')}>
+            <h2>Vereadores Eleitos <span className="count">({listaVereadores.length})</span><InfoBadge chave="tse_candidatos" onInfoClick={setPopupInfo} /></h2>
+            <span className="estado-section-toggle">{collapsed.vereadores ? '▶' : '▼'}</span>
           </div>
           {!collapsed.vereadores && (
-            candidatos ? (
-              listaVereadores.length > 0 ? (
-                <TabelaCandidatos dados={listaVereadores} titulo="" semSecao />
+            <div className="estado-section-body estado-section-body--scroll">
+              {candidatos ? (
+                listaVereadores.length > 0 ? (
+                  <TabelaCandidatos dados={listaVereadores} titulo="" semSecao />
+                ) : (
+                  <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum vereador encontrado</p>
+                )
               ) : (
-                <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum vereador encontrado</p>
-              )
-            ) : (
-              <div className="municipios-loading">Carregando vereadores...</div>
-            )
+                <div className="municipios-loading">Carregando vereadores...</div>
+              )}
+            </div>
           )}
         </div>
 
         <div className="politicos-grid">
-          <div className="estado-section" id="estado-deputados">
-            <div className="estado-section-header" onClick={() => toggleCollapse('deputados')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h2 style={{ margin: 0 }}>Deputados Federais <span className="count">({depFiltrados.length}/{listaDeputados.length})</span><InfoBadge chave="deputados" onInfoClick={setPopupInfo} /></h2>
-              <span>{collapsed.deputados ? '▶' : '▼'}</span>
+          <div className="estado-section" id="estado-deputados" ref={depSectionRef}>
+            <div className="estado-section-header" onClick={() => toggleCollapse('deputados')}>
+              <h2>Deputados Federais <span className="count">({depFiltrados.length}/{listaDeputados.length})</span><InfoBadge chave="camara_deputados" onInfoClick={setPopupInfo} /></h2>
+              <span className="estado-section-toggle">{collapsed.deputados ? '▶' : '▼'}</span>
             </div>
             {!collapsed.deputados && (
-              <>
+              <div className="estado-section-body">
                 {listaDeputados.length > 0 ? (
                   <>
                     <SearchAutocomplete
@@ -989,24 +970,29 @@ export default function ConhecendoEstado() {
                       onFilter={setDepBuscaTexto}
                     />
                     {depFiltrados.length > 0 ? (
-                      <div className="ad-grid">
-                        {depFiltrados.map(d => (
-                          <div key={d.id} className="ad-card-dep">
-                            <img className="ad-foto" src={d.url_foto} alt={d.nome} onError={(e) => { e.target.style.display = 'none'; }} />
-                            <div className="ad-card-dep-info">
-                              <strong className="ad-card-dep-nome">{d.nome}</strong>
-                              <span className="ad-card-dep-partido">
-                                <span className="tag tag-candidato">{d.sigla_partido}</span>
-                                <span className="ad-card-dep-uf">{d.sigla_uf}</span>
-                              </span>
-                              <span className="ad-card-dep-extra" style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                                {d.email ? `📧 ${d.email}` : ''}{d.email && d.nome_eleitoral ? ' · ' : ''}{d.nome_eleitoral ? `🗳 ${d.nome_eleitoral}` : ''}
-                              </span>
+                      <>
+                        <div className="dep-grid">
+                          {depPag.paginaDados.map(d => (
+                            <div key={d.id} className="dep-card">
+                              <div className="dep-card-foto-wrap">
+                                <img className="dep-card-foto" src={d.url_foto} alt={d.nome} onError={(e) => { (e.target as HTMLImageElement).src = ''; (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              </div>
+                              <div className="dep-card-info">
+                                <strong className="dep-card-nome">{d.nome}</strong>
+                                <div className="dep-card-badges">
+                                  <span className="tag tag-candidato">{d.sigla_partido}</span>
+                                  <span className="dep-card-uf">{d.sigla_uf}</span>
+                                </div>
+                                {d.nome_eleitoral && (
+                                  <span className="dep-card-extra">🗳 {d.nome_eleitoral}</span>
+                                )}
+                              </div>
+                              <button className="btn btn-sm btn-outline-accent dep-card-btn" onClick={() => setDepDetalhe(d)}>Detalhes</button>
                             </div>
-                            <button className="btn btn-sm btn-outline-accent" onClick={() => setDepDetalhe(d)}>Detalhes</button>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                        <Paginacao pagina={depPag.pagina} totalPaginas={depPag.totalPaginas} onPagina={depPag.setPagina} />
+                      </>
                     ) : (
                       <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Nenhum deputado encontrado para os filtros atuais</p>
                     )}
@@ -1016,17 +1002,17 @@ export default function ConhecendoEstado() {
                 ) : (
                   <div className="municipios-loading">Carregando deputados...</div>
                 )}
-              </>
+              </div>
             )}
           </div>
 
           <div className="estado-section" id="estado-senadores">
-            <div className="estado-section-header" onClick={() => toggleCollapse('senadores')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h2 style={{ margin: 0 }}>Senadores <span className="count">({listaSenadores.length})</span><InfoBadge chave="senadores" onInfoClick={setPopupInfo} /></h2>
-              <span>{collapsed.senadores ? '▶' : '▼'}</span>
+            <div className="estado-section-header" onClick={() => toggleCollapse('senadores')}>
+              <h2>Senadores <span className="count">({listaSenadores.length})</span><InfoBadge chave="senado_federal" onInfoClick={setPopupInfo} /></h2>
+              <span className="estado-section-toggle">{collapsed.senadores ? '▶' : '▼'}</span>
             </div>
             {!collapsed.senadores && (
-              <>
+              <div className="estado-section-body">
                 {listaSenadores.length > 0 ? (
                   <div className="ad-grid">
                     {listaSenadores.map(s => (
@@ -1053,13 +1039,13 @@ export default function ConhecendoEstado() {
                 ) : (
                   <div className="municipios-loading">Carregando senadores...</div>
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="estado-section" id="estado-financas" style={{ padding: '12px', marginBottom: 8, background: 'var(--card-bg)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div className="estado-section estado-toolbar" id="estado-financas">
         <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Anos:</span>
         {Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - i).reverse().map(ano => (
           <button
@@ -1092,15 +1078,17 @@ export default function ConhecendoEstado() {
 
       {finDespesaPessoal && (
         <div className="estado-section">
-          <div className="estado-section-header" onClick={() => toggleCollapse('despesa_pessoal')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Despesa com Pessoal <span className="count">(Executivo)</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="despesa_pessoal" onInfoClick={setPopupInfo} /></h2>
-            <span>{collapsed.despesa_pessoal ? '▶' : '▼'}</span>
+          <div className="estado-section-header" onClick={() => toggleCollapse('despesa_pessoal')}>
+            <h2>Despesa com Pessoal <span className="count">(Executivo)</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="siconfi_despesa_pessoal" onInfoClick={setPopupInfo} /></h2>
+            <span className="estado-section-toggle">{collapsed.despesa_pessoal ? '▶' : '▼'}</span>
           </div>
           {!collapsed.despesa_pessoal && (
+            <div className="estado-section-body">
             <div className="dm-cards">
               <FinCard label="Total Despesa Pessoal" value={fmtMoney(finDespesaPessoal.valor_total)} />
               <FinCard label="% da RCL" value={fmtNum(finDespesaPessoal.percentual_rcl) + '%'} />
               <FinCard label="Exercício" value={finDespesaPessoal.periodo} />
+            </div>
             </div>
           )}
         </div>
@@ -1108,11 +1096,12 @@ export default function ConhecendoEstado() {
 
       {finDespesaCategoria && finDespesaCategoria.length > 0 && (
         <div className="estado-section">
-          <div className="estado-section-header" onClick={() => toggleCollapse('despesa_categoria')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Despesa com Pessoal por Categoria <span className="count">({finDespesaCategoria.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="despesa_categoria" onInfoClick={setPopupInfo} /></h2>
-            <span>{collapsed.despesa_categoria ? '▶' : '▼'}</span>
+          <div className="estado-section-header" onClick={() => toggleCollapse('despesa_categoria')}>
+            <h2>Despesa com Pessoal por Categoria <span className="count">({finDespesaCategoria.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="siconfi_despesa_categoria" onInfoClick={setPopupInfo} /></h2>
+            <span className="estado-section-toggle">{collapsed.despesa_categoria ? '▶' : '▼'}</span>
           </div>
           {!collapsed.despesa_categoria && (
+            <div className="estado-section-body estado-section-body--scroll">
             <table className="estado-table">
               <thead>
                 <tr>
@@ -1133,17 +1122,19 @@ export default function ConhecendoEstado() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
 
       {finGastosFuncao && finGastosFuncao.length > 0 && (
         <div className="estado-section">
-          <div className="estado-section-header" onClick={() => toggleCollapse('gastos_por_funcao')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Gastos por Função <span className="count">({finGastosFuncao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="gastos_por_funcao" onInfoClick={setPopupInfo} /></h2>
-            <span>{collapsed.gastos_por_funcao ? '▶' : '▼'}</span>
+          <div className="estado-section-header" onClick={() => toggleCollapse('gastos_por_funcao')}>
+            <h2>Gastos por Função <span className="count">({finGastosFuncao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="siconfi_gastos_funcao" onInfoClick={setPopupInfo} /></h2>
+            <span className="estado-section-toggle">{collapsed.gastos_por_funcao ? '▶' : '▼'}</span>
           </div>
           {!collapsed.gastos_por_funcao && (
+            <div className="estado-section-body estado-section-body--scroll">
             <table className="estado-table">
               <thead>
                 <tr>
@@ -1164,17 +1155,19 @@ export default function ConhecendoEstado() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
 
       {finReceitas && finReceitas.length > 0 && (
         <div className="estado-section">
-          <div className="estado-section-header" onClick={() => toggleCollapse('receitas')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ margin: 0 }}>Receitas <span className="count">({finReceitas.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="receitas" onInfoClick={setPopupInfo} /></h2>
-            <span>{collapsed.receitas ? '▶' : '▼'}</span>
+          <div className="estado-section-header" onClick={() => toggleCollapse('receitas')}>
+            <h2>Receitas <span className="count">({finReceitas.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anoExibicao}</span><InfoBadge chave="siconfi_receitas" onInfoClick={setPopupInfo} /></h2>
+            <span className="estado-section-toggle">{collapsed.receitas ? '▶' : '▼'}</span>
           </div>
           {!collapsed.receitas && (
+            <div className="estado-section-body estado-section-body--scroll">
             <table className="estado-table">
               <thead>
                 <tr>
@@ -1195,33 +1188,35 @@ export default function ConhecendoEstado() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
 
       <div className="estado-section">
-        <div className="estado-section-header" onClick={() => toggleCollapse('recursos_federais')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}>Recursos Federais Recebidos <span className="count">({recursosFedExibicao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anosSelecionados.sort().join(', ')}</span><button className="btn btn-sm btn-outline-accent" style={{ marginLeft: 8 }} onClick={(e) => { e.stopPropagation(); setRecursosDetalhe(true); }}>Detalhes ▸</button><InfoBadge chave="recursos_federais" onInfoClick={setPopupInfo} /></h2>
-          <span>{collapsed.recursos_federais ? '▶' : '▼'}</span>
+        <div className="estado-section-header" onClick={() => toggleCollapse('recursos_federais')}>
+          <h2>Recursos Federais Recebidos <span className="count">({recursosFedExibicao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{anosSelecionados.sort().join(', ')}</span><button className="btn btn-sm btn-outline-accent" style={{ marginLeft: 8 }} onClick={(e) => { e.stopPropagation(); setRecursosDetalhe(true); }}>Detalhes ▸</button><InfoBadge chave="portal_recursos" onInfoClick={setPopupInfo} /></h2>
+          <span className="estado-section-toggle">{collapsed.recursos_federais ? '▶' : '▼'}</span>
         </div>
-        {!collapsed.recursos_federais && recursosFedExibicao.length > 0 && (<>
+        {!collapsed.recursos_federais && recursosFedExibicao.length > 0 && (
+        <div className="estado-section-body">
           {chartData && (
             <div className="chart-row">
               <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Tipo Pessoa', data: chartData.tipoPessoa })}>
                 <div className="chart-card-title">Tipo Pessoa</div>
-                <PieChart data={chartData.tipoPessoa} size={240} />
+                <PieChart data={chartData.tipoPessoa} size={CHART_SIZE_MD} />
               </div>
               <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Órgão', data: chartData.porOrgao })}>
                 <div className="chart-card-title">Por Órgão</div>
-                <PieChart data={chartData.porOrgao} size={240} />
+                <PieChart data={chartData.porOrgao} size={CHART_SIZE_MD} />
               </div>
               <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Órgão Superior', data: chartData.porOrgaoSuperior })}>
                 <div className="chart-card-title">Órgão Superior</div>
-                <PieChart data={chartData.porOrgaoSuperior} size={240} />
+                <PieChart data={chartData.porOrgaoSuperior} size={CHART_SIZE_MD} />
               </div>
               <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Recursos por Mês/Ano', data: chartData.porMesAno })}>
                 <div className="chart-card-title">Por Mês/Ano</div>
-                <PieChart data={chartData.porMesAno} size={240} />
+                <PieChart data={chartData.porMesAno} size={CHART_SIZE_MD} />
               </div>
             </div>
           )}
@@ -1252,7 +1247,7 @@ export default function ConhecendoEstado() {
             </tbody>
           </table>
           <Paginacao pagina={recursosFedPag.pagina} totalPaginas={recursosFedPag.totalPaginas} onPagina={recursosFedPag.setPagina} />
-        </>)}
+        </div>)}
         {!collapsed.recursos_federais && recursosFedExibicao.length === 0 && (
           <div className="rp-empty" style={{ padding: 20, textAlign: 'center' }}>
             {anoAtualCarregando ? 'Carregando dados...' : 'Selecione anos e meses acima para carregar os dados'}
@@ -1260,7 +1255,7 @@ export default function ConhecendoEstado() {
         )}
       </div>
 
-      <div className="estado-section" id="estado-licitacoes" style={{ padding: '12px', marginBottom: 8, background: 'var(--card-bg)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div className="estado-section estado-toolbar" id="estado-licitacoes">
         <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Ano:</span>
         <input
           type="text"
@@ -1302,7 +1297,7 @@ export default function ConhecendoEstado() {
       )}
 
       {Object.keys(licCache).length > 0 && (
-        <div className="estado-section" style={{ padding: '8px 12px', marginBottom: 8, background: 'var(--card-bg)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="estado-section estado-toolbar" style={{ marginBottom: 8 }}>
           <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Chaves buscadas:</span>
           {Object.keys(licCache).sort().map(chave => (
             <span key={chave} className="ano-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: 'var(--bg-elevated)', borderRadius: 12, fontSize: '0.78rem' }}>
@@ -1325,21 +1320,22 @@ export default function ConhecendoEstado() {
       )}
 
       <div className="estado-section">
-        <div className="estado-section-header" onClick={() => toggleCollapse('licitacoes')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}>Licitações (PNCP) <span className="count">({licExibicao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{licChavesSelecionadas.size > 0 ? [...licChavesSelecionadas].sort().join(', ') : ''}</span><InfoBadge chave="licitacoes" onInfoClick={setPopupInfo} /></h2>
-          <span>{collapsed.licitacoes ? '▶' : '▼'}</span>
+        <div className="estado-section-header" onClick={() => toggleCollapse('licitacoes')}>
+          <h2>Licitações (PNCP) <span className="count">({licExibicao.length})</span><span className="tag tag-candidato" style={{ marginLeft: 8 }}>{licChavesSelecionadas.size > 0 ? [...licChavesSelecionadas].sort().join(', ') : ''}</span><InfoBadge chave="pncp_licitacoes" onInfoClick={setPopupInfo} /></h2>
+          <span className="estado-section-toggle">{collapsed.licitacoes ? '▶' : '▼'}</span>
         </div>
-        {!collapsed.licitacoes && licExibicao.length > 0 && (<>
+        {!collapsed.licitacoes && licExibicao.length > 0 && (
+        <div className="estado-section-body">
           {licChartData && (
             <div className="chart-row">
               <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Licitações por Categoria', data: licChartData })}>
                 <div className="chart-card-title">Categorias</div>
-                <PieChart data={licChartData} size={240} />
+                <PieChart data={licChartData} size={CHART_SIZE_MD} />
               </div>
               {licFaixaChartData && (
                 <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Licitações por Faixa de Valor', data: licFaixaChartData })}>
                   <div className="chart-card-title">Faixa de Valores</div>
-                  <PieChart data={licFaixaChartData} size={240} />
+                  <PieChart data={licFaixaChartData} size={CHART_SIZE_MD} />
                 </div>
               )}
             </div>
@@ -1381,7 +1377,7 @@ export default function ConhecendoEstado() {
           </table>
           <Paginacao pagina={licPag.pagina} totalPaginas={licPag.totalPaginas} onPagina={licPag.setPagina} />
           <p className="dm-hint">Clique em um contrato para ver detalhes completos</p>
-        </>)}
+        </div>)}
         {!collapsed.licitacoes && licExibicao.length === 0 && (
           <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>
             {licEmAndamento ? 'Buscando licitações...' : Object.keys(licCache).length === 0 ? 'Insira um ano, selecione os trimestres e clique em Buscar' : 'Nenhum dado encontrado para as chaves selecionadas'}
@@ -1390,12 +1386,13 @@ export default function ConhecendoEstado() {
       </div>
 
       <div className="estado-section" id="estado-municipios">
-        <div className="estado-section-header" onClick={() => toggleCollapse('municipios')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}>Municípios <span className="count">({munFiltrados.length}/{municipios.length} no total)</span><InfoBadge chave="candidatos" onInfoClick={setPopupInfo} /></h2>
-          <span>{collapsed.municipios ? '▶' : '▼'}</span>
+        <div className="estado-section-header" onClick={() => toggleCollapse('municipios')}>
+          <h2>Municípios <span className="count">({munFiltrados.length}/{municipios.length} no total)</span><InfoBadge chave="tse_candidatos" onInfoClick={setPopupInfo} /></h2>
+          <span className="estado-section-toggle">{collapsed.municipios ? '▶' : '▼'}</span>
         </div>
         {!collapsed.municipios && (
-          basico ? (
+          <div className="estado-section-body">
+          {basico ? (
             <>
               <div className="search-filter-bar">
                 <input
@@ -1434,7 +1431,8 @@ export default function ConhecendoEstado() {
             </>
           ) : (
             <div className="municipios-loading">Carregando municípios...</div>
-          )
+          )}
+          </div>
         )}
       </div>
 
@@ -1448,7 +1446,7 @@ export default function ConhecendoEstado() {
               <button className="dm-modal-close" onClick={() => setChartPopup(null)}>×</button>
             </div>
             <div className="dm-modal-body" style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
-              <PieChart data={chartPopup.data} size={420} />
+              <PieChart data={chartPopup.data} size={CHART_SIZE_LG} />
             </div>
           </div>
         </div>

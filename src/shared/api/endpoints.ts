@@ -1,9 +1,5 @@
 export const ENDPOINTS = {
   // Licitacoes
-  ORGAO_ANALISE_STREAM: '/orgao/analise/stream',
-  ORGAO_ANALISE_BATCH: '/orgao/analise/batch',
-  PUBLICACAO_ANALISE_STREAM: '/publicacao/analise/stream',
-  PUBLICACAO_ANALISE_BATCH: '/publicacao/analise/batch',
   ORGAO_ANALISE_START: '/orgao/analise',
   PUBLICACAO_ANALISE_START: '/publicacao/analise',
 
@@ -55,4 +51,14 @@ export const ENDPOINTS = {
 
   // Ligacao Politica
   LIGACAO_POLITICA: '/ligacao-politica',
+
+  // Worker Anomalias
+  ANOMALIA_WS_CHANNEL: 'anomalia_analise',
+  ANOMALIA_INICIAR: '/worker/anomalia/iniciar',
+  ANOMALIA_PARAR: '/worker/anomalia/parar',
+  ANOMALIA_PROGRESSO: '/worker/anomalia/progresso',
+  ANOMALIAS_LISTAR: '/anomalias',
+
+  // Convenios
+  CONVENIOS: '/convenios',
 } as const;

@@ -3,6 +3,7 @@ import { api } from '@/shared/api/client';
 import { fmtDoc, fmtVal } from '@/shared/lib/formatters';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import type { TseResultItem, TseFornecedorResult, TseDespesa } from '../model/types';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface BuscaFornecedorProps {
   onFechar: () => void;
@@ -17,6 +18,7 @@ export default function BuscaFornecedor({
   const [documento, setDocumento] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { popupInfo, setPopupInfo } = useEntityInfo();
   const abortRef = useRef<AbortController | null>(null);
 
   const handleBuscar = useCallback(async () => {
@@ -131,10 +133,14 @@ export default function BuscaFornecedor({
       <div className="rp-topo">
         <h2>Relação de Fornecedores</h2>
         <span className="rp-desc">Buscar fornecedor por CPF/CNPJ</span>
+        <InfoBadge chave="tse_fornecedor" onInfoClick={setPopupInfo} />
         <div className="rp-topo-actions">
           <button className="btn btn-sm" onClick={onFechar}>Fechar</button>
         </div>
       </div>
+      <p className="ad-query-form-desc" style={{ marginBottom: 12 }}>
+        Informe o CPF ou CNPJ de um fornecedor para consultar todas as despesas de campanha pagas a ele por candidatos e partidos. Os resultados exibem valor, data, descrição da despesa e o candidato ou partido contratante.
+      </p>
       <div className="rp-search-box">
         <label className="rp-search-label rp-search-label-required">CPF/CNPJ do fornecedor</label>
         <div className="rp-search-row">
@@ -153,6 +159,7 @@ export default function BuscaFornecedor({
         </div>
         {error && <p className="rp-error">{error}</p>}
       </div>
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

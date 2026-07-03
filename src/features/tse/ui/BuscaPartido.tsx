@@ -3,6 +3,7 @@ import { api } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import { CandidateCard } from './CandidateCard';
 import type { TseResultItem, CandidatosResult, PartidoOption, OpcoesResult } from '../model/types';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 const UFS_LIST = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -22,6 +23,7 @@ export default function BuscaPartido({
   const [uf, setUf] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { popupInfo, setPopupInfo } = useEntityInfo();
 
   useEffect(() => {
     api.get<OpcoesResult<PartidoOption>>(ENDPOINTS.TSE_PARTIDOS)
@@ -72,10 +74,14 @@ export default function BuscaPartido({
       <div className="rp-topo">
         <h2>Políticos por Partido</h2>
         <span className="rp-desc">Buscar candidatos pelo partido político</span>
+        <InfoBadge chave="tse_partido" onInfoClick={setPopupInfo} />
         <div className="rp-topo-actions">
           <button className="btn btn-sm" onClick={onFechar}>Fechar</button>
         </div>
       </div>
+      <p className="ad-query-form-desc" style={{ marginBottom: 12 }}>
+        Selecione um partido político e opcionalmente filtre por UF e situação (eleitos/não eleitos). Os resultados exibem todos os candidatos da legenda com nome, cargo, UF e situação eleitoral.
+      </p>
       <div className="rp-search-box">
         <div className="rp-search-row bfilter-row">
           <span className="rp-field-label required">Partido</span>
@@ -100,6 +106,7 @@ export default function BuscaPartido({
         </div>
         {error && <p className="rp-error">{error}</p>}
       </div>
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

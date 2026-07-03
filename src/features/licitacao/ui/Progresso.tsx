@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { useAnaliseProgress, useBatchResults } from '../api/progress-hooks';
+import { useAnaliseProgress } from '../api/progress-hooks';
 import { fmtDoc, fmtValor } from '@/shared/lib/formatters';
-import { API_BASE_URL } from '@/shared/config';
 
 interface ProgressoProps {
   jobId: string;
@@ -10,10 +9,9 @@ interface ProgressoProps {
   onFinalizar: (resultados: unknown[], meta: unknown, paginasErro: unknown) => void;
   onCancelar: () => void;
   streamPath: string;
-  batchPath: string;
 }
 
-export default function Progresso({ jobId, total, meta, onFinalizar, onCancelar, streamPath, batchPath }: ProgressoProps) {
+export default function Progresso({ jobId, total, meta, onFinalizar, onCancelar, streamPath }: ProgressoProps) {
   const tipo = streamPath?.includes('publicacao') ? 'publicacao' : 'orgao';
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -25,36 +23,21 @@ export default function Progresso({ jobId, total, meta, onFinalizar, onCancelar,
     concluido,
     cancelado,
     pct,
+    results,
     cancelar,
-    batchEnabled,
-    batchPath: resolvedBatchPath,
   } = useAnaliseProgress(jobId, tipo, total, onCancelar);
 
-  const batchPathOverride = batchPath || '/orgao/analise/batch';
-
-  useBatchResults(jobId, batchEnabled && !cancelado, resolvedBatchPath);
-
   useEffect(() => {
-    if (concluido && !cancelado) {
-      carregarResultados();
+    if (concluido && !cancelado && results) {
+      onFinalizar(results, meta, []);
     }
-  }, [concluido, cancelado]);
+  }, [concluido, cancelado, results]);
 
   useEffect(() => {
     if (logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
     }
   }, [log]);
-
-  async function carregarResultados() {
-    try {
-      const resp = await fetch(`${API_BASE_URL}${resolvedBatchPath}/${jobId}`);
-      const data = await resp.json();
-      if (data.status === 'completed' && data.results) {
-        onFinalizar(data.results, meta, data.paginasErro || []);
-      }
-    } catch (_) {}
-  }
 
   return (
     <div className="progresso-card">

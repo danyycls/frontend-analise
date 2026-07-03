@@ -2,7 +2,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { toggleTheme } from '@/app/store/slices/themeSlice';
 import { setAbaAtiva, NAV_TABS, type TabId } from '@/app/store/slices/navigationSlice';
-import { setSubTabAtiva } from '@/app/store/slices/ligacaoPoliticaSlice';
 
 const TAB_ROUTES: Record<string, string> = {
   'home': '/',
@@ -13,8 +12,9 @@ const TAB_ROUTES: Record<string, string> = {
   'deputados': '/deputados',
   'senadores': '/senadores',
   'tcu': '/tcu',
+  'anomalias-analise': '/anomalias-analise',
+  'anomalias-encontradas': '/anomalias-encontradas',
   'wiki-pesquisa': '/wiki',
-  'ligacao-politica': '/ligacao-politica',
   'feedback': '/feedback',
 };
 
@@ -32,19 +32,10 @@ export function Sidebar() {
   const navigate = useNavigate();
   const abaAtiva = useActiveTab();
   const theme = useAppSelector((s) => s.theme.theme);
-  const lpResultados = useAppSelector((s) => s.ligacaoPolitica.lpResultados);
-  const ligPoliticaCache = useAppSelector((s) => s.ligacaoPolitica.ligPoliticaCache);
-  const showLpNavBtn = lpResultados && ligPoliticaCache.length > 0;
 
   const handleTabClick = (tabId: TabId) => {
     dispatch(setAbaAtiva(tabId));
     navigate(TAB_ROUTES[tabId] || '/');
-  };
-
-  const handleLpClick = () => {
-    dispatch(setSubTabAtiva('geral'));
-    dispatch(setAbaAtiva('ligacao-politica'));
-    navigate(TAB_ROUTES['ligacao-politica']);
   };
 
   return (
@@ -66,15 +57,6 @@ export function Sidebar() {
             <span className="nav-tab-label">{tab.label}</span>
           </button>
         ))}
-        {showLpNavBtn && (
-          <button
-            className={`nav-tab ${abaAtiva === 'ligacao-politica' ? 'ativo' : ''}`}
-            onClick={handleLpClick}
-          >
-            <span className="nav-tab-icon">▣</span>
-            <span className="nav-tab-label">Ligações Políticas</span>
-          </button>
-        )}
         <button
           className={`nav-tab ${abaAtiva === 'feedback' ? 'ativo' : ''}`}
           onClick={() => { dispatch(setAbaAtiva('feedback')); navigate('/feedback'); }}

@@ -2,6 +2,8 @@
 import { useState, useCallback, useRef } from 'react';
 import { api } from '@/shared/api/client';
 import { fmtDoc } from '@/shared/lib/formatters';
+import { usePageMemory } from '@/shared/lib/hooks';
+import { InfoBadge } from '@/shared/ui/EntityInfo/EntityInfo';
 import './AnaliseTCU.css';
 
 function fmtVal(v: unknown) {
@@ -14,13 +16,20 @@ function fLabel(k) {
 }
 
 const API_MAP = {
-  'contas-irregulares': { endpoint: '/tcu/contas-irregulares', label: 'Contas Irregulares', desc: 'Pessoas com contas julgadas irregulares no TCU' },
-  'fins-eleitorais':    { endpoint: '/tcu/fins-eleitorais',    label: 'Fins Eleitorais',    desc: 'Contas irregulares com implicação eleitoral (últimos 8 anos)' },
-  'inabilitados':       { endpoint: '/tcu/inabilitados',       label: 'Inabilitados',       desc: 'Pessoas inabilitadas para cargo em comissão' },
-  'inidoneos':          { endpoint: '/tcu/inidoneos',          label: 'Inidôneos',          desc: 'Pessoas inidôneas impedidas de licitar' },
+  'contas-irregulares': { endpoint: '/tcu/contas-irregulares', label: 'Contas Irregulares', desc: 'Consulta pessoas físicas e jurídicas com contas julgadas irregulares pelo TCU. Filtre por nome, CPF, CNPJ, UF ou município.' },
+  'fins-eleitorais':    { endpoint: '/tcu/fins-eleitorais',    label: 'Fins Eleitorais',    desc: 'Consulta contas irregulares com implicação eleitoral nos últimos 8 anos. Filtre por nome, CPF, UF ou município.' },
+  'inabilitados':       { endpoint: '/tcu/inabilitados',       label: 'Inabilitados',       desc: 'Consulta pessoas inabilitadas para cargo em comissão por decisão do TCU. Filtre por nome, CPF, UF ou município.' },
+  'inidoneos':          { endpoint: '/tcu/inidoneos',          label: 'Inidôneos',          desc: 'Consulta empresas e pessoas inidôneas impedidas de licitar. Filtre por nome, CPF, CNPJ, UF ou município.' },
 };
 
 const METODOS = Object.entries(API_MAP).map(([key, v]) => ({ key, ...v }));
+
+const DESC_PLACEHOLDER = {
+  'contas-irregulares': 'Consulte pessoas físicas e jurídicas que tiveram contas julgadas irregulares pelo Tribunal de Contas da União. Utilize os filtros opcionais abaixo para refinar a busca por nome, CPF, CNPJ, UF ou município. Os resultados exibem número do processo, tipo de registro, acórdão e data de trânsito em julgado.',
+  'fins-eleitorais': 'Consulte registros de contas julgadas irregulares pelo TCU com implicação eleitoral nos últimos 8 anos. Utilize os filtros opcionais para refinar por nome, CPF, UF ou município. Os resultados incluem a data final do efeito eleitoral.',
+  'inabilitados': 'Consulte pessoas declaradas inabilitadas pelo TCU para o exercício de cargo em comissão. Utilize os filtros opcionais para refinar por nome, CPF, UF ou município. Os resultados exibem o tipo de sanção, processo e período de inabilitação.',
+  'inidoneos': 'Consulte empresas e pessoas físicas declaradas inidôneas pelo TCU, impedidas de licitar com a administração pública. Utilize os filtros opcionais para refinar por nome, CPF, CNPJ, UF ou município. Os resultados exibem o processo e a data final da sanção.',
+};
 
 function TCUResultView({ data, tipo }) {
   if (!data || data.length === 0) {
@@ -115,14 +124,14 @@ function TCUResultView({ data, tipo }) {
   );
 }
 
-export default function AnaliseTCU({ onIdClick }) {
-  const [topAba, setTopAba] = useState('geral');
-  const [metodoState, setMetodoState] = useState(
+export default function AnaliseTCU({ onIdClick, onInfoClick }) {
+  const [topAba, setTopAba] = usePageMemory('tcu-topAba', 'geral');
+  const [metodoState, setMetodoState] = usePageMemory('tcu-metodoState',
     Object.fromEntries(METODOS.map(m => [m.key, { subs: [], ativa: 'geral' }]))
   );
-  const [dataCache, setDataCache] = useState({});
-  const [savedList, setSavedList] = useState([]);
-  const [ultimoFiltro, setUltimoFiltro] = useState({});
+  const [dataCache, setDataCache] = usePageMemory('tcu-dataCache', {});
+  const [savedList, setSavedList] = usePageMemory('tcu-savedList', []);
+  const [ultimoFiltro, setUltimoFiltro] = usePageMemory('tcu-ultimoFiltro', {});
 
   let uid = useRef(0);
 
@@ -182,7 +191,7 @@ export default function AnaliseTCU({ onIdClick }) {
     <div className="tcu-section">
       <div className="tcu-topo">
         <h2>Análises TCU</h2>
-        <span className="tcu-desc">Consultas aos cadastros do Tribunal de Contas da União</span>
+        <span className="tcu-desc">Cadastros oficiais do TCU: contas julgadas irregulares, registros com implicação eleitoral, pessoas inabilitadas para cargo em comissão e empresas inidôneas impedidas de licitar.</span>
       </div>
 
       <div className="tcu-sub-tabs">
@@ -216,6 +225,7 @@ export default function AnaliseTCU({ onIdClick }) {
               onClick={() => setTopAba(m.key)}
             >
               <strong>{m.label}</strong>
+              <InfoBadge chave={`tcu_${m.key}`} onInfoClick={onInfoClick} />
               <span className="tcu-metodo-desc">{m.desc}</span>
             </button>
           ))}
@@ -247,6 +257,7 @@ export default function AnaliseTCU({ onIdClick }) {
           <div key={m.key} style={{ display: topAba === m.key ? '' : 'none' }}>
             <div className="tcu-search-box">
               <span className="tcu-search-label">Filtros (opcional — vazio busca todos)</span>
+              <InfoBadge chave={`tcu_${m.key}`} onInfoClick={onInfoClick} />
               <div className="tcu-search-fields">
                 <input
                   className="tcu-search-input"
@@ -337,7 +348,7 @@ export default function AnaliseTCU({ onIdClick }) {
 
             <div style={{ display: state.ativa === 'geral' ? '' : 'none' }}>
               <div className="tcu-search-placeholder">
-                <p>Preencha os filtros e clique em <strong>Buscar</strong>.</p>
+                <p>{DESC_PLACEHOLDER[m.key] || 'Preencha os filtros e clique em <strong>Buscar</strong>.'}</p>
               </div>
             </div>
 

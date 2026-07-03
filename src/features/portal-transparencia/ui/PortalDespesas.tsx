@@ -1,5 +1,6 @@
 import { useState, useCallback, type ChangeEvent } from 'react';
 import { api } from '@/shared/api/client';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 const UFS_LIST = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -21,6 +22,7 @@ export default function PortalDespesas({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultados, setResultados] = useState<any[]>([]);
+  const { popupInfo, setPopupInfo } = useEntityInfo();
 
   const handleBuscar = useCallback(async () => {
     setLoading(true);
@@ -81,8 +83,12 @@ export default function PortalDespesas({
       <div className="rp-topo">
         <h2>Despesas</h2>
         <span className="rp-desc">Buscar despesas governamentais</span>
+        <InfoBadge chave="portal_despesas" onInfoClick={setPopupInfo} />
         <div className="rp-topo-actions"><button className="btn btn-sm" onClick={onFechar}>Fechar</button></div>
       </div>
+      <p className="ad-query-form-desc" style={{ marginBottom: 12 }}>
+        Informe órgão, ano, UF, município ou nome do favorecido para consultar despesas executadas pelo governo federal. Os resultados exibem valores empenhados, liquidados e pagos.
+      </p>
       <div className="rp-search-box">
         <div className="rp-search-row bfilter-row">
           <select value={tipoBusca} onChange={(e: ChangeEvent<HTMLSelectElement>) => setTipoBusca(e.target.value)} className="rp-search-input">
@@ -107,6 +113,7 @@ export default function PortalDespesas({
         {error && <p className="rp-error">{error}</p>}
       </div>
       {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 .tcu-section {
   background: var(--bg-surface);
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--card-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -14,7 +14,7 @@
   gap: 16px;
   padding: 16px 24px;
   background: var(--bg-surface);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--card-border);
   flex-shrink: 0;
 }
 
@@ -41,7 +41,7 @@
   gap: 2px;
   padding: 8px 24px;
   background: var(--bg-tertiary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--card-border);
   flex-wrap: wrap;
 }
 
@@ -64,15 +64,15 @@
 }
 
 .tcu-sub-tab:hover {
-  color: #39ff14;
-  background: rgba(57, 255, 20, 0.03);
-  border-color: rgba(57, 255, 20, 0.2);
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border-color: var(--accent-glow);
 }
 
 .tcu-sub-tab.ativo {
-  color: #a855f7;
-  background: rgba(168, 85, 247, 0.06);
-  border-color: rgba(168, 85, 247, 0.25);
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border-color: var(--accent-glow);
 }
 
 .tcu-sub-tab-fechar {
@@ -97,7 +97,7 @@
 
 .tcu-metodo-btn {
   background: var(--bg-surface);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--card-border);
   padding: 14px;
   font-family: var(--font-mono);
   color: var(--text-primary);
@@ -110,8 +110,8 @@
 }
 
 .tcu-metodo-btn:hover {
-  border-color: #39ff14;
-  background: rgba(57, 255, 20, 0.03);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
 }
 
 .tcu-metodo-desc {
@@ -123,7 +123,7 @@
 .tcu-search-box {
   padding: 16px 24px;
   background: var(--bg-tertiary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--card-border);
 }
 
 .tcu-search-label {
@@ -151,13 +151,13 @@
   font-family: var(--font-mono);
   font-size: 0.78rem;
   background: var(--bg-surface);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--input-border);
   color: var(--text-primary);
   outline: none;
   transition: border-color 0.12s;
 }
 
-.tcu-search-input:focus { border-color: #39ff14; }
+.tcu-search-input:focus { border-color: var(--accent); }
 
 .tcu-search-input-mono {
   font-family: var(--font-mono);
@@ -169,7 +169,7 @@
   gap: 2px;
   padding: 6px 24px;
   background: var(--bg-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--card-border);
   flex-wrap: wrap;
 }
 
@@ -205,14 +205,14 @@
   margin-bottom: 12px;
   padding: 8px 14px;
   background: var(--bg-surface);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--card-border);
 }
 
 .tcu-result-count {
   font-family: var(--font-mono);
   font-size: 0.82rem;
   font-weight: 700;
-  color: #a855f7;
+  color: var(--accent);
 }
 
 .tcu-empty {
@@ -231,7 +231,7 @@
 
 .tcu-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--card-border);
 }
 
 .tcu-card-topo {
@@ -240,7 +240,7 @@
   gap: 10px;
   padding: 8px 14px;
   background: var(--bg-tertiary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--card-border);
 }
 
 .tcu-card-tipo {
@@ -248,9 +248,9 @@
   font-size: 0.58rem;
   font-weight: 600;
   padding: 2px 8px;
-  background: rgba(168, 85, 247, 0.08);
-  color: #a855f7;
-  border: 1px solid rgba(168, 85, 247, 0.2);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border: 1px solid var(--accent-glow);
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
@@ -309,18 +309,18 @@
   gap: 12px;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--card-border);
 }
 
 .tcu-card-link {
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  color: #a855f7;
+  color: var(--accent);
   cursor: pointer;
   transition: color 0.12s;
 }
 
-.tcu-card-link:hover { color: #39ff14; }
+.tcu-card-link:hover { color: var(--accent); }
 
 .tcu-error-box {
   padding: 20px 24px;
@@ -330,7 +330,7 @@
 }
 
 .tcu-saved-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--card-border);
 }
 
 .tcu-saved-list {
@@ -356,14 +356,14 @@
   gap: 10px;
   padding: 8px 14px;
   background: var(--bg-surface);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--card-border);
 }
 
 .tcu-saved-label {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 600;
-  color: #a855f7;
+  color: var(--accent);
 }
 
 .tcu-saved-meta {

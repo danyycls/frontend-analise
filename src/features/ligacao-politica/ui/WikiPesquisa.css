@@ -23,7 +23,7 @@
   color: var(--text-muted);
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--card-border);
 }
 
 .wiki-nav {
@@ -50,15 +50,15 @@
 }
 
 .wiki-nav-item:hover {
-  color: #39ff14;
-  border-left-color: #39ff14;
-  background: rgba(57, 255, 20, 0.03);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--accent-subtle);
 }
 
 .wiki-nav-item.ativo {
-  color: #a855f7;
-  border-left-color: #a855f7;
-  background: rgba(168, 85, 247, 0.05);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--accent-subtle);
   font-weight: 600;
 }
 
@@ -85,7 +85,7 @@
   letter-spacing: -0.5px;
   margin-bottom: 16px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--card-border);
   text-transform: uppercase;
   position: relative;
 }
@@ -97,7 +97,7 @@
   left: 0;
   width: 40px;
   height: 1px;
-  background: #a855f7;
+  background: var(--accent);
 }
 
 .wiki-section h3 {
@@ -179,12 +179,12 @@
 
   .wiki-nav-item:hover {
     border-left-color: transparent;
-    border-bottom-color: #39ff14;
+    border-bottom-color: var(--accent);
   }
 
   .wiki-nav-item.ativo {
     border-left-color: transparent;
-    border-bottom-color: #a855f7;
+    border-bottom-color: var(--accent);
   }
 
   .wiki-content {

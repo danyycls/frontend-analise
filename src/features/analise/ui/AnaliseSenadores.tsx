@@ -3,6 +3,8 @@ import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { api } from '@/shared/api/client';
 import SecaoGeralSenador from '@/entities/senador/ui/SenadorSecaoGeral';
 import TabelaGen from '@/shared/ui/TabelaGen/TabelaGen';
+import { usePageMemory } from '@/shared/lib/hooks';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 import './AnaliseDeputados.css';
 
 /* ─── Helpers ──────────────────────────── */
@@ -480,7 +482,7 @@ function SecaoProcessos() {
       <SubTabBar tabs={fixedTabs} ativa={tabAtiva} onSelect={setTabAtiva} />
       <div style={{ display: tabAtiva === 'geral' ? '' : 'none' }}>
         <h3 className="ad-section-title">Processos e Emendas</h3>
-        <p className="ad-query-form-desc">Selecione uma opção para consultar dados legislativos do Senado. Os resultados abrem em novas sub-abas.</p>
+        <p className="ad-query-form-desc">Consulta de dados legislativos do Senado Federal. Escolha entre Processos (proposições e projetos), Emendas ou Votações nominais. Preencha os filtros e os resultados abrem em novas sub-abas.</p>
         <div className="ad-card-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
           <button className="ad-card" style={{ cursor: 'pointer', padding: 20, textAlign: 'center' }} onClick={() => setTabAtiva('filtro-processos')}>
             <strong>Processos</strong><br /><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Buscar processos legislativos</span>
@@ -679,7 +681,7 @@ function SecaoAgenda() {
       <SubTabBar tabs={fixedTabs} ativa={tabAtiva} onSelect={setTabAtiva} />
       <div style={{ display: tabAtiva === 'geral' ? '' : 'none' }}>
         <h3 className="ad-section-title">Agenda do Senado</h3>
-        <p className="ad-query-form-desc">Consulte a agenda do plenário, reuniões de comissão e encontros legislativos.</p>
+        <p className="ad-query-form-desc">Acompanhe a agenda oficial do Senado Federal: sessões do plenário, reuniões de comissões e encontros legislativos. Consulte por dia, mês ou código do encontro.</p>
         <div className="ad-card-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
           <button className="ad-card" style={{ cursor: 'pointer', padding: 20, textAlign: 'center' }} onClick={() => setTabAtiva('filtro-dia')}>
             <strong>Agenda do Dia</strong><br /><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Consulta por data</span>
@@ -933,6 +935,9 @@ function SecaoComissoes() {
         <div>
           <h3 className="ad-section-title">Comissões do Senado</h3>
           <p className="ad-query-form-desc">
+            Relação de todas as comissões do Senado Federal (permanentes, temporárias e especiais). Filtre por nome, sigla ou código. Clique em "Detalhes" para visualizar informações, membros Titulares e Suplentes, e votações de cada comissão.
+          </p>
+          <p className="ad-query-form-desc">
             {comissoes.length > 0 ? `${comissoes.length} comissões encontradas.` : 'Clique no botão abaixo para carregar.'}
           </p>
           {!loading && comissoes.length === 0 && !erro && (
@@ -1089,21 +1094,22 @@ function SectionComissoesMembros({ membros }) {
 /* ─── Componente Principal ────────────── */
 
 export default function AnaliseSenadores() {
-  const [senadores, setSenadores] = useState([]);
+  const [senadores, setSenadores] = usePageMemory('senadores-lista', []);
   const [listaLoading, setListaLoading] = useState(false);
   const [listaErro, setListaErro] = useState(null);
-  const [filtroNome, setFiltroNome] = useState('');
-  const [filtroPartido, setFiltroPartido] = useState('');
-  const [filtroUf, setFiltroUf] = useState('');
+  const [filtroNome, setFiltroNome] = usePageMemory('senadores-filtroNome', '');
+  const [filtroPartido, setFiltroPartido] = usePageMemory('senadores-filtroPartido', '');
+  const [filtroUf, setFiltroUf] = usePageMemory('senadores-filtroUf', '');
 
-  const [senatorTabs, setSenatorTabs] = useState([]);
-  const [senatorTabAtiva, setSenatorTabAtiva] = useState(null);
-  const [dadosCache, setDadosCache] = useState({});
+  const [senatorTabs, setSenatorTabs] = usePageMemory('senadores-tabs', []);
+  const [senatorTabAtiva, setSenatorTabAtiva] = usePageMemory('senadores-tabAtiva', null);
+  const [dadosCache, setDadosCache] = usePageMemory('senadores-dadosCache', {});
   const [detalheLoading, setDetalheLoading] = useState(null);
-  const [senatorSecao, setSenatorSecao] = useState({});
-  const [emendasCache, setEmendasCache] = useState({});
+  const [senatorSecao, setSenatorSecao] = usePageMemory('senadores-secao', {});
+  const [emendasCache, setEmendasCache] = usePageMemory('senadores-emendasCache', {});
 
-  const [mainTabAtiva, setMainTabAtiva] = useState('lista');
+  const [mainTabAtiva, setMainTabAtiva] = usePageMemory('senadores-mainTabAtiva', 'lista');
+  const { popupInfo, setPopupInfo } = useEntityInfo();
 
   const senatorTabsRef = useRef(senatorTabs);
   senatorTabsRef.current = senatorTabs;
@@ -1224,7 +1230,8 @@ export default function AnaliseSenadores() {
     <div className="tab-content">
       <div className="tab-header">
         <h2 className="tab-title">Análise de Senadores</h2>
-        <p className="tab-desc">Consulte informações detalhadas dos senadores, processos legislativos e agenda do Senado.</p>
+        <p className="tab-desc">Dados oficiais do Senado Federal: relação completa dos senadores com informações gerais, cargos, comissões, mandatos e emendas. Consulte também processos legislativos, agenda do plenário e comissões.</p>
+        <InfoBadge chave="senado_federal" onInfoClick={setPopupInfo} />
       </div>
 
       {/* Top-level tab bar: only the 3 main tabs */}
@@ -1263,6 +1270,9 @@ export default function AnaliseSenadores() {
         {senatorTabAtiva === null && (
           <div>
             <h3 className="ad-section-title">Senadores em Exercício</h3>
+            <p className="ad-query-form-desc">
+              Relação completa dos 81 senadores em exercício. Utilize os filtros abaixo para localizar por nome, partido ou UF. Clique em "Detalhes" para acessar informações gerais, cargos, comissões, mandatos e emendas parlamentares de cada senador.
+            </p>
             <p className="ad-query-form-desc">
               {senadores.length > 0 ? `${senadores.length} senadores encontrados. Clique em "Detalhes" para ver informações completas.` : 'Carregando lista de senadores...'}
             </p>
@@ -1395,6 +1405,7 @@ export default function AnaliseSenadores() {
       <div style={{ display: mainTabAtiva === 'comissoes' ? '' : 'none' }}>
         <SecaoComissoes />
       </div>
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

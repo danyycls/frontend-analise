@@ -1,0 +1,93 @@
+.tool-card {
+  position: relative;
+  background: var(--bg-surface);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--accent-tertiary-glow);
+  padding: 20px;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.tool-card::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 16px;
+  height: 16px;
+  border-top: 2px solid var(--accent-tertiary-glow);
+  border-right: 2px solid var(--accent-tertiary-glow);
+  pointer-events: none;
+  transition: border-color 0.2s;
+}
+
+.tool-card:hover {
+  border-color: var(--accent-tertiary);
+  box-shadow: 0 0 8px var(--accent-tertiary-subtle);
+}
+
+.tool-card:hover::before {
+  border-color: var(--accent-tertiary);
+}
+
+.tool-card-icon {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  opacity: 0.6;
+}
+
+.tool-card-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tool-card-body {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.tool-card-body p {
+  margin-bottom: 6px;
+}
+
+.tool-card-body ul {
+  margin: 6px 0;
+  padding-left: 16px;
+  list-style: none;
+}
+
+.tool-card-body ul li {
+  margin-bottom: 3px;
+  position: relative;
+  padding-left: 12px;
+}
+
+.tool-card-body ul li::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.tool-card-body ul li strong {
+  color: var(--text-primary);
+}
+
+.tool-card-body h4 {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 10px 0 4px;
+}

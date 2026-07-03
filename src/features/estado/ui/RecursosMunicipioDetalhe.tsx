@@ -12,7 +12,7 @@ import {
   finishSearch,
   removeYearFromSearch,
 } from '@/app/store/slices/recursosMunicipioSlice';
-import { PieChart, aggregateBy, topN, fmtMoneyCompact } from './chart-utils';
+import { PieChart, aggregateBy, topN, fmtMoneyCompact, CHART_SIZE_SM, CHART_SIZE_LG } from './chart-utils';
 
 function usePaginacao(dados, itensPorPagina = 10) {
   const [pagina, setPagina] = useState(0);
@@ -85,7 +85,7 @@ function DraggableChartPopup({ titulo, data, onFechar }) {
           <button className="dm-modal-close" onClick={onFechar}>×</button>
         </div>
         <div className="dm-modal-body" style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
-          <PieChart data={data} size={420} />
+          <PieChart data={data} size={CHART_SIZE_LG} />
         </div>
       </div>
     </div>
@@ -499,19 +499,19 @@ export default function RecursosMunicipioDetalhe({ uf, ufNome, municipios, onFec
               <div className="recursos-charts-grid">
                 <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Tipo Pessoa', data: chartData.tipoPessoa })}>
                   <div className="chart-card-title">Tipo Pessoa</div>
-                  <PieChart data={chartData.tipoPessoa} size={200} />
+                  <PieChart data={chartData.tipoPessoa} size={CHART_SIZE_SM} />
                 </div>
                 <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Por Órgão', data: chartData.porOrgao })}>
                   <div className="chart-card-title">Por Órgão</div>
-                  <PieChart data={chartData.porOrgao} size={200} />
+                  <PieChart data={chartData.porOrgao} size={CHART_SIZE_SM} />
                 </div>
                 <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Órgão Superior', data: chartData.porOrgaoSuperior })}>
                   <div className="chart-card-title">Órgão Superior</div>
-                  <PieChart data={chartData.porOrgaoSuperior} size={200} />
+                  <PieChart data={chartData.porOrgaoSuperior} size={CHART_SIZE_SM} />
                 </div>
                 <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Por Mês/Ano', data: chartData.porMesAno })}>
                   <div className="chart-card-title">Por Mês/Ano</div>
-                  <PieChart data={chartData.porMesAno} size={200} />
+                  <PieChart data={chartData.porMesAno} size={CHART_SIZE_SM} />
                 </div>
               </div>
             </>

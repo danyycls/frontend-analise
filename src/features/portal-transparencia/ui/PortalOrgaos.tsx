@@ -1,5 +1,6 @@
 import { useState, useCallback, type ChangeEvent } from 'react';
 import { api } from '@/shared/api/client';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface PortalOrgaosProps {
   onFechar: () => void;
@@ -17,6 +18,7 @@ export default function PortalOrgaos({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultados, setResultados] = useState<any[]>([]);
+  const { popupInfo, setPopupInfo } = useEntityInfo();
 
   const handleBuscar = useCallback(async () => {
     setLoading(true);
@@ -86,10 +88,14 @@ export default function PortalOrgaos({
       <div className="rp-topo">
         <h2>Órgãos</h2>
         <span className="rp-desc">Buscar órgãos públicos (SIAPE/SIAFI)</span>
+        <InfoBadge chave="portal_orgaos" onInfoClick={setPopupInfo} />
         <div className="rp-topo-actions">
           <button className="btn btn-sm" onClick={onFechar}>Fechar</button>
         </div>
       </div>
+      <p className="ad-query-form-desc" style={{ marginBottom: 12 }}>
+        Informe o código ou nome do órgão público federal para consultar seus dados cadastrais no SIAPE/SIAFI. Os resultados exibem código, nome, sigla e CNPJ do órgão.
+      </p>
       <div className="rp-search-box">
         <div className="rp-search-row bfilter-row">
           <select value={tipo} onChange={(e: ChangeEvent<HTMLSelectElement>) => setTipo(e.target.value)} className="rp-search-input">
@@ -105,6 +111,7 @@ export default function PortalOrgaos({
         {error && <p className="rp-error">{error}</p>}
       </div>
       {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

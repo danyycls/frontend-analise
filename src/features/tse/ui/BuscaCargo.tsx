@@ -3,6 +3,7 @@ import { api } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import { CandidateCard } from './CandidateCard';
 import type { TseResultItem, CandidatosResult, CargoOption, OpcoesResult } from '../model/types';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 const UFS_LIST = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -22,6 +23,7 @@ export default function BuscaCargo({
   const [uf, setUf] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { popupInfo, setPopupInfo } = useEntityInfo();
 
   useEffect(() => {
     api.get<OpcoesResult<CargoOption>>(ENDPOINTS.TSE_CARGOS)
@@ -72,10 +74,14 @@ export default function BuscaCargo({
       <div className="rp-topo">
         <h2>Políticos por Cargo</h2>
         <span className="rp-desc">Buscar candidatos pelo cargo político</span>
+        <InfoBadge chave="tse_cargo" onInfoClick={setPopupInfo} />
         <div className="rp-topo-actions">
           <button className="btn btn-sm" onClick={onFechar}>Fechar</button>
         </div>
       </div>
+      <p className="ad-query-form-desc" style={{ marginBottom: 12 }}>
+        Selecione um cargo eletivo e filtre por UF e situação (eleitos/não eleitos) para encontrar candidatos. Os resultados exibem nome, partido, cargo, UF e situação de cada candidato nas eleições.
+      </p>
       <div className="rp-search-box">
         <div className="rp-search-row bfilter-row">
           <span className="rp-field-label required">Cargo</span>
@@ -100,6 +106,7 @@ export default function BuscaCargo({
         </div>
         {error && <p className="rp-error">{error}</p>}
       </div>
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

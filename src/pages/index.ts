@@ -8,3 +8,5 @@ export { default as TcuPage } from './TcuPage/TcuPage';
 export { default as LigacaoPoliticaPage } from './LigacaoPoliticaPage/LigacaoPoliticaPage';
 export { default as EstadoPage } from './EstadoPage/EstadoPage';
 export { default as WikiPage } from './WikiPage/WikiPage';
+export { default as AnomaliasAnalisePage } from './AnomaliasAnalisePage/AnomaliasAnalisePage';
+export { default as AnomaliasEncontradasPage } from './AnomaliasEncontradasPage/AnomaliasEncontradasPage';

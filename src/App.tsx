@@ -3,6 +3,7 @@ import FeedbackPage from './pages/FeedbackPage/FeedbackPage';
 import { Routes, Route } from 'react-router-dom';
 import { Sidebar } from './widgets/Sidebar/Sidebar';
 import ConhecendoEstado from './features/estado/ui/ConhecendoEstado';
+import DevBanner from './shared/ui/DevBanner/DevBanner';
 import './App.css';
 
 const HomePage = lazy(() => import('./pages/HomePage/HomePage'));
@@ -15,6 +16,8 @@ const TcuPage = lazy(() => import('./pages/TcuPage/TcuPage'));
 const LigacaoPoliticaPage = lazy(() => import('./pages/LigacaoPoliticaPage/LigacaoPoliticaPage'));
 const EstadoPage = lazy(() => import('./pages/EstadoPage/EstadoPage'));
 const WikiPage = lazy(() => import('./pages/WikiPage/WikiPage'));
+const AnomaliasAnalisePage = lazy(() => import('./pages/AnomaliasAnalisePage/AnomaliasAnalisePage'));
+const AnomaliasEncontradasPage = lazy(() => import('./pages/AnomaliasEncontradasPage/AnomaliasEncontradasPage'));
 
 function PageLoader() {
   return (
@@ -41,6 +44,7 @@ function AppLayout() {
       <Sidebar />
       <main className="app-main">
         <div className="app-main-inner">
+          <DevBanner />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route index element={<HomePage />} />
@@ -53,6 +57,8 @@ function AppLayout() {
               <Route path="ligacao-politica" element={<LigacaoPoliticaPage />} />
               <Route path="estado" element={<EstadoPage />} />
               <Route path="wiki" element={<WikiPage />} />
+              <Route path="anomalias-analise" element={<AnomaliasAnalisePage />} />
+              <Route path="anomalias-encontradas" element={<AnomaliasEncontradasPage />} />
                 <Route path="feedback" element={<FeedbackPage />} />
               <Route path="*" element={<HomePage />} />
             </Routes>

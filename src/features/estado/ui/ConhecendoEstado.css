@@ -9,10 +9,16 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding-bottom: 16px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  box-shadow:
+    0 0 6px rgba(255, 255, 255, 0.14),
+    0 0 16px rgba(255, 255, 255, 0.06),
+    inset 0 0 18px rgba(255, 255, 255, 0.025);
 }
 
 .estado-header h1 {
@@ -63,7 +69,73 @@
 }
 
 .estado-section {
-  margin-bottom: 32px;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  box-shadow:
+    0 0 6px rgba(255, 255, 255, 0.14),
+    0 0 16px rgba(255, 255, 255, 0.06),
+    inset 0 0 18px rgba(255, 255, 255, 0.025);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.estado-section:hover {
+  border-color: rgba(255, 255, 255, 0.52);
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.22),
+    0 0 28px rgba(255, 255, 255, 0.1),
+    inset 0 0 22px rgba(255, 255, 255, 0.04);
+}
+
+.estado-section-header {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  user-select: none;
+}
+
+.estado-section-header:last-child {
+  margin-bottom: 0;
+}
+
+.estado-section-header h2 {
+  margin: 0 !important;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+  flex: 1;
+  min-width: 0;
+}
+
+.estado-section-header h2::after {
+  display: none;
+}
+
+.estado-section-toggle {
+  flex-shrink: 0;
+  color: var(--accent-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.estado-section-body {
+  padding-top: 14px;
+  min-width: 0;
+}
+
+.estado-section-body--scroll {
+  overflow-x: auto;
+}
+
+.estado-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .estado-section h2 {
@@ -163,6 +235,10 @@
   min-width: 160px;
   flex: 1;
   max-width: 220px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .estado-card .municipio-nome {
@@ -170,6 +246,8 @@
   font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 4px;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .estado-card .municipio-pop {
@@ -272,9 +350,13 @@
   flex-wrap: wrap;
 }
 
+.estado-counters-section .estado-counters {
+  margin-bottom: 0;
+}
+
 .estado-counter-item {
   flex: 1;
-  min-width: 120px;
+  min-width: 0;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   padding: 16px;
@@ -282,6 +364,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow: hidden;
 }
 
 .estado-counter-val {
@@ -411,6 +494,7 @@
   border: 1px solid var(--border);
   padding: 16px;
   text-align: center;
+  overflow: hidden;
 }
 
 .dm-card-val {
@@ -420,6 +504,8 @@
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 4px;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .dm-card-lbl {
@@ -698,19 +784,147 @@
 
 /* ── Políticos Grid 2-col ──────────────────────── */
 
+#estado-candidatos {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .politicos-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+  align-items: stretch;
 }
 
 .politicos-grid > .estado-section {
   margin-bottom: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.politicos-grid > .estado-section .estado-section-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.politicos-grid .estado-table {
+  font-size: 0.72rem;
+}
+
+.politicos-grid .estado-table th,
+.politicos-grid .estado-table td {
+  padding: 5px 8px;
+}
+
+.politicos-grid .cand-situacao-btns,
+.politicos-grid .ano-filtro-btns {
+  flex-wrap: wrap;
 }
 
 .politicos-grid-full {
   grid-column: 1 / -1;
+}
+
+.politicos-grid .dep-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+/* ── Deputados Grid (novo layout de cards) ──────── */
+
+.dep-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.dep-card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  padding: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.dep-card:hover {
+  border-color: var(--accent-secondary-glow);
+  background: var(--accent-secondary-subtle);
+}
+
+.dep-card-foto-wrap {
+  flex-shrink: 0;
+}
+
+.dep-card-foto {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  display: block;
+}
+
+.dep-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dep-card-nome {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dep-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dep-card-uf {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.dep-card-extra {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.dep-card-btn {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+@media (max-width: 600px) {
+  .dep-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Estado Page Nav (dot-nav) ─────────────────── */
@@ -1008,14 +1222,14 @@
 .chart-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  gap: 20px;
   margin-bottom: 16px;
 }
 
 .chart-card-sm {
   background: var(--bg-surface);
   border: 1px solid var(--card-border);
-  padding: 20px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;

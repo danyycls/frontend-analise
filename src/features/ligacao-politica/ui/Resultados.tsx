@@ -9,7 +9,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { PieChart } from '@/features/estado/ui/chart-utils';
+import { PieChart, CHART_SIZE_MD } from '@/features/estado/ui/chart-utils';
 import './Resultados.css';
 
 // ═══════════════════════════════════════════════════
@@ -490,13 +490,13 @@ function OrgaoCard({ resultado, pncpDestacado, onAnaliseDetalhada, pncpComMatch,
               {chartCategorias.length > 0 && (
                 <div className="chart-card-sm">
                   <div className="chart-card-title">Valor por Categoria</div>
-                  <PieChart data={chartCategorias} size={220} />
+                  <PieChart data={chartCategorias} size={CHART_SIZE_MD} />
                 </div>
               )}
               {chartFaixaValor && (
                 <div className="chart-card-sm">
                   <div className="chart-card-title">Valor por Faixa (R$)</div>
-                  <PieChart data={chartFaixaValor} size={220} />
+                  <PieChart data={chartFaixaValor} size={CHART_SIZE_MD} />
                 </div>
               )}
             </div>

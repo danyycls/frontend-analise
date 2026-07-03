@@ -3,6 +3,8 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { api } from '@/shared/api/client';
 import { API_BASE_URL } from '@/shared/config';
 import { fmtDoc, fmtValor } from '@/shared/lib/formatters';
+import { usePageMemory } from '@/shared/lib/hooks';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 import SecaoGeralDeputado from '@/entities/deputado/ui/DeputadoSecaoGeral';
 import TabelaDespesasDeputado from '@/entities/deputado/ui/DeputadoDespesas';
 import CardGridOrgaosDeputado from '@/entities/deputado/ui/DeputadoOrgaos';
@@ -305,7 +307,7 @@ function SecaoBuscaAvancada() {
   return (
     <div>
       <h3 className="ad-section-title">Busca Avançada</h3>
-      <p className="ad-query-form-desc">Selecione um recurso para consultar dados da Câmara dos Deputados. Os resultados abrem em novas sub-abas.</p>
+      <p className="ad-query-form-desc">Consulta direta à API da Câmara dos Deputados. Escolha um recurso (Partidos, Proposições, Eventos, Órgãos, Blocos, Frentes, Grupos, Legislaturas ou Votações), aplique os filtros desejados e visualize os resultados em tabelas. Cada busca abre em uma nova aba.</p>
       <div className="ad-query-form-grid ad-query-form-grid-tabs">
         {recursos.map(r => (
           <button
@@ -351,22 +353,23 @@ function SecaoBuscaAvancada() {
 }
 
 export default function AnaliseDeputados({ onFechar }) {
-  const [deputados, setDeputados] = useState([]);
+  const [deputados, setDeputados] = usePageMemory('deputados-lista', []);
   const [deputadosLoading, setDeputadosLoading] = useState(false);
   const [deputadosErro, setDeputadosErro] = useState(null);
-  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [paginaAtual, setPaginaAtual] = usePageMemory('deputados-pagina', 1);
 
-  const [subTabs, setSubTabs] = useState([]);
-  const [subTabAtiva, setSubTabAtiva] = useState('lista');
-  const [dadosCache, setDadosCache] = useState({});
-  const [subSecao, setSubSecao] = useState({});
+  const [subTabs, setSubTabs] = usePageMemory('deputados-subTabs', []);
+  const [subTabAtiva, setSubTabAtiva] = usePageMemory('deputados-subTabAtiva', 'lista');
+  const [dadosCache, setDadosCache] = usePageMemory('deputados-dadosCache', {});
+  const [subSecao, setSubSecao] = usePageMemory('deputados-subSecao', {});
+  const { popupInfo, setPopupInfo } = useEntityInfo();
   const [detalheLoading, setDetalheLoading] = useState(null);
-  const [queryTabs, setQueryTabs] = useState({});
-  const [queryTabAtiva, setQueryTabAtiva] = useState({});
+  const [queryTabs, setQueryTabs] = usePageMemory('deputados-queryTabs', {});
+  const [queryTabAtiva, setQueryTabAtiva] = usePageMemory('deputados-queryTabAtiva', {});
 
-  const [filtroNome, setFiltroNome] = useState('');
-  const [filtroPartido, setFiltroPartido] = useState('');
-  const [filtroUf, setFiltroUf] = useState('');
+  const [filtroNome, setFiltroNome] = usePageMemory('deputados-filtroNome', '');
+  const [filtroPartido, setFiltroPartido] = usePageMemory('deputados-filtroPartido', '');
+  const [filtroUf, setFiltroUf] = usePageMemory('deputados-filtroUf', '');
 
   const subTabsRef = useRef(subTabs);
   subTabsRef.current = subTabs;
@@ -546,7 +549,8 @@ export default function AnaliseDeputados({ onFechar }) {
     <div className="tab-content">
       <div className="tab-header">
         <h2 className="tab-title">Análise de Deputados</h2>
-        <p className="tab-desc">Consulte informações detalhadas dos deputados federais em exercício.</p>
+        <p className="tab-desc">Dados oficiais da Câmara dos Deputados: relação completa dos deputados federais em exercício com informações gerais, despesas parlamentares, órgãos de atuação, frentes parlamentares, histórico e mandatos externos. Inclui busca avançada por partidos, proposições, eventos e votações.</p>
+        <InfoBadge chave="camara_deputados" onInfoClick={setPopupInfo} />
       </div>
 
       <div className="lp-sub-tabs">
@@ -579,6 +583,9 @@ export default function AnaliseDeputados({ onFechar }) {
 
       <div style={{ display: isTabAtiva('lista') ? '' : 'none' }}>
         <h3 className="ad-section-title">Deputados em Exercício</h3>
+        <p className="ad-query-form-desc">
+          Relação completa dos 513 deputados federais em exercício na atual legislatura. Utilize os filtros abaixo para localizar por nome, partido ou UF. Clique em "Detalhes" para visualizar informações gerais, despesas parlamentares, órgãos de atuação, frentes parlamentares, histórico e mandatos externos.
+        </p>
         <p className="ad-query-form-desc">
           {deputados.length > 0
             ? `${deputados.length} deputados encontrados. Clique em "Detalhes" para ver informações completas.`
@@ -842,6 +849,7 @@ export default function AnaliseDeputados({ onFechar }) {
           </div>
         );
       })}
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

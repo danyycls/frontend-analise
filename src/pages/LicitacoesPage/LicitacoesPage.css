@@ -4,6 +4,8 @@
   align-items: center;
   padding: 40px 24px;
   min-height: 100vh;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 .licitacoes-header {
@@ -57,9 +59,42 @@
   margin-top: 12px;
 }
 
+/* ── Two-column layout: cards sidebar + main content ── */
+
+.licitacoes-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 28px;
+  width: 100%;
+  max-width: 1200px;
+  align-items: start;
+}
+
+.licitacoes-cards-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 24px;
+}
+
+.licitacoes-main-column {
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .licitacoes-layout {
+    grid-template-columns: 1fr;
+  }
+  .licitacoes-cards-column {
+    position: static;
+  }
+}
+
+/* ── Form wrapper (inside main column) ── */
+
 .licitacoes-form-wrapper {
   width: 100%;
-  max-width: 960px;
   display: flex;
   justify-content: center;
   margin-bottom: 32px;
@@ -71,7 +106,6 @@
 
 .licitacoes-content {
   width: 100%;
-  max-width: 1100px;
 }
 
 .licitacoes-form-inner {
@@ -94,19 +128,17 @@
 
 .licitacoes-section-divider {
   width: 100%;
-  max-width: 800px;
   height: 1px;
   background: var(--card-border);
-  margin: 32px auto;
+  margin: 32px 0;
   position: relative;
 }
 
 .licitacoes-section-divider::after {
   content: '';
   position: absolute;
-  left: 50%;
+  left: 0;
   top: -1px;
-  transform: translateX(-50%);
   width: 80px;
   height: 1px;
   background: var(--accent);
@@ -153,4 +185,26 @@
 .consulta-restore-btn:hover {
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
+}
+
+.licitacoes-layout-duas-colunas {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  width: 100%;
+  align-items: start;
+}
+
+.licitacoes-coluna-principal {
+  min-width: 0;
+}
+
+.licitacoes-coluna-principal form.card {
+  max-width: 100%;
+}
+
+.licitacoes-coluna-lateral {
+  min-width: 0;
+  position: sticky;
+  top: 24px;
 }

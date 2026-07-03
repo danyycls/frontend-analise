@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAppDispatch } from '@/app/store/hooks';
-import { setTipoBusca } from '@/app/store/slices/navigationSlice';
+import { setTipoBusca, setLicitacaoForm, type LicitacaoFormState } from '@/app/store/slices/navigationSlice';
 import { api } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import { API_BASE_URL } from '@/shared/config';
-import { PieChart } from '@/features/estado/ui/chart-utils';
+import { PieChart, CHART_SIZE_MD } from '@/features/estado/ui/chart-utils';
 import { JanelaPopup, ContratoDetalhes } from '@/features/ligacao-politica/ui/Resultados';
 import './Formulario.css';
 
@@ -79,21 +79,23 @@ interface Municipio {
 interface FormularioPublicacaoProps {
   onIniciar?: (jobId: string, meta: Record<string, unknown>) => void;
   onResultados?: (dados: any[], meta: Record<string, unknown>) => void;
+  formState?: LicitacaoFormState;
+  onFormChange?: (state: Partial<LicitacaoFormState>) => void;
 }
 
-export default function FormularioPublicacao({ onIniciar, onResultados }: FormularioPublicacaoProps) {
+export default function FormularioPublicacao({ onIniciar, onResultados, formState, onFormChange }: FormularioPublicacaoProps) {
   const dispatch = useAppDispatch();
-  const [tipo, setTipo] = useState<string>('uf');
-  const [uf, setUf] = useState('DF');
-  const [codigoMunicipio, setCodigoMunicipio] = useState('');
-  const [municipioNome, setMunicipioNome] = useState('');
+  
+  const tipo = formState?.tipo || 'uf';
+  const uf = formState?.uf || 'DF';
+  const codigoMunicipio = formState?.codigoMunicipio || '';
+  const municipioNome = formState?.municipioNome || '';
+  const codigoModalidade = formState?.modalidade || '';
+  const anoInput = formState?.ano || String(new Date().getFullYear());
+  const trimestresSelecionados = new Set(formState?.trimestres || []);
+
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
   const [carregandoMunicipios, setCarregandoMunicipios] = useState(false);
-  const [codigoModalidade, setCodigoModalidade] = useState('');
-
-  const [anoInput, setAnoInput] = useState(String(new Date().getFullYear()));
-  const [trimestresSelecionados, setTrimestresSelecionados] = useState(new Set<number>());
-
   const [cache, setCache] = useState<Record<string, any[]>>({});
   const [chavesSelecionadas, setChavesSelecionadas] = useState(new Set<string>());
   const [emAndamento, setEmAndamento] = useState(false);
@@ -102,6 +104,33 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
   const cancelRef = useRef(false);
 
   const [popup, setPopup] = useState<any>(null);
+
+  const notifyChange = useCallback((patch: Partial<LicitacaoFormState>) => {
+    onFormChange?.(patch);
+  }, [onFormChange]);
+
+  const handleSetTipo = useCallback((value: string) => {
+    notifyChange({ tipo: value as 'uf' | 'municipio' });
+  }, [notifyChange]);
+
+  const handleSetUf = useCallback((value: string) => {
+    notifyChange({ uf: value, codigoMunicipio: '', municipioNome: '' });
+  }, [notifyChange]);
+
+  const handleSetCodigoModalidade = useCallback((value: string) => {
+    notifyChange({ modalidade: value });
+  }, [notifyChange]);
+
+  const handleSetAnoInput = useCallback((value: string) => {
+    notifyChange({ ano: value });
+  }, [notifyChange]);
+
+  const handleToggleTrimestre = useCallback((t: number) => {
+    const prev = new Set(trimestresSelecionados);
+    if (prev.has(t)) prev.delete(t);
+    else prev.add(t);
+    notifyChange({ trimestres: [...prev] });
+  }, [notifyChange, trimestresSelecionados]);
 
   useEffect(() => {
     if (tipo === 'municipio' && uf) {
@@ -112,8 +141,6 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
   async function carregarMunicipios(ufSigla: string) {
     setCarregandoMunicipios(true);
     setMunicipios([]);
-    setCodigoMunicipio('');
-    setMunicipioNome('');
     try {
       const data = await api.get<Municipio[]>(`${ENDPOINTS.IBGE_MUNICIPIOS}/${ufSigla}`);
       setMunicipios(data);
@@ -126,24 +153,13 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
   function handleMunicipioChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const idx = e.target.value;
     if (idx === '') {
-      setCodigoMunicipio('');
-      setMunicipioNome('');
+      notifyChange({ codigoMunicipio: '', municipioNome: '' });
       return;
     }
     const mun = municipios[parseInt(idx)];
     if (mun) {
-      setCodigoMunicipio(String(mun.id));
-      setMunicipioNome(mun.nome);
+      notifyChange({ codigoMunicipio: String(mun.id), municipioNome: mun.nome });
     }
-  }
-
-  function toggleTrimestre(t: number) {
-    setTrimestresSelecionados(prev => {
-      const next = new Set(prev);
-      if (next.has(t)) next.delete(t);
-      else next.add(t);
-      return next;
-    });
   }
 
   function toggleChave(chave: string) {
@@ -232,7 +248,7 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
     let sels = [...trimestresSelecionados];
     if (sels.length === 0) {
       sels = [1, 2, 3, 4];
-      setTrimestresSelecionados(new Set(sels));
+      notifyChange({ trimestres: sels });
     }
 
     const fila = sels.map(s => `${ano}-${s}`).filter(k => !cache[k]);
@@ -320,6 +336,8 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
       .sort((a, b) => b.valor - a.valor);
   }, [exibicao]);
 
+  const municipioIndex = municipios.findIndex(m => String(m.id) === codigoMunicipio);
+
   return (
     <div style={{ width: '100%' }}>
       <form className="card" onSubmit={(e) => { e.preventDefault(); buscar(); }}>
@@ -343,14 +361,14 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
         <div className="form-row">
           <div className="form-group required">
             <label>Tipo de Busca</label>
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+            <select value={tipo} onChange={(e) => handleSetTipo(e.target.value)}>
               <option value="uf">Por Estado (UF)</option>
               <option value="municipio">Por Município</option>
             </select>
           </div>
           <div className="form-group required">
             <label>UF</label>
-            <select value={uf} onChange={(e) => setUf(e.target.value)}>
+            <select value={uf} onChange={(e) => handleSetUf(e.target.value)}>
               {UFS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
@@ -364,7 +382,7 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
             ) : municipios.length === 0 ? (
               <p className="form-status vazio">Nenhum município encontrado para {uf}.</p>
             ) : (
-              <select value={municipios.findIndex(m => String(m.id) === codigoMunicipio)} onChange={handleMunicipioChange}>
+              <select value={municipioIndex} onChange={handleMunicipioChange}>
                 <option value="">Selecione um município</option>
                 {municipios.map((m, i) => (
                   <option key={m.id} value={i}>{m.nome}</option>
@@ -376,7 +394,7 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
 
         <div className="form-group optional">
           <label htmlFor="modalidade">Modalidade</label>
-          <select id="modalidade" value={codigoModalidade} onChange={(e) => setCodigoModalidade(e.target.value)}>
+          <select id="modalidade" value={codigoModalidade} onChange={(e) => handleSetCodigoModalidade(e.target.value)}>
             {MODALIDADES.map((m) => (
               <option key={m.codigo} value={m.codigo}>{m.nome}</option>
             ))}
@@ -390,7 +408,7 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
             type="text"
             placeholder="2024"
             value={anoInput}
-            onChange={e => setAnoInput(e.target.value)}
+            onChange={e => handleSetAnoInput(e.target.value)}
             maxLength={4}
             disabled={emAndamento}
           />
@@ -404,7 +422,7 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
                 key={t.codigo}
                 type="button"
                 className={`ano-btn${trimestresSelecionados.has(t.codigo) ? ' ativo' : ''}`}
-                onClick={() => toggleTrimestre(t.codigo)}
+                onClick={() => handleToggleTrimestre(t.codigo)}
                 disabled={emAndamento}
               >
                 {t.nome}
@@ -429,14 +447,14 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
         </div>
       </form>
 
-        {emAndamento && (
-          <div className="progresso-card" style={{ marginTop: 16 }}>
-            <div className="dm-carregando">
-              <div className="spinner-sm" />
-              <span>Progresso: {progresso.buscados} de {progresso.total} trimestre(s) buscado(s)</span>
-            </div>
+      {emAndamento && (
+        <div className="progresso-card" style={{ marginTop: 16 }}>
+          <div className="dm-carregando">
+            <div className="spinner-sm" />
+            <span>Progresso: {progresso.buscados} de {progresso.total} trimestre(s) buscado(s)</span>
           </div>
-        )}
+        </div>
+      )}
 
       {erro && !emAndamento && (
         <div className="form-erro" style={{ marginTop: 12 }}>{erro}</div>
@@ -471,13 +489,13 @@ export default function FormularioPublicacao({ onIniciar, onResultados }: Formul
                 {chartCategoria && (
                   <div className="chart-card-sm">
                     <div className="chart-card-title">Valor por Categoria</div>
-                    <PieChart data={chartCategoria} size={240} />
+                    <PieChart data={chartCategoria} size={CHART_SIZE_MD} />
                   </div>
                 )}
                 {chartFaixa && (
                   <div className="chart-card-sm">
                     <div className="chart-card-title">Valor por Faixa (R$) - Total por Faixa</div>
-                    <PieChart data={chartFaixa} size={240} />
+                    <PieChart data={chartFaixa} size={CHART_SIZE_MD} />
                   </div>
                 )}
               </div>

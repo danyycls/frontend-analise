@@ -1,0 +1,1 @@
+export { usePageMemory } from './usePageMemory'

@@ -1,0 +1,173 @@
+.convenio-selector {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  max-height: 600px;
+}
+
+.convenio-selector-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.convenio-selector-titulo {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+
+.convenio-selector-subtitulo {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-muted);
+}
+
+.convenio-filtros {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.convenio-filtros select,
+.convenio-filtros input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.convenio-filtros select:focus,
+.convenio-filtros input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.convenio-select-all {
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.convenio-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.convenio-checkbox-label input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.convenio-lista {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200px;
+}
+
+.convenio-loading,
+.convenio-vazio {
+  padding: 32px 16px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.convenio-item {
+  padding: 6px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.1s;
+}
+
+.convenio-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.convenio-item.selected {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.convenio-item .convenio-checkbox-label {
+  align-items: flex-start;
+}
+
+.convenio-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.convenio-item-cnpj {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.convenio-item-nome {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.convenio-item-meta {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+.convenio-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.convenio-paginacao .pagina-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 2px 10px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+}
+
+.convenio-paginacao .pagina-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.convenio-paginacao .pagina-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.convenio-paginacao .pagina-info {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}

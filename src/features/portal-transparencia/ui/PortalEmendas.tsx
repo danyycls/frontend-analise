@@ -1,5 +1,6 @@
 import { useState, useCallback, type ChangeEvent } from 'react';
 import { api } from '@/shared/api/client';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface PortalEmendasProps {
   onFechar: () => void;
@@ -19,6 +20,7 @@ export default function PortalEmendas({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultados, setResultados] = useState<any[]>([]);
+  const { popupInfo, setPopupInfo } = useEntityInfo();
 
   const handleBuscar = useCallback(async () => {
     setLoading(true);
@@ -75,8 +77,12 @@ export default function PortalEmendas({
       <div className="rp-topo">
         <h2>Emendas</h2>
         <span className="rp-desc">Buscar emendas parlamentares</span>
+        <InfoBadge chave="portal_emendas" onInfoClick={setPopupInfo} />
         <div className="rp-topo-actions"><button className="btn btn-sm" onClick={onFechar}>Fechar</button></div>
       </div>
+      <p className="ad-query-form-desc" style={{ marginBottom: 12 }}>
+        Informe código, autor, ano ou tipo para consultar emendas parlamentares ao orçamento federal. Os resultados exibem valor, autor, órgão beneficiado e situação.
+      </p>
       <div className="rp-search-box">
         <div className="rp-search-row bfilter-row">
           <input type="text" value={codigoEmenda} onChange={e => setCodigoEmenda(e.target.value)} className="rp-search-input" placeholder="Código da emenda" />
@@ -96,6 +102,7 @@ export default function PortalEmendas({
         {error && <p className="rp-error">{error}</p>}
       </div>
       {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

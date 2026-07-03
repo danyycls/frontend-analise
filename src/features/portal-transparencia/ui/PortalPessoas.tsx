@@ -1,5 +1,6 @@
 import { useState, useCallback, type ChangeEvent } from 'react';
 import { api } from '@/shared/api/client';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface PortalPessoasProps {
   onFechar: () => void;
@@ -17,6 +18,7 @@ export default function PortalPessoas({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultados, setResultados] = useState<any[]>([]);
+  const { popupInfo, setPopupInfo } = useEntityInfo();
 
   const handleBuscar = useCallback(async () => {
     if (!documento) { setError('Digite um CPF ou CNPJ'); return; }
@@ -77,8 +79,12 @@ export default function PortalPessoas({
       <div className="rp-topo">
         <h2>Pessoas</h2>
         <span className="rp-desc">Buscar pessoas físicas ou jurídicas</span>
+        <InfoBadge chave="portal_pessoas" onInfoClick={setPopupInfo} />
         <div className="rp-topo-actions"><button className="btn btn-sm" onClick={onFechar}>Fechar</button></div>
       </div>
+      <p className="ad-query-form-desc" style={{ marginBottom: 12 }}>
+        Informe o CPF, CNPJ ou nome para consultar vínculos com a administração pública federal. Os resultados exibem documento, nome e tipo de vínculo.
+      </p>
       <div className="rp-search-box">
         <div className="rp-search-row bfilter-row">
           <select value={tipo} onChange={(e: ChangeEvent<HTMLSelectElement>) => setTipo(e.target.value)} className="rp-search-input">
@@ -92,6 +98,7 @@ export default function PortalPessoas({
         {error && <p className="rp-error">{error}</p>}
       </div>
       {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

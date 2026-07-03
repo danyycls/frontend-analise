@@ -3,6 +3,7 @@ import { api } from '@/shared/api/client';
 import { fmtDoc, fmtVal } from '@/shared/lib/formatters';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import type { TseResultItem, TseDoadorResult, TseReceita } from '../model/types';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface BuscaDoadorProps {
   onFechar: () => void;
@@ -18,6 +19,7 @@ export default function BuscaDoador({
   const [documento, setDocumento] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { popupInfo, setPopupInfo } = useEntityInfo();
   const abortRef = useRef<AbortController | null>(null);
 
   const handleBuscar = useCallback(async () => {
@@ -132,10 +134,14 @@ export default function BuscaDoador({
       <div className="rp-topo">
         <h2>Relação de Doadores</h2>
         <span className="rp-desc">Buscar doador por CPF/CNPJ</span>
+        <InfoBadge chave="tse_doador" onInfoClick={setPopupInfo} />
         <div className="rp-topo-actions">
           <button className="btn btn-sm" onClick={onFechar}>Fechar</button>
         </div>
       </div>
+      <p className="ad-query-form-desc" style={{ marginBottom: 12 }}>
+        Informe o CPF ou CNPJ de um doador para consultar todas as doações feitas a candidatos e partidos nas campanhas eleitorais. Os resultados exibem valor, data, origem da receita e o candidato ou partido beneficiado.
+      </p>
       <div className="rp-search-box">
         <label className="rp-search-label rp-search-label-required">CPF/CNPJ do doador</label>
         <div className="rp-search-row">
@@ -154,6 +160,7 @@ export default function BuscaDoador({
         </div>
         {error && <p className="rp-error">{error}</p>}
       </div>
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

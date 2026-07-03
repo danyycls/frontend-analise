@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { api } from '@/shared/api/client';
+import { extrairDocumentosDosContratos } from '@/shared/lib/extrair-documentos-contratos';
 import './LigacaoPolitica.css';
 
 function fmtDoc(d) {
@@ -599,60 +600,13 @@ export default function LigacaoPolitica({
 
   const licitacoes = useMemo(() => {
     if (cachedItem) return cachedItem.licitacoes || [];
-    const lista = [];
-    const seen = new Set();
-    consultasAlvo.forEach(c => {
-      (c.resultados || []).forEach(r => {
-        (r.contratos || []).forEach(ct => {
-          const mainDoc = ct.fornecedor?.cnpj || ct.niFornecedor || ct.orgaoEntidade?.cnpj;
-          if (mainDoc && mainDoc.length >= 3) {
-            const key = `${ct.numeroControlePNCP || ''}_${mainDoc}`;
-            if (!seen.has(key)) {
-              seen.add(key);
-              lista.push({
-                numero_controle_pncp: ct.numeroControlePNCP || '',
-                cpf_cnpj: mainDoc,
-                socios: (ct.fornecedor?.qsa || []).map(s => ({
-                  nome: s.nome_socio || '',
-                  documento: s.cnpj_cpf_socio || ''
-                }))
-              });
-            }
-          }
-          if (ct.niFornecedor && ct.niFornecedor !== mainDoc && ct.niFornecedor !== ct.orgaoEntidade?.cnpj && ct.niFornecedor.length >= 3) {
-            const key = `${ct.numeroControlePNCP || ''}_ni_${ct.niFornecedor}`;
-            if (!seen.has(key)) {
-              seen.add(key);
-              lista.push({
-                numero_controle_pncp: ct.numeroControlePNCP || '',
-                cpf_cnpj: ct.niFornecedor,
-                socios: (ct.fornecedor?.qsa || []).map(s => ({
-                  nome: s.nome_socio || '',
-                  documento: s.cnpj_cpf_socio || ''
-                }))
-              });
-            }
-          }
-          (ct.fornecedor?.qsa || []).forEach(s => {
-            const sd = s.cnpj_cpf_socio;
-            if (sd && sd.length >= 3 && sd !== mainDoc && sd !== ct.niFornecedor) {
-              const key = `${ct.numeroControlePNCP || ''}_socio_${sd}`;
-              if (!seen.has(key)) {
-                seen.add(key);
-                lista.push({
-                  numero_controle_pncp: ct.numeroControlePNCP || '',
-                  cpf_cnpj: sd,
-                  socios: []
-                });
-              }
-            }
-          });
-        });
-      });
-    });
-    if (lista.length > 0) return lista;
+    const todosContratos = consultasAlvo.flatMap(c =>
+      (c.resultados || []).flatMap(r => r.contratos || [])
+    );
+    const extraidos = extrairDocumentosDosContratos(todosContratos);
+    if (extraidos.length > 0) return extraidos;
     if (panelLicitacoes && panelLicitacoes.length > 0) return panelLicitacoes;
-    return lista;
+    return extraidos;
   }, [consultasAlvo, cachedItem, panelLicitacoes]);
 
   const buscar = useCallback(async () => {

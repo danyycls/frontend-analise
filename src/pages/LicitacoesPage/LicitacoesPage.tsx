@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
-import { setAbaAtiva, setFormAberto } from '@/app/store/slices/navigationSlice';
+import { setAbaAtiva, setFormAberto, setLicitacaoForm, type LicitacaoFormState } from '@/app/store/slices/navigationSlice';
 import { addConsulta, removeConsulta as removeConsultaAction, setConsultas, setActiveJob } from '@/app/store/slices/consultaSlice';
 import { addSubTab, setSubTabAtiva } from '@/app/store/slices/ligacaoPoliticaSlice';
 import Formulario from '@/features/licitacao/ui/Formulario';
@@ -12,17 +12,38 @@ import Progresso from '@/features/licitacao/ui/Progresso';
 import Resultados from '@/features/ligacao-politica/ui/Resultados';
 import { JanelaPopup, ContratoDetalhes } from '@/features/ligacao-politica/ui/Resultados';
 import EntityPopup from '@/features/ligacao-politica/ui/EntityPopup';
+import PageNav from '@/shared/ui/PageNav/PageNav';
+import ToolCard from '@/shared/ui/ToolCard/ToolCard';
+import { LicitacaoDefinicao, LicitacaoImportancia, LicitacaoDispensa } from '@/features/licitacao/ui/LicitacaoInfo';
+import ConvenioSelector from '@/widgets/ConvenioSelector/ConvenioSelector';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 import { api } from '@/shared/api/client';
-import { fmtDoc } from '@/shared/lib/formatters';
+import { fmtDoc, normalizarCNPJ } from '@/shared/lib/formatters';
 import './LicitacoesPage.css';
 
 let uid = 0;
+
+interface FilaItem {
+  jobId: string;
+  meta: Record<string, unknown>;
+}
 
 export default function LicitacoesPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const formAberto = useAppSelector((s) => s.navigation.formAberto);
   const tipoBusca = useAppSelector((s) => s.navigation.tipoBusca);
+  const licitacaoForm = useAppSelector((s) => s.navigation.licitacaoForm);
+
+  const formState = useMemo(() => ({
+    tipo: licitacaoForm.tipo,
+    uf: licitacaoForm.uf,
+    codigoMunicipio: licitacaoForm.codigoMunicipio,
+    municipioNome: licitacaoForm.municipioNome,
+    ano: licitacaoForm.ano,
+    trimestres: licitacaoForm.trimestres,
+    modalidade: licitacaoForm.modalidade,
+  }), [licitacaoForm]);
 
   const consultas = useAppSelector((s) => s.consulta.consultas);
   const consultasFiltradas = useMemo(
@@ -30,9 +51,18 @@ export default function LicitacoesPage() {
     [consultas, tipoBusca]
   );
   const activeJob = useAppSelector((s) => s.consulta.activeJob);
+  const { popupInfo, setPopupInfo } = useEntityInfo();
   const [pncpDestacado, setPncpDestacado] = useState(null);
   const [popup, setPopup] = useState(null);
   const [entidadeCache, setEntidadeCache] = useState({});
+
+  // ConvenioSelector state (persisted in Redux so it survives tab navigation)
+  const cnpjsSelecionados = useAppSelector((s) => s.navigation.licitacaoForm.cnpjsSelecionados);
+
+  // Sequential trimestre processing (refs to avoid closure issues)
+  const filaRef = useRef<FilaItem[]>([]);
+  const acumuladoRef = useRef<any[]>([]);
+  const [filaCount, setFilaCount] = useState(0);
 
   const KEY_TO_TIPO = {
     sq_candidato: 'candidato',
@@ -44,19 +74,66 @@ export default function LicitacoesPage() {
     cpf_cnpj_doador: 'doador',
   };
 
-  const handleIniciar = useCallback((jobId, meta) => {
-    dispatch(setActiveJob({ jobId, meta: { ...meta, tipo: 'orgao' } }));
+  // Start processing next job in queue
+  const processarProximo = useCallback(() => {
+    const fila = filaRef.current;
+    if (fila.length === 0) {
+      const acumulado = acumuladoRef.current;
+      if (acumulado.length > 0) {
+        const nova = {
+          id: ++uid,
+          timestamp: new Date().toISOString(),
+          meta: {
+            ...acumulado[0]?.meta,
+            trimestresConcluidos: true,
+            tipo: 'orgao',
+          },
+          resultados: acumulado,
+        };
+        dispatch(addConsulta(nova));
+      }
+      acumuladoRef.current = [];
+      dispatch(setActiveJob(null));
+      return;
+    }
+    const next = fila[0];
+    dispatch(setActiveJob({ jobId: next.jobId, meta: { ...next.meta, tipo: 'orgao' } }));
   }, [dispatch]);
 
+  // Called when a job completes
   const handleFinalizar = useCallback((resultados, meta, paginasErro) => {
-    const nova = {
-      id: ++uid,
-      timestamp: new Date().toISOString(),
-      meta: { ...meta, paginasErro },
-      resultados,
-    };
-    dispatch(addConsulta(nova));
-    dispatch(setActiveJob(null));
+    const novos = resultados || [];
+    const acumulado = [...acumuladoRef.current, ...novos];
+    acumuladoRef.current = acumulado;
+
+    // Remove the completed job from queue (always the first)
+    const fila = filaRef.current;
+    if (fila.length > 0) {
+      fila.shift();
+      filaRef.current = fila;
+      setFilaCount(fila.length);
+    }
+
+    // Schedule next
+    setTimeout(() => processarProximo(), 0);
+  }, [processarProximo]);
+
+  // Called by Formulario to add a new job to the queue
+  const handleEnfileirar = useCallback((jobId: string, meta: Record<string, unknown>) => {
+    const fila = filaRef.current;
+    const isFirst = fila.length === 0;
+    fila.push({ jobId, meta: { ...meta, jobId } });
+    filaRef.current = fila;
+    setFilaCount(fila.length);
+
+    // If nothing is processing, start this one
+    if (isFirst) {
+      dispatch(setActiveJob({ jobId, meta: { ...meta, tipo: 'orgao' } }));
+    }
+  }, [dispatch]);
+
+  const handleIniciar = useCallback((jobId, meta) => {
+    dispatch(setActiveJob({ jobId, meta: { ...meta, tipo: 'orgao' } }));
   }, [dispatch]);
 
   const handleApagar = useCallback((id) => {
@@ -73,6 +150,9 @@ export default function LicitacoesPage() {
   const handleCancelarJob = useCallback(() => {
     dispatch(setActiveJob(null));
     dispatch(setFormAberto(true));
+    filaRef.current = [];
+    acumuladoRef.current = [];
+    setFilaCount(0);
   }, [dispatch]);
 
   const handlePublicacaoResultados = useCallback((dados: any[], meta: Record<string, unknown>) => {
@@ -121,9 +201,9 @@ export default function LicitacoesPage() {
     }
   }, []);
 
-  const handleAtualizarEntidadeCache = useCallback((tipo, chave, dados) => {
-    setEntidadeCache(prev => ({ ...prev, [`${tipo}_${chave}`]: dados }));
-  }, []);
+  const handleFormChange = useCallback((state: Partial<LicitacaoFormState>) => {
+    dispatch(setLicitacaoForm(state));
+  }, [dispatch]);
 
   const handleLicitacaoPopup = useCallback((pncp) => {
     for (const c of consultas) {
@@ -139,7 +219,46 @@ export default function LicitacoesPage() {
     setPopup({ tipo: 'contrato', data: { numeroControlePNCP: pncp }, titulo: `Licitação ${pncp}` });
   }, [consultas]);
 
+  // ConvenioSelector handlers
+  const cnpjsSelecionadosNorm = useMemo(
+    () => cnpjsSelecionados.map(normalizarCNPJ),
+    [cnpjsSelecionados]
+  );
+
+  const handleToggleCnpj = useCallback((cnpj: string) => {
+    const norm = normalizarCNPJ(cnpj);
+    dispatch(setLicitacaoForm({
+      cnpjsSelecionados: cnpjsSelecionadosNorm.includes(norm)
+        ? cnpjsSelecionados.filter((_, i) => normalizarCNPJ(cnpjsSelecionados[i]) !== norm)
+        : [...cnpjsSelecionados, cnpj],
+    }));
+  }, [dispatch, cnpjsSelecionados, cnpjsSelecionadosNorm]);
+
+  const handleSelectAll = useCallback((cnpjs: string[]) => {
+    const set = new Set(cnpjsSelecionadosNorm);
+    const novos = cnpjs.filter(c => !set.has(normalizarCNPJ(c)));
+    dispatch(setLicitacaoForm({ cnpjsSelecionados: [...cnpjsSelecionados, ...novos] }));
+  }, [dispatch, cnpjsSelecionados, cnpjsSelecionadosNorm]);
+
+  const handleDeselectAll = useCallback(() => {
+    dispatch(setLicitacaoForm({ cnpjsSelecionados: [] }));
+  }, [dispatch]);
+
+  const handleRemoverCnpjExterno = useCallback((cnpj: string) => {
+    const norm = normalizarCNPJ(cnpj);
+    dispatch(setLicitacaoForm({
+      cnpjsSelecionados: cnpjsSelecionados.filter(c => normalizarCNPJ(c) !== norm),
+    }));
+  }, [dispatch, cnpjsSelecionados]);
+
   const totalOrgaos = consultasFiltradas.reduce((acc, c) => acc + (c.resultados?.length || 0), 0);
+
+  const licitacaoSections = [
+    { id: 'licitacoes-header', label: 'Início' },
+    { id: 'licitacoes-cards', label: 'Entenda a Licitação' },
+    { id: 'licitacoes-consulta', label: 'Faça sua Consulta' },
+    ...(consultasFiltradas.length > 0 ? [{ id: 'licitacoes-resultados', label: 'Resultados' }] : []),
+  ];
 
   useEffect(() => {
     if (pncpDestacado) {
@@ -150,71 +269,123 @@ export default function LicitacoesPage() {
 
   return (
     <div className="tab-page">
+      <PageNav position="left" sections={licitacaoSections} />
       <div className="licitacoes-page">
-        <div className="licitacoes-header">
+        <div className="licitacoes-header" id="licitacoes-header">
           <div className="licitacoes-badge">// CONSULTA DE LICITAÇÕES //</div>
           <h1 className="licitacoes-title">
             Busca de Licitações<br />
             <span style={{ color: 'var(--accent)', fontSize: 'inherit' }}>PNCP</span>
+            <InfoBadge chave="pncp_licitacoes" onInfoClick={setPopupInfo} />
           </h1>
           <p className="licitacoes-subtitle">Consulte contratos públicos no Portal Nacional de Contratações Públicas por órgão ou região.</p>
         </div>
 
-        <div className="licitacoes-form-wrapper">
-          {activeJob ? (
-            <Progresso
-              jobId={activeJob.jobId}
-              total={activeJob.meta.total}
-              meta={activeJob.meta}
-              onFinalizar={handleFinalizar}
-              onCancelar={handleCancelarJob}
-              streamPath={activeJob.meta.tipo === 'publicacao' ? '/publicacao/analise/stream' : '/orgao/analise/stream'}
-              batchPath={activeJob.meta.tipo === 'publicacao' ? '/publicacao/analise/batch' : '/orgao/analise/batch'}
-            />
-          ) : (
-            <div className="licitacoes-form-inner" style={{ display: formAberto ? 'block' : 'none' }}>
-              <div style={{ display: tipoBusca === 'orgao' ? 'block' : 'none', width: '100%' }}>
-                <Formulario onIniciar={handleIniciar} />
+        <div className="licitacoes-content-wrapper">
+          <div className="licitacoes-cards-top">
+            <ToolCard id="licitacao-o-que-e" title="O que é uma Licitação?">
+              <LicitacaoDefinicao />
+            </ToolCard>
+            <ToolCard id="licitacao-importancia" title="Por que isso importa?">
+              <LicitacaoImportancia />
+            </ToolCard>
+            <ToolCard id="licitacao-dispensa" title="Dispensa de Licitação">
+              <LicitacaoDispensa />
+            </ToolCard>
+          </div>
+
+          <div className="licitacoes-form-wrapper" id="licitacoes-consulta">
+            {activeJob && filaCount > 0 ? (
+              <div style={{ width: '100%' }}>
+                {filaCount > 1 && (
+                  <div className="progresso-card" style={{ marginBottom: 12, padding: '8px 16px', textAlign: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      Trimestres restantes: {filaCount - 1}
+                    </span>
+                  </div>
+                )}
+                <Progresso
+                  jobId={activeJob.jobId}
+                  total={activeJob.meta.total}
+                  meta={activeJob.meta}
+                  onFinalizar={handleFinalizar}
+                  onCancelar={handleCancelarJob}
+                  streamPath="/orgao/analise/stream"
+                />
               </div>
-              <div style={{ display: tipoBusca === 'publicacao' ? 'block' : 'none', width: '100%' }}>
-                <FormularioPublicacao onIniciar={handleIniciar} onResultados={handlePublicacaoResultados} />
+            ) : formAberto ? (
+              tipoBusca === 'orgao' ? (
+                <div className="licitacoes-layout-duas-colunas">
+                  <div className="licitacoes-coluna-principal">
+                    <Formulario
+                      onIniciar={handleEnfileirar}
+                      cnpjsExternos={cnpjsSelecionados}
+                      onRemoverCnpjExterno={handleRemoverCnpjExterno}
+                    />
+                  </div>
+                  <div className="licitacoes-coluna-lateral">
+                    <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                        Convênios
+                      </span>
+                      <InfoBadge chave="convenios" onInfoClick={setPopupInfo} />
+                    </div>
+                    <ConvenioSelector
+                      cnpjsSelecionados={cnpjsSelecionados}
+                      onToggleCnpj={handleToggleCnpj}
+                      onSelectAll={handleSelectAll}
+                      onDeselectAll={handleDeselectAll}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="licitacoes-form-inner">
+                  <FormularioPublicacao
+                    onIniciar={handleIniciar}
+                    onResultados={handlePublicacaoResultados}
+                    formState={formState}
+                    onFormChange={handleFormChange}
+                  />
+                </div>
+              )
+            ) : null}
+          </div>
+
+          {consultasFiltradas.length > 0 && (
+            <>
+              {(formAberto || (activeJob && filaCount > 0)) && <div className="licitacoes-section-divider" />}
+              <div className="licitacoes-content" id="licitacoes-resultados">
+                <div className="consultas-bar">
+                  {!formAberto && !activeJob && (
+                    <button className="btn btn-sm" onClick={() => dispatch(setFormAberto(true))}>
+                      + Nova Consulta
+                    </button>
+                  )}
+                  {consultasFiltradas.length > 0 && (
+                    <span className="consultas-count">
+                      {consultasFiltradas.length} consulta{consultasFiltradas.length > 1 ? 's' : ''}
+                      {totalOrgaos > 0 && ` · ${totalOrgaos} orgaos`}
+                    </span>
+                  )}
+                </div>
+
+                {consultasFiltradas.map((consulta) => (
+                  <ConsultaCard
+                    key={consulta.id}
+                    consulta={consulta}
+                    pncpDestacado={pncpDestacado}
+                    onIdClick={handleIdClickFromAnalise}
+                    onClose={() => handleApagar(consulta.id)}
+                    onLigacaoPolitica={() => handleLigacaoPoliticaConsulta(consulta.id)}
+                  />
+                ))}
               </div>
-            </div>
+            </>
           )}
         </div>
-
-        {consultasFiltradas.length > 0 && (
-          <>
-            {(formAberto || activeJob) && <div className="licitacoes-section-divider" />}
-            <div className="licitacoes-content">
-              <div className="consultas-bar">
-                {!formAberto && !activeJob && (
-                  <button className="btn btn-sm" onClick={() => dispatch(setFormAberto(true))}>
-                    + Nova Consulta
-                  </button>
-                )}
-                {consultasFiltradas.length > 0 && (
-                  <span className="consultas-count">
-                    {consultasFiltradas.length} consulta{consultasFiltradas.length > 1 ? 's' : ''}
-                    {totalOrgaos > 0 && ` · ${totalOrgaos} orgaos`}
-                  </span>
-                )}
-              </div>
-
-              {consultasFiltradas.map((consulta) => (
-                <ConsultaCard
-                  key={consulta.id}
-                  consulta={consulta}
-                  pncpDestacado={pncpDestacado}
-                  onIdClick={handleIdClickFromAnalise}
-                  onClose={() => handleApagar(consulta.id)}
-                  onLigacaoPolitica={() => handleLigacaoPoliticaConsulta(consulta.id)}
-                />
-              ))}
-            </div>
-          </>
-        )}
       </div>
+
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
 
       {popup && popup.tipo === 'contrato' && (
         <JanelaPopup titulo={popup.titulo} onFechar={() => setPopup(null)}>

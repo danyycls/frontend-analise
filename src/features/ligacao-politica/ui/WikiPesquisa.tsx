@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect, useRef } from 'react';
+import LicitacaoInfo from '@/features/licitacao/ui/LicitacaoInfo';
 import './WikiPesquisa.css';
 
 const SECTIONS = [
@@ -15,7 +16,6 @@ const SECTIONS = [
   { id: 'opencnpj',            label: 'OpenCNPJ' },
   { id: 'ibge',                label: 'IBGE' },
   { id: 'siconfi',             label: 'SICONFI' },
-  { id: 'ligacao-politica',    label: 'Ligação Política' },
   { id: 'repositorios',        label: 'Repositórios' },
 ];
 
@@ -131,48 +131,7 @@ export default function WikiPesquisa() {
           </p>
 
              <section id="licitacao" className="wiki-section">
-          <h2>O que é uma Licitação?</h2>
-
-          <h3>Definição</h3>
-          <p>
-            Licitação é o processo administrativo formal pelo qual a Administração Pública (União,
-            Estados, Municípios, autarquias, fundações, empresas públicas) contrata obras, serviços,
-            compras e alienações. É um procedimento obrigatório previsto na Constituição Federal
-            (art. 37, XXI) e regulamentado pela Lei 14.133/2021 (Nova Lei de Licitações).
-          </p>
-
-          <h3>Quem pode fazer uma licitação?</h3>
-          <p>
-            Todos os órgãos e entidades da Administração Pública direta e indireta dos três poderes
-            (Executivo, Legislativo e Judiciário) em todas as esferas (federal, estadual, distrital e
-            municipal). Isso inclui ministérios, prefeituras, universidades, hospitais públicos,
-            empresas estatais e autarquias.
-          </p>
-
-          <h3>Por que isso importa?</h3>
-          <p>
-            As licitações movimentam centenas de bilhões de reais por ano no Brasil, a transparência
-            e o controle desses processos são fundamentais.
-          </p>
-          <ul>
-            <li><strong>Licitações = dinheiro público</strong>: cada contrato é pago com impostos dos cidadãos.</li>
-            <li>
-              <strong>Encontre conexões políticas ocultas</strong>: ao cruzar os dados de varias fontes de informação, encontramos potenciais conflitos de interesse ou relações politicas ocultas.
-            </li>
-            <li>
-              <strong>Sobrepreço e irregularidades</strong>: contratos superfaturados desviam recursos que
-              deveriam ir para saúde, educação e infraestrutura, e faz parte do dever do cidadão acompanhar esses gastos.
-            </li>
-          </ul>
-
-          <h3>Tipos de licitação (Lei 14.133/2021)</h3>
-          <ul>
-            <li><strong>Pregão</strong>: para bens e serviços comuns (mais comum).</li>
-            <li><strong>Concorrência</strong>: para obras e serviços de engenharia de grande porte.</li>
-            <li><strong>Concurso</strong>: para trabalhos técnicos, científicos ou artísticos.</li>
-            <li><strong>Leilão</strong>: para venda de bens públicos.</li>
-            <li><strong>Diálogo Competitivo</strong>: para contratações complexas e inovadoras.</li>
-          </ul>
+          <LicitacaoInfo />
         </section>
 
         </section>
@@ -223,10 +182,6 @@ export default function WikiPesquisa() {
 
         <section id="tse-arquitetura" className="wiki-section">
           <h2>TSE — Arquitetura de Dados</h2>
-
-          <div className="hero-alerta">
-            ⚠️ Ambiente de Desenvolvimento — O TSE está desativado neste ambiente de desenvolvimento
-          </div>
 
           <div className="wiki-entidade-header">
             <p><strong>Dados disponibilizados:</strong> dados eleitorais históricos desde 2006, incluindo candidatos, partidos, doadores, fornecedores de campanha, prestação de contas (receitas e despesas) e bens declarados.</p>
@@ -514,63 +469,6 @@ export default function WikiPesquisa() {
           </p>
         </section>
 
-        <section id="ligacao-politica" className="wiki-section">
-          <h2>Ligação Política</h2>
-
-          <div className="wiki-entidade-header">
-            <p><strong>Dados disponibilizados:</strong> cruzamento de documentos de licitações com dados eleitorais do TSE (fornecedores e doadores de campanha), cadastrais do OpenCNPJ (QSA e situação CNPJ) e sanções do TCU (contas irregulares, inabilitados, inidôneos).</p>
-            <p><strong>Documentação:</strong>{' '}
-              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/ligacao-politica.md" target="_blank" rel="noopener noreferrer">docs/ligacao-politica.md</a>
-              {' | '}
-              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/db-tse.md" target="_blank" rel="noopener noreferrer">docs/db-tse.md</a>
-              {' | '}
-              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/tcu.md" target="_blank" rel="noopener noreferrer">docs/clientes/tcu.md</a>
-              {' | '}
-              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/portal-da-transparencia.md" target="_blank" rel="noopener noreferrer">docs/clientes/portal-da-transparencia.md</a>
-              {' | '}
-              <a href="https://github.com/danyycls/backend-analise/blob/main/docs/clientes/opencnpj.md" target="_blank" rel="noopener noreferrer">docs/clientes/opencnpj.md</a>
-            </p>
-          </div>
-
-          <h3>O que é</h3>
-          <p>
-            O serviço de <strong>Ligação Política</strong> cruza documentos de licitações/contratos
-            com dados eleitorais (TSE), cadastrais (OpenCNPJ), sanções (TCU) e servidores(Portal Transparencia) para revelar conexões
-            entre empresas contratadas e políticos.
-          </p>
-
-          <h3>Fluxo de análise</h3>
-          <ol>
-            <li><strong>Normalização</strong> — remove prefixos de CPF/CNPJ.</li>
-            <li><strong>Busca no TSE</strong> — verifica se o CNPJ aparece como fornecedor ou
-            doador de campanhas eleitorais.</li>
-            <li><strong>Enriquecimento OpenCNPJ</strong> — obtém razão social, situação cadastral
-            e sócios da empresa.</li>
-            <li><strong>Validação TCU</strong> — verifica contas irregulares, inidôneos e
-            inabilitados.</li>
-            <li><strong>Validação Portal Transparencia</strong> — verifica possiveis servidores publicos..</li>
-            <li><strong>Cache Redis</strong> — resultados são armazenados em cache para evitar
-            consultas repetidas.</li>
-          </ol>
-
-          <h3>API</h3>
-          <table>
-            <thead>
-              <tr><th>Método</th><th>Rota</th><th>Descrição</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><code>POST</code></td><td><code>/busca/contexto</code></td><td>Analisa ligação política de documentos</td></tr>
-            </tbody>
-          </table>
-
-          <h3>Por que é relevante</h3>
-          <p>
-            Este é o serviço central de analises do PODP. Ele conecta os pontos entre licitações, doações e fornecedores de
-            campanha e sanções, automatizando o que antes exigia horas de pesquisa manual em
-            múltiplos sistemas.
-          </p>
-        </section>
-
         <section id="repositorios" className="wiki-section">
           <h2>Repositórios do Projeto</h2>
 
@@ -591,7 +489,7 @@ export default function WikiPesquisa() {
                 github.com/danyycls/backend-analise
               </a>
               — API REST e WebSocket em Go, integração com serviços externos,
-              banco PostgreSQL, cache Redis, análise de ligação política.
+              banco PostgreSQL, cache Redis e análises automatizadas.
             </li>
             <li>
               <strong>Front-end (React)</strong>:{" "}

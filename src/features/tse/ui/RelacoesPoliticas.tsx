@@ -4,6 +4,7 @@ import { fmtDoc } from '@/shared/lib/formatters';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import { RPResultView } from './RPResultView';
 import type { TseResultItem, TseSavedItem } from '../model/types';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface RelacoesPoliticasProps {
   onFechar: () => void;
@@ -31,6 +32,7 @@ export default function RelacoesPoliticas({
   const [error, setError] = useState<string | null>(null);
   const [mostrarSalvas, setMostrarSalvas] = useState(savedList && savedList.length > 0);
   const [rpSalvo, setRpSalvo] = useState<Record<number, boolean>>({});
+  const { popupInfo, setPopupInfo } = useEntityInfo();
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -107,11 +109,15 @@ export default function RelacoesPoliticas({
       <div className="rp-topo">
         <h2>TSE</h2>
         <span className="rp-desc">Busca de despesas e receitas eleitorais por CNPJ de empresa</span>
+        <InfoBadge chave="tse_empresas" onInfoClick={setPopupInfo} />
         <div className="rp-topo-actions">
           <button className="btn btn-sm" onClick={onFechar}>Fechar</button>
         </div>
       </div>
 
+      <p className="ad-query-form-desc" style={{ marginBottom: 12 }}>
+        Informe o CNPJ da empresa para consultar todas as despesas e receitas eleitorais declaradas ao TSE nas campanhas em que ela atuou como doadora ou fornecedora. Os resultados exibem valores, datas, origens e os candidatos ou partidos envolvidos em cada transação.
+      </p>
       <div className="rp-search-box">
         <label className="rp-search-label rp-search-label-required">CNPJ da empresa</label>
         <div className="rp-search-row">
@@ -131,6 +137,7 @@ export default function RelacoesPoliticas({
         {error && <p className="rp-error">{error}</p>}
       </div>
 
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
       {savedList && savedList.length > 0 && (
         <div className="rp-saved-section">
           <button

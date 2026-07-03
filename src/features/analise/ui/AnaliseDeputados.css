@@ -12,19 +12,21 @@
 
 .ad-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 12px;
+  margin-bottom: 12px;
 }
 
 .ad-card-dep {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  padding: 12px;
+  padding: 14px;
   background: var(--bg-surface);
   backdrop-filter: blur(4px);
   border: 1px solid var(--accent-tertiary-subtle);
   transition: all 0.15s;
+  overflow: hidden;
 }
 
 .ad-card-dep:hover {
@@ -51,6 +53,7 @@
 }
 
 .ad-card-dep-nome {
+  display: block;
   font-family: var(--font-mono);
   font-size: 0.78rem;
   color: var(--text-primary);

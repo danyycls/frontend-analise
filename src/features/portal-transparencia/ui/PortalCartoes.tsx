@@ -1,5 +1,6 @@
 import { useState, useCallback, type ChangeEvent } from 'react';
 import { api } from '@/shared/api/client';
+import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface PortalCartoesProps {
   onFechar: () => void;
@@ -20,6 +21,7 @@ export default function PortalCartoes({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultados, setResultados] = useState<any[]>([]);
+  const { popupInfo, setPopupInfo } = useEntityInfo();
 
   const handleBuscar = useCallback(async () => {
     setLoading(true);
@@ -75,8 +77,12 @@ export default function PortalCartoes({
       <div className="rp-topo">
         <h2>Cartões</h2>
         <span className="rp-desc">Buscar transações de cartões de pagamento</span>
+        <InfoBadge chave="portal_cartoes" onInfoClick={setPopupInfo} />
         <div className="rp-topo-actions"><button className="btn btn-sm" onClick={onFechar}>Fechar</button></div>
       </div>
+      <p className="ad-query-form-desc" style={{ marginBottom: 12 }}>
+        Informe o órgão, CPF do portador ou período para consultar gastos com cartões corporativos do governo federal. Os resultados exibem data, valor, estabelecimento e portador.
+      </p>
       <div className="rp-search-box">
         <div className="rp-search-row bfilter-row">
           <input type="text" value={codigoOrgao} onChange={e => setCodigoOrgao(e.target.value)} className="rp-search-input" placeholder="Código do órgão" />
@@ -96,6 +102,7 @@ export default function PortalCartoes({
         {error && <p className="rp-error">{error}</p>}
       </div>
       {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );
 }

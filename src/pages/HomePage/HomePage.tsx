@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '@/app/store/hooks';
 import { setAbaAtiva } from '@/app/store/slices/navigationSlice';
 import { setFormAberto } from '@/app/store/slices/navigationSlice';
 import { setSubTabAtiva } from '@/app/store/slices/ligacaoPoliticaSlice';
 import { useAppSelector } from '@/app/store/hooks';
+import PageNav from '@/shared/ui/PageNav/PageNav';
 
 const FAQ_DATA = [
   {
@@ -29,52 +30,6 @@ const PAGE_SECTIONS = [
   { id: 'home-faq', label: 'FAQ' },
 ];
 
-function PageNav() {
-  const [active, setActive] = useState('home-hero');
-
-  useEffect(() => {
-    const ids = PAGE_SECTIONS.map((s) => s.id);
-    const elements = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) {
-          setActive(visible[0].target.id);
-        }
-      },
-      { rootMargin: '-15% 0px -70% 0px', threshold: 0 },
-    );
-
-    elements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const scrollTo = useCallback((id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, []);
-
-  return (
-    <nav className="home-page-nav">
-      {PAGE_SECTIONS.map((section) => (
-        <button
-          key={section.id}
-          className={`page-nav-item ${active === section.id ? 'active' : ''}`}
-          onClick={() => scrollTo(section.id)}
-        >
-          <span className="page-nav-dot" />
-          <span>{section.label}</span>
-        </button>
-      ))}
-    </nav>
-  );
-}
-
 export default function HomePage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -90,10 +45,7 @@ export default function HomePage() {
 
   return (
     <div className="tab-page">
-      <div className="hero-alerta">
-          ⚠️ Ambiente de Desenvolvimento — O TSE está desativado neste ambiente de desenvolvimento
-        </div>
-
+      <PageNav position="right" sections={PAGE_SECTIONS} />
       {/* ── Hero Section ── */}
       <section className="hero" id="home-hero">
         <div className="hero-bg" />
@@ -135,9 +87,19 @@ export default function HomePage() {
               <span className="hero-cta-icon">▸</span>
               INICIAR ANÁLISE
             </button>
-            <button className="hero-cta" onClick={() => { dispatch(setAbaAtiva('conheca-estado')); navigate('/estado'); }}>
+            <button
+              className="hero-cta"
+              onClick={() => { dispatch(setAbaAtiva('conheca-estado')); navigate('/estado'); }}
+            >
               <span className="hero-cta-icon">■</span>
               CONHEÇA SEU ESTADO
+            </button>
+            <button
+              className="hero-cta"
+              onClick={() => { dispatch(setAbaAtiva('anomalias-encontradas')); dispatch(setFormAberto(true)); navigate('/anomalias-encontradas'); }}
+            >
+              <span className="hero-cta-icon">⚡</span>
+              ANOMALIAS ENCONTRADAS
             </button>
           </div>
         </div>
@@ -153,6 +115,11 @@ export default function HomePage() {
             <div className="feature-icon">■</div>
             <h3 className="feature-title">Conheça seu Estado</h3>
             <p className="feature-desc">Explore dados de todos os estados do Brasil: politicos, recursos recebidos, licitações.</p>
+          </div>
+          <div className="feature-card" onClick={() => { dispatch(setAbaAtiva('anomalias-encontradas')); navigate('/anomalias-encontradas'); }}>
+            <div className="feature-icon">⚡</div>
+            <h3 className="feature-title">Anomalias Encontradas</h3>
+            <p className="feature-desc">Explore as anomalias detectadas nas análises de dados.</p>
           </div>
           <div className="feature-card" onClick={() => { dispatch(setAbaAtiva('relacoes')); navigate('/tse'); }}>
             <div className="feature-icon">▣</div>

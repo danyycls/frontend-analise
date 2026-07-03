@@ -100,3 +100,11 @@ export function fmtPct(n: number | null | undefined): string {
   if (n === null || n === undefined) return '-';
   return `${n.toFixed(1)}%`;
 }
+
+/**
+ * Normaliza CNPJ removendo todos os caracteres não-dígitos.
+ * Útil para comparar CNPJs com/sem formatação.
+ */
+export function normalizarCNPJ(cnpj: string): string {
+  return cnpj.replace(/\D/g, '');
+}

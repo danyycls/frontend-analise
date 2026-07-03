@@ -3,6 +3,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
 import { api } from '@/shared/api/client';
 import { TOPO_URL, COUNTRY_TOPO_URL } from '@/shared/config';
+import ToolCard from '@/shared/ui/ToolCard/ToolCard';
+import { getDataSources } from './DataSourceCards';
 import './MapaBrasil.css';
 
 const IBGE_TO_UF = {
@@ -62,105 +64,152 @@ export default function MapaBrasil() {
     center: [-55, -14],
   };
 
+  const allSources = getDataSources();
+  const mid = Math.ceil(allSources.length / 2);
+  const leftSources = allSources.slice(0, mid);
+  const rightSources = allSources.slice(mid);
+
   return (
     <div className="mapa-container" id="mapa-container">
-      <div className="mapa-titulo">SELECIONE UM ESTADO</div>
-      <div className="mapa-info-card">
-        <div className="mapa-info-item">
-          <span className="mapa-info-val">{TOTAL_ESTADOS}</span>
-          <span className="mapa-info-lbl">ESTADOS</span>
+      <div className="mapa-topo">
+        <div className="mapa-titulo">SELECIONE UM ESTADO</div>
+
+        <div className="mapa-descricao">
+          <p>
+            Explore dados completos de cada estado brasileiro: políticos eleitos (prefeitos, vereadores,
+            deputados, senadores), finanças públicas, licitações e contratos, recursos federais
+            transferidos e muito mais. Clique em um estado no mapa para acessar todas as informações.
+          </p>
         </div>
-        <div className="mapa-info-divider" />
-        <div className="mapa-info-item">
-          <span className="mapa-info-val">{TOTAL_MUNICIPIOS}</span>
-          <span className="mapa-info-lbl">MUNICÍPIOS</span>
+
+        <div className="mapa-info-card">
+          <div className="mapa-info-item">
+            <span className="mapa-info-val">{TOTAL_ESTADOS}</span>
+            <span className="mapa-info-lbl">ESTADOS</span>
+          </div>
+          <div className="mapa-info-divider" />
+          <div className="mapa-info-item">
+            <span className="mapa-info-val">{TOTAL_MUNICIPIOS}</span>
+            <span className="mapa-info-lbl">MUNICÍPIOS</span>
+          </div>
         </div>
       </div>
-      <div className="mapa-controls">
-        <button className="mapa-zoom-btn" onClick={zoomIn} title="Ampliar">+</button>
-        <button className="mapa-zoom-btn" onClick={zoomOut} title="Reduzir">−</button>
-        <button className="mapa-zoom-btn" onClick={resetZoom} title="Resetar" style={{ fontSize: '0.8rem' }}>⟲</button>
-        <span className="mapa-zoom-level">{Math.round(scale * 100)}%</span>
-      </div>
-      <div className="mapa-wrapper" onWheel={handleWheel}>
-        <ComposableMap
-          projection="geoMercator"
-          projectionConfig={projectionConfig}
-          style={{ width: '100%', height: '100%' }}
-        >
-          <Geographies geography={COUNTRY_TOPO_URL}>
-            {({ geographies }) =>
-              geographies.map(geo => (
-                <Geography
-                  key={`country-${geo.rsmKey}`}
-                  geography={geo}
-                  className="pais-contorno"
-                  style={{
-                    default: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
-                    hover: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
-                    pressed: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
-                  }}
-                />
-              ))
-            }
-          </Geographies>
-          <Geographies geography={TOPO_URL}>
-            {({ geographies }) =>
-              geographies.map(geo => {
-                const cod = geo.properties?.codarea || '';
-                const sigla = IBGE_TO_UF[cod] || cod;
+
+      <div className="mapa-body">
+        <div className="mapa-cards-column">
+          {leftSources.map((source) => (
+            <ToolCard key={source.id} icon={source.icon} title={source.name}>
+              <p>{source.description}</p>
+              <ul>
+                {source.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </ToolCard>
+          ))}
+        </div>
+
+        <div className="mapa-center">
+          <div className="mapa-controls">
+            <button className="mapa-zoom-btn" onClick={zoomIn} title="Ampliar">+</button>
+            <button className="mapa-zoom-btn" onClick={zoomOut} title="Reduzir">−</button>
+            <button className="mapa-zoom-btn" onClick={resetZoom} title="Resetar" style={{ fontSize: '0.8rem' }}>⟲</button>
+            <span className="mapa-zoom-level">{Math.round(scale * 100)}%</span>
+          </div>
+          <div className="mapa-wrapper" onWheel={handleWheel}>
+            <ComposableMap
+              projection="geoMercator"
+              projectionConfig={projectionConfig}
+              style={{ width: '100%', height: '100%' }}
+            >
+              <Geographies geography={COUNTRY_TOPO_URL}>
+                {({ geographies }) =>
+                  geographies.map(geo => (
+                    <Geography
+                      key={`country-${geo.rsmKey}`}
+                      geography={geo}
+                      className="pais-contorno"
+                      style={{
+                        default: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                        hover: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                        pressed: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round', outline: 'none' },
+                      }}
+                    />
+                  ))
+                }
+              </Geographies>
+              <Geographies geography={TOPO_URL}>
+                {({ geographies }) =>
+                  geographies.map(geo => {
+                    const cod = geo.properties?.codarea || '';
+                    const sigla = IBGE_TO_UF[cod] || cod;
+                    const nome = nomeMap[sigla] || sigla;
+                    return (
+                      <Geography
+                        key={geo.rsmKey}
+                        geography={geo}
+                        className="estado-geography"
+                        style={{
+                          default: { fill: 'transparent', stroke: 'var(--accent-tertiary)', strokeWidth: 0.8, outline: 'none' },
+                          hover: { fill: 'rgba(95,145,127,0.08)', stroke: 'var(--accent)', strokeWidth: 1.5, outline: 'none' },
+                          pressed: { fill: 'rgba(95,145,127,0.12)', stroke: 'var(--accent)', strokeWidth: 1.5, outline: 'none' },
+                        }}
+                        onMouseEnter={() => setTooltip({ name: nome })}
+                        onMouseLeave={() => setTooltip(null)}
+                        onClick={() => {
+                          if (sigla && sigla.length === 2) window.open(`/estado/${sigla}`, '_blank');
+                        }}
+                      />
+                    );
+                  })
+                }
+              </Geographies>
+
+              {Object.entries(STATE_COORDS).map(([sigla, coords]) => {
                 const nome = nomeMap[sigla] || sigla;
                 return (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    className="estado-geography"
-                    style={{
-                      default: { fill: 'transparent', stroke: 'var(--accent-tertiary)', strokeWidth: 0.8, outline: 'none' },
-                      hover: { fill: 'rgba(95,145,127,0.08)', stroke: 'var(--accent)', strokeWidth: 1.5, outline: 'none' },
-                      pressed: { fill: 'rgba(95,145,127,0.12)', stroke: 'var(--accent)', strokeWidth: 1.5, outline: 'none' },
-                    }}
-                    onMouseEnter={() => setTooltip({ name: nome })}
-                    onMouseLeave={() => setTooltip(null)}
-                    onClick={() => {
-                      if (sigla && sigla.length === 2) window.open(`/estado/${sigla}`, '_blank');
-                    }}
-                  />
+                  <Marker key={sigla} coordinates={coords}>
+                    <circle
+                      r={5}
+                      fill="#ffffff"
+                      stroke="#000000"
+                      strokeWidth={1.5}
+                      className="mapa-dot"
+                      onClick={() => window.open(`/estado/${sigla}`, '_blank')}
+                    />
+                    <text
+                      textAnchor="middle"
+                      y={-12}
+                      className="mapa-label"
+                      onClick={() => window.open(`/estado/${sigla}`, '_blank')}
+                    >
+                      {sigla}
+                    </text>
+                  </Marker>
                 );
-              })
-            }
-          </Geographies>
+              })}
+            </ComposableMap>
 
-          {Object.entries(STATE_COORDS).map(([sigla, coords]) => {
-            const nome = nomeMap[sigla] || sigla;
-            return (
-              <Marker key={sigla} coordinates={coords}>
-                <circle
-                  r={5}
-                  fill="#ffffff"
-                  stroke="#000000"
-                  strokeWidth={1.5}
-                  className="mapa-dot"
-                  onClick={() => window.open(`/estado/${sigla}`, '_blank')}
-                />
-                <text
-                  textAnchor="middle"
-                  y={-12}
-                  className="mapa-label"
-                  onClick={() => window.open(`/estado/${sigla}`, '_blank')}
-                >
-                  {sigla}
-                </text>
-              </Marker>
-            );
-          })}
-        </ComposableMap>
-
-        {tooltip && (
-          <div className="mapa-tooltip" style={{ top: 10, left: 10 }}>
-            {tooltip.name}
+            {tooltip && (
+              <div className="mapa-tooltip" style={{ top: 10, left: 10 }}>
+                {tooltip.name}
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        <div className="mapa-cards-column">
+          {rightSources.map((source) => (
+            <ToolCard key={source.id} icon={source.icon} title={source.name}>
+              <p>{source.description}</p>
+              <ul>
+                {source.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </ToolCard>
+          ))}
+        </div>
       </div>
     </div>
   );

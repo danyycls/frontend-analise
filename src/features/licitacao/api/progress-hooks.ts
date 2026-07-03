@@ -1,7 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/shared/api/client';
-import { WS_BASE_URL, API_BASE_URL } from '@/shared/config';
+import { WS_BASE_URL } from '@/shared/config';
 
 export interface ProgressLog {
   type: string;
@@ -22,7 +20,6 @@ export interface ProgressState {
 type AnaliseType = 'orgao' | 'publicacao';
 
 const MAX_WS_RETRIES = 3;
-const POLL_INTERVAL_MS = 2000;
 
 export function useAnaliseProgress(
   jobId: string | null,
@@ -31,7 +28,6 @@ export function useAnaliseProgress(
   onCancelar?: () => void
 ) {
   const channel = tipo === 'publicacao' ? 'publicacao_analise' : 'orgao_analise';
-  const batchPath = tipo === 'publicacao' ? '/publicacao/analise/batch' : '/orgao/analise/batch';
 
   const [processed, setProcessed] = useState(0);
   const [success, setSuccess] = useState(0);
@@ -39,34 +35,12 @@ export function useAnaliseProgress(
   const [log, setLog] = useState<ProgressLog[]>([]);
   const [concluido, setConcluido] = useState(false);
   const [cancelado, setCancelado] = useState(false);
-  const [batchEnabled, setBatchEnabled] = useState(false);
+  const [results, setResults] = useState<any[] | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCountRef = useRef(0);
   const mountedRef = useRef(true);
 
   const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
-
-  const startPolling = useCallback(() => {
-    if (pollRef.current) return;
-    pollRef.current = setInterval(async () => {
-      if (!jobId) return;
-      try {
-        const resp = await fetch(`${API_BASE_URL}${batchPath}/${jobId}`);
-        const data = await resp.json();
-        if (data.status === 'completed') {
-          if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-          }
-          if (mountedRef.current) {
-            setConcluido(true);
-            setBatchEnabled(true);
-          }
-        }
-      } catch (_) {}
-    }, POLL_INTERVAL_MS);
-  }, [jobId, batchPath]);
 
   const connectWebSocket = useCallback(() => {
     if (!jobId) return;
@@ -100,6 +74,9 @@ export function useAnaliseProgress(
             setSuccess(ev.Success ?? ev.success ?? 0);
             setErrors(ev.Errors ?? ev.errors ?? 0);
             break;
+          case 'results':
+            setResults(ev.Results || []);
+            break;
           case 'completed':
             setLog((prev) => [...prev, { type: 'completed', msg: 'Processamento concluído' }]);
             break;
@@ -108,7 +85,6 @@ export function useAnaliseProgress(
             wsRef.current = null;
             if (mountedRef.current) {
               setConcluido(true);
-              setBatchEnabled(true);
             }
             break;
         }
@@ -130,19 +106,18 @@ export function useAnaliseProgress(
         ws.close();
         wsRef.current = null;
         if (mountedRef.current) {
-          setLog((prev) => [...prev, { type: 'error', msg: 'WebSocket indisponível — tentando polling…' }]);
-          startPolling();
+          setLog((prev) => [...prev, { type: 'error', msg: 'WebSocket indisponível após tentativas' }]);
         }
       }
     };
-  }, [jobId, channel, cancelado, concluido, startPolling]);
+  }, [jobId, channel, cancelado, concluido]);
 
   useEffect(() => {
     mountedRef.current = true;
     if (!jobId) return;
     setCancelado(false);
     setConcluido(false);
-    setBatchEnabled(false);
+    setResults(null);
     retryCountRef.current = 0;
 
     connectWebSocket();
@@ -153,10 +128,6 @@ export function useAnaliseProgress(
         wsRef.current.close();
         wsRef.current = null;
       }
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
     };
   }, [jobId, channel]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -164,10 +135,6 @@ export function useAnaliseProgress(
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
-    }
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
     }
     setCancelado(true);
     onCancelar?.();
@@ -181,17 +148,7 @@ export function useAnaliseProgress(
     concluido,
     cancelado,
     pct,
+    results,
     cancelar,
-    batchEnabled,
-    batchPath,
   };
-}
-
-export function useBatchResults(jobId: string | null, enabled: boolean, batchPath: string = '/orgao/analise/batch') {
-  return useQuery({
-    queryKey: ['licitacao', 'batch', jobId],
-    queryFn: () => api.get<any>(`${batchPath}/${jobId}`),
-    enabled: !!jobId && enabled,
-    staleTime: 0,
-  });
 }

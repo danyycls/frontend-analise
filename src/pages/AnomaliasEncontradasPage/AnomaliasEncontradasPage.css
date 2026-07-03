@@ -1,0 +1,71 @@
+/* AnomaliasEncontradasPage styling – enhanced layout and visual balance */
+
+/* Root container – limit width and center horizontally */
+.tab-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px;
+  min-height: 100vh;
+  background: var(--background);
+}
+
+/* Reuse licitacoes-page styles but constrain max width */
+.licitacoes-page {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Header stays centered */
+.licitacoes-header {
+  text-align: center;
+  max-width: 800px;
+  margin-bottom: 32px;
+}
+
+/* Grid for explanatory cards – responsive two‑column layout */
+.anomalia-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+  width: 100%;
+  margin-bottom: 32px;
+}
+
+/* Form wrapper – ensure the form is centered and limited width */
+.licitacoes-form-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+/* Card containing the filter form – tighter padding */
+.licitacoes-form-wrapper .card {
+  width: 100%;
+  max-width: 560px;
+  padding: 24px;
+}
+
+/* Content area – keep full width within the max container */
+.licitacoes-content {
+  width: 100%;
+}
+
+/* Pagination controls – centered */
+.pagina-btn {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.pagina-info {
+  font-weight: 600;
+  margin: 0 8px;
+}

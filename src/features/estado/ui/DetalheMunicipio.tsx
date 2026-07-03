@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { API_BASE_URL } from '@/shared/config';
 import { ContratoDetalhes, JanelaPopup } from '../../ligacao-politica/ui/Resultados';
-import { PieChart } from './chart-utils';
+import { PieChart, CHART_SIZE_MD, CHART_SIZE_LG } from './chart-utils';
 
 function fmtMoney(v) {
   if (!v && v !== 0) return '-';
@@ -347,12 +347,12 @@ export default function DetalheMunicipio({ municipio, uf, onFechar }) {
               <div className="chart-row">
                 <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Licitações por Categoria', data: licChartData })}>
                   <div className="chart-card-title">Categorias</div>
-                  <PieChart data={licChartData} size={240} />
+                  <PieChart data={licChartData} size={CHART_SIZE_MD} />
                 </div>
                 {licFaixaChartData && (
                   <div className="chart-card-sm chart-clickable" onClick={() => setChartPopup({ titulo: 'Licitações por Faixa de Valor', data: licFaixaChartData })}>
                     <div className="chart-card-title">Faixa de Valores</div>
-                    <PieChart data={licFaixaChartData} size={240} />
+                    <PieChart data={licFaixaChartData} size={CHART_SIZE_MD} />
                   </div>
                 )}
               </div>
@@ -421,7 +421,7 @@ export default function DetalheMunicipio({ municipio, uf, onFechar }) {
               <button className="dm-modal-close" onClick={() => setChartPopup(null)}>×</button>
             </div>
             <div className="dm-modal-body" style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
-              <PieChart data={chartPopup.data} size={420} />
+              <PieChart data={chartPopup.data} size={CHART_SIZE_LG} />
             </div>
           </div>
         </div>
