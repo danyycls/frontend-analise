@@ -1,5 +1,5 @@
 import { useState, useCallback, type ChangeEvent } from 'react';
-import { api } from '@/shared/api/client';
+import { usePessoasSearch } from '../api/hooks';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface PortalPessoasProps {
@@ -15,32 +15,18 @@ export default function PortalPessoas({
   const [tipo, setTipo] = useState('fisica');
   const [documento, setDocumento] = useState('');
   const [nome, setNome] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resultados, setResultados] = useState<any[]>([]);
   const { popupInfo, setPopupInfo } = useEntityInfo();
+  const pessoasSearch = usePessoasSearch();
 
-  const handleBuscar = useCallback(async () => {
-    if (!documento) { setError('Digite um CPF ou CNPJ'); return; }
-    setLoading(true);
-    setError(null);
-    try {
-      const endpoint = tipo === 'fisica'
-        ? '/portal-transparencia/pessoas/fisica'
-        : '/portal-transparencia/pessoas/juridica';
-      const params: Record<string, string> = {};
-      if (tipo === 'fisica' && documento) params.cpf = documento;
-      if (tipo === 'juridica' && documento) params.cnpj = documento;
-      if (nome) params.nome = nome;
-      const json = await api.get<any>(endpoint, params);
-      const data = Array.isArray(json) ? json : [json].filter(Boolean);
-      setResultados(data);
-      onPTSearchComplete?.('pessoas', { tipo, documento, nome }, data);
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  }, [tipo, documento, nome, onPTSearchComplete]);
+  const handleBuscar = useCallback(() => {
+    if (!documento) return;
+    pessoasSearch.mutate({ tipo, documento, nome }, {
+      onSuccess: (data) => {
+        const arr = Array.isArray(data) ? data : [data].filter(Boolean);
+        onPTSearchComplete?.('pessoas', { tipo, documento, nome }, arr);
+      },
+    });
+  }, [tipo, documento, nome, onPTSearchComplete, pessoasSearch]);
 
   const renderCards = (dados: any[]) => (
     <div className="bcard-grid">
@@ -93,11 +79,11 @@ export default function PortalPessoas({
           </select>
           <input type="text" value={documento} onChange={e => setDocumento(e.target.value)} className="rp-search-input" placeholder={tipo === 'fisica' ? 'CPF' : 'CNPJ'} />
           <input type="text" value={nome} onChange={e => setNome(e.target.value)} className="rp-search-input" placeholder="Nome" />
-          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading}>{loading ? 'Buscando...' : 'Buscar'}</button>
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={pessoasSearch.isPending}>{pessoasSearch.isPending ? 'Buscando...' : 'Buscar'}</button>
         </div>
-        {error && <p className="rp-error">{error}</p>}
+        {pessoasSearch.error && <p className="rp-error">{(pessoasSearch.error as Error).message}</p>}
       </div>
-      {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {pessoasSearch.data && pessoasSearch.data.length > 0 && <div className="rp-result">{renderCards(pessoasSearch.data)}</div>}
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );

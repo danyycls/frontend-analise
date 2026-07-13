@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
+import { useSearchMutation } from '@/shared/lib/hooks/useSearchMutation';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import type {
   TseEmpresaResult,
@@ -60,5 +61,60 @@ export function useFornecedores(documento: string, enabled: boolean) {
     queryFn: () => api.post<TseFornecedorResult>(ENDPOINTS.TSE_FORNECEDORES, { documento }),
     enabled,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useEmpresasSearch() {
+  return useSearchMutation<string, TseEmpresaResult>({
+    mutationKey: ['tse', 'empresas'],
+    mutationFn: (cnpj: string) =>
+      api.post<TseEmpresaResult>(ENDPOINTS.TSE_RELACOES, { cnpj }),
+    searchLabel: (cnpj) => `TSE - Empresas (CNPJ ${cnpj})`,
+    searchRoute: '/tse',
+    searchId: (cnpj) => `tse-empresas-${cnpj}`,
+  });
+}
+
+export function useCargoSearch() {
+  return useSearchMutation<Record<string, unknown>, CandidatosResult>({
+    mutationKey: ['tse', 'cargos'],
+    mutationFn: (body) =>
+      api.post<CandidatosResult>(ENDPOINTS.TSE_CANDIDATOS, body),
+    searchLabel: 'TSE - Políticos por Cargo',
+    searchRoute: '/tse',
+    searchId: 'tse-cargos',
+  });
+}
+
+export function usePartidoSearch() {
+  return useSearchMutation<Record<string, unknown>, CandidatosResult>({
+    mutationKey: ['tse', 'partidos'],
+    mutationFn: (body) =>
+      api.post<CandidatosResult>(ENDPOINTS.TSE_CANDIDATOS, body),
+    searchLabel: 'TSE - Políticos por Partido',
+    searchRoute: '/tse',
+    searchId: 'tse-partidos',
+  });
+}
+
+export function useDoadorSearch() {
+  return useSearchMutation<string, TseDoadorResult>({
+    mutationKey: ['tse', 'doadores'],
+    mutationFn: (documento: string) =>
+      api.post<TseDoadorResult>(ENDPOINTS.TSE_DOADORES, { documento }),
+    searchLabel: (doc) => `TSE - Doadores (${doc})`,
+    searchRoute: '/tse',
+    searchId: (doc) => `tse-doadores-${doc}`,
+  });
+}
+
+export function useFornecedorSearch() {
+  return useSearchMutation<string, TseFornecedorResult>({
+    mutationKey: ['tse', 'fornecedores'],
+    mutationFn: (documento: string) =>
+      api.post<TseFornecedorResult>(ENDPOINTS.TSE_FORNECEDORES, { documento }),
+    searchLabel: (doc) => `TSE - Fornecedores (${doc})`,
+    searchRoute: '/tse',
+    searchId: (doc) => `tse-fornecedores-${doc}`,
   });
 }

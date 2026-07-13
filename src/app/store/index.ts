@@ -14,7 +14,7 @@ import anomaliaReducer from './slices/anomaliaSlice';
 const persistConfig = {
   key: 'podp-root',
   storage,
-  whitelist: ['anomalia', 'investigation', 'consulta', 'recursosMunicipio', 'ligacaoPolitica', 'theme'],
+  whitelist: ['anomalia', 'investigation', 'consulta', 'recursosMunicipio', 'ligacaoPolitica', 'theme', 'navigation', 'tse', 'portal'],
 };
 
 const rootReducer = combineReducers({

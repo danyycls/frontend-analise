@@ -1,7 +1,6 @@
-import { useState, useCallback, useRef, type KeyboardEvent } from 'react';
-import { api } from '@/shared/api/client';
+import { useState, useCallback, type KeyboardEvent } from 'react';
 import { fmtDoc, fmtVal } from '@/shared/lib/formatters';
-import { ENDPOINTS } from '@/shared/api/endpoints';
+import { useDoadorSearch } from '../api/hooks';
 import type { TseResultItem, TseDoadorResult, TseReceita } from '../model/types';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
@@ -17,32 +16,18 @@ export default function BuscaDoador({
   onFechar, onIdClick, resultItem, onRPSearchComplete,
 }: BuscaDoadorProps) {
   const [documento, setDocumento] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { popupInfo, setPopupInfo } = useEntityInfo();
-  const abortRef = useRef<AbortController | null>(null);
+  const doadorSearch = useDoadorSearch();
 
-  const handleBuscar = useCallback(async () => {
+  const handleBuscar = useCallback(() => {
     const digits = documento.replace(/\D/g, '');
-    if (digits.length < 3) { setError('Informe um CPF ou CNPJ'); return; }
-    if (abortRef.current) abortRef.current.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setLoading(true);
-    setError(null);
-    try {
-      const json = await api.post<TseDoadorResult>(ENDPOINTS.TSE_DOADORES, { documento: digits });
-      if (controller.signal.aborted) return;
-      onRPSearchComplete?.('doador', digits, json);
-    } catch (err: any) {
-      if (err.name === 'AbortError') return;
-      setError(err.message);
-    }
-    if (!controller.signal.aborted) {
-      setLoading(false);
-      abortRef.current = null;
-    }
-  }, [documento, onRPSearchComplete]);
+    if (digits.length < 3) return;
+    doadorSearch.mutate(digits, {
+      onSuccess: (data) => {
+        onRPSearchComplete?.('doador', digits, data);
+      },
+    });
+  }, [documento, onRPSearchComplete, doadorSearch]);
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') handleBuscar();
@@ -154,11 +139,11 @@ export default function BuscaDoador({
             onKeyDown={handleKeyDown}
             maxLength={18}
           />
-          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading || digits.length < 3}>
-            {loading ? 'Buscando...' : 'Buscar'}
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={doadorSearch.isPending || digits.length < 3}>
+            {doadorSearch.isPending ? 'Buscando...' : 'Buscar'}
           </button>
         </div>
-        {error && <p className="rp-error">{error}</p>}
+        {doadorSearch.error && <p className="rp-error">{(doadorSearch.error as Error).message}</p>}
       </div>
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>

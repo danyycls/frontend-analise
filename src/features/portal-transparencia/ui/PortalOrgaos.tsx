@@ -1,5 +1,5 @@
 import { useState, useCallback, type ChangeEvent } from 'react';
-import { api } from '@/shared/api/client';
+import { useOrgaosSearch } from '../api/hooks';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface PortalOrgaosProps {
@@ -15,29 +15,16 @@ export default function PortalOrgaos({
   const [tipo, setTipo] = useState('siape');
   const [codigo, setCodigo] = useState('');
   const [nome, setNome] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resultados, setResultados] = useState<any[]>([]);
   const { popupInfo, setPopupInfo } = useEntityInfo();
+  const orgaosSearch = useOrgaosSearch();
 
-  const handleBuscar = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const endpoint = tipo === 'siape'
-        ? '/portal-transparencia/orgaos/siape'
-        : '/portal-transparencia/orgaos/siafi';
-      const params: Record<string, string> = {};
-      if (codigo) params.codigoOrgao = codigo;
-      if (nome) params.nomeOrgao = nome;
-      const json = await api.get<any[]>(endpoint, params);
-      setResultados(json || []);
-      onPTSearchComplete?.('orgaos', { tipo, codigo, nome }, json);
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  }, [tipo, codigo, nome, onPTSearchComplete]);
+  const handleBuscar = useCallback(() => {
+    orgaosSearch.mutate({ tipo, codigo, nome }, {
+      onSuccess: (data) => {
+        onPTSearchComplete?.('orgaos', { tipo, codigo, nome }, data);
+      },
+    });
+  }, [tipo, codigo, nome, onPTSearchComplete, orgaosSearch]);
 
   const renderCards = (dados: any[]) => (
     <div className="bcard-grid">
@@ -104,13 +91,13 @@ export default function PortalOrgaos({
           </select>
           <input type="text" value={codigo} onChange={e => setCodigo(e.target.value)} className="rp-search-input" placeholder="Código do órgão" />
           <input type="text" value={nome} onChange={e => setNome(e.target.value)} className="rp-search-input" placeholder="Nome do órgão" />
-          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading}>
-            {loading ? 'Buscando...' : 'Buscar'}
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={orgaosSearch.isPending}>
+            {orgaosSearch.isPending ? 'Buscando...' : 'Buscar'}
           </button>
         </div>
-        {error && <p className="rp-error">{error}</p>}
+        {orgaosSearch.error && <p className="rp-error">{(orgaosSearch.error as Error).message}</p>}
       </div>
-      {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {orgaosSearch.data && orgaosSearch.data.length > 0 && <div className="rp-result">{renderCards(orgaosSearch.data)}</div>}
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );

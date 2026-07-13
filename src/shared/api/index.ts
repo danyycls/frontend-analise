@@ -1,2 +1,2 @@
-export { api, ApiError } from './client';
+export { api, apiP2, ApiError } from './client';
 export { ENDPOINTS } from './endpoints';

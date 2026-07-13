@@ -1,45 +1,25 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app';
 import { store } from '@/app/store';
 import {
   removeAnalise,
+  addAnalise,
   setActiveAnalise,
   updateActiveAnalise,
   addToFila,
   removeFromFila,
 } from '@/app/store/slices/anomaliaSlice';
-import type { FilaItem } from '@/app/store/slices/anomaliaSlice';
-import { api } from '@/shared/api/client';
+import type { FilaItem, WorkerProgresso } from '@/app/store/slices/anomaliaSlice';
+import FormConsulta from '@/features/licitacao/ui/FormConsulta';
+import type { ItemBusca, ParametrosBusca } from '@/features/licitacao/ui/FormConsulta';
+import { api, apiP2 } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import { WS_BASE_URL } from '@/shared/config';
 import { extrairDocumentosDosContratos } from '@/shared/lib/extrair-documentos-contratos';
 import { normalizarCNPJ } from '@/shared/lib/formatters';
 import ConvenioSelector from '@/widgets/ConvenioSelector/ConvenioSelector';
 import '../LicitacoesPage/LicitacoesPage.css';
-
-const UFS = [
-  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA',
-  'PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'
-];
-
-const TRIMESTRES = [
-  { codigo: 1, nome: '1º Trimestre (Jan-Mar)' },
-  { codigo: 2, nome: '2º Trimestre (Abr-Jun)' },
-  { codigo: 3, nome: '3º Trimestre (Jul-Set)' },
-  { codigo: 4, nome: '4º Trimestre (Out-Dez)' },
-];
-
-function trimestreParaDatas(ano: string, trimestre: number): { dataInicial: string; dataFinal: string } {
-  const a = ano.trim();
-  switch (trimestre) {
-    case 1: return { dataInicial: `${a}-01-01`, dataFinal: `${a}-03-31` };
-    case 2: return { dataInicial: `${a}-04-01`, dataFinal: `${a}-06-30` };
-    case 3: return { dataInicial: `${a}-07-01`, dataFinal: `${a}-09-30` };
-    case 4: return { dataInicial: `${a}-10-01`, dataFinal: `${a}-12-31` };
-    default: return { dataInicial: `${a}-01-01`, dataFinal: `${a}-12-31` };
-  }
-}
 
 const STAGES = [
   { id: 'buscando_licitacoes', label: 'Buscando licitações' },
@@ -69,17 +49,6 @@ function StageLabel({ id, label }: { id: string; label: string }) {
   return <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{label}</span>;
 }
 
-interface SubmitParams {
-  tipo: string;
-  valor: string;
-  ano: string;
-  uf: string;
-  codigoMunicipio: string;
-  cnpjsSelecionados: string[];
-  trimestres: number[];
-  codigoModalidade: string;
-}
-
 export default function AnomaliasAnalisePage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -87,30 +56,19 @@ export default function AnomaliasAnalisePage() {
   const active = useAppSelector(state => state.anomalia.active);
   const fila = useAppSelector(state => state.anomalia.fila);
 
-  const [codigoModalidade, setCodigoModalidade] = useState('');
-  const [erro, setErro] = useState('');
-
-  const [anoInput, setAnoInput] = useState(String(new Date().getFullYear()));
-  const [trimestresSelecionados, setTrimestresSelecionados] = useState(new Set<number>());
-
-  const [selectedUfs, setSelectedUfs] = useState<string[]>([]);
-  const [ufFilter, setUfFilter] = useState('SP');
-  const [municipios, setMunicipios] = useState<{ id: number; nome: string }[]>([]);
-  const [carregandoMunicipios, setCarregandoMunicipios] = useState(false);
-  const [selectedMunicipios, setSelectedMunicipios] = useState<{ uf: string; codigo: string; nome: string }[]>([]);
-
   const [cnpjsSelecionados, setCnpjsSelecionados] = useState<string[]>([]);
-  const [cnpjInput, setCnpjInput] = useState('');
+  const [erro, setErro] = useState('');
   const [view, setView] = useState<'form' | 'progress'>('form');
-
-  const cnpjsSelecionadosNorm = useMemo(
-    () => cnpjsSelecionados.map(normalizarCNPJ),
-    [cnpjsSelecionados]
-  );
+  const [filaPausada, setFilaPausada] = useState(false);
 
   const cancelRef = useRef(false);
   const processandoRef = useRef(false);
   const prevProcessingRef = useRef(false);
+  const filaPausadaRef = useRef(false);
+
+  useEffect(() => {
+    filaPausadaRef.current = filaPausada;
+  }, [filaPausada]);
 
   useEffect(() => {
     if (active) {
@@ -128,51 +86,90 @@ export default function AnomaliasAnalisePage() {
     }
   }, [active?.processando, active?.concluido]);
 
-  async function carregarMunicipios(ufSigla: string) {
-    setCarregandoMunicipios(true);
-    setMunicipios([]);
-    try {
-      const data = await api.get<{ id: number; nome: string }[]>(`${ENDPOINTS.IBGE_MUNICIPIOS}/${ufSigla}`);
-      setMunicipios(data);
-    } catch (err) {
-      console.error('Erro ao carregar municipios:', err);
-    }
-    setCarregandoMunicipios(false);
+  function listenWebSocket(jobId: string, channel: string): Promise<any[] | null> {
+    return new Promise<any[] | null>((resolve) => {
+      const ws = new WebSocket(`${WS_BASE_URL}/ws`);
+      let resolved = false;
+
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          ws.close();
+          resolve(null);
+        }
+      }, 120000);
+
+      const finalizar = (val: any[] | null) => {
+        clearTimeout(timeout);
+        clearInterval(checkCancel);
+        if (!resolved) {
+          resolved = true;
+          ws.close();
+          resolve(val);
+        }
+      };
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ channel, job_id: jobId }));
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const ev = JSON.parse(e.data);
+          if (ev.type === 'results') {
+            finalizar(ev.results || []);
+          }
+          if (ev.type === 'error') {
+            finalizar(null);
+          }
+          if (ev.type === 'done' && !resolved) {
+            finalizar(null);
+          }
+        } catch (_) {}
+      };
+
+      ws.onerror = () => {
+        finalizar(null);
+      };
+
+      cancelRef.current = false;
+      const checkCancel = setInterval(() => {
+        if (cancelRef.current && !resolved) {
+          finalizar(null);
+        }
+      }, 200);
+    });
   }
 
-  useEffect(() => {
-    if (ufFilter) {
-      carregarMunicipios(ufFilter);
-    }
-  }, [ufFilter]);
-
-  async function buscarContratosUF(uf: string, ano: string, trimestres: number[], modalidade?: string): Promise<any[]> {
+  async function buscarContratosUFMunicipio(tipo: string, uf: string, codigoMunicipio: string, ano: string, trimestres: number[]): Promise<any[]> {
     const todos: any[] = [];
     dispatch(updateActiveAnalise({ fetchProgresso: { concluidos: 0, total: trimestres.length } }));
     for (let i = 0; i < trimestres.length; i++) {
       if (cancelRef.current) break;
       const t = trimestres[i];
-      dispatch(updateActiveAnalise({ mensagem: `Buscando licitações — ${uf} ${ano} T${t}...` }));
-      const params: Record<string, string | number> = { ano, trimestre: t };
-      if (modalidade) params.codigoModalidadeContratacao = modalidade;
-      const data = await api.get<any[]>(`/estado/${uf}/licitacoes`, params);
-      todos.push(...(data || []));
-      dispatch(updateActiveAnalise({ fetchProgresso: { concluidos: i + 1, total: trimestres.length } }));
-    }
-    return todos;
-  }
+      const label = tipo === 'uf' ? uf : codigoMunicipio;
+      dispatch(updateActiveAnalise({ mensagem: `Buscando contratos — ${label} ${ano} T${t}...` }));
 
-  async function buscarContratosMunicipio(uf: string, codigo: string, ano: string, trimestres: number[], modalidade?: string): Promise<any[]> {
-    const todos: any[] = [];
-    dispatch(updateActiveAnalise({ fetchProgresso: { concluidos: 0, total: trimestres.length } }));
-    for (let i = 0; i < trimestres.length; i++) {
-      if (cancelRef.current) break;
-      const t = trimestres[i];
-      dispatch(updateActiveAnalise({ mensagem: `Buscando licitações — município ${codigo} ${ano} T${t}...` }));
-      const params: Record<string, string | number> = { ano, trimestre: t };
-      if (modalidade) params.codigoModalidadeContratacao = modalidade;
-      const data = await api.get<any[]>(`/estado/${uf}/licitacoes/municipio/${codigo}`, params);
-      todos.push(...(data || []));
+      let dataInicial: string, dataFinal: string;
+      switch (t) {
+        case 1: dataInicial = `${ano}0101`; dataFinal = `${ano}0331`; break;
+        case 2: dataInicial = `${ano}0401`; dataFinal = `${ano}0630`; break;
+        case 3: dataInicial = `${ano}0701`; dataFinal = `${ano}0930`; break;
+        default: dataInicial = `${ano}1001`; dataFinal = `${ano}1231`; break;
+      }
+
+      const resp = await api.post<{ jobId: string }>(ENDPOINTS.UF_MUNICIPIO_ANALISE_START, {
+        tipo,
+        uf,
+        codigo_municipio_ibge: tipo === 'municipio' ? codigoMunicipio : '',
+        data_inicial: dataInicial,
+        data_final: dataFinal,
+      });
+
+      dispatch(updateActiveAnalise({ mensagem: `Aguardando resultados — ${label} ${ano} T${t}...` }));
+      const results = await listenWebSocket(resp.jobId, 'uf_municipio_analise');
+      const contratos = (results || []).flatMap((r: any) => r.contratos || []);
+      todos.push(...contratos);
       dispatch(updateActiveAnalise({ fetchProgresso: { concluidos: i + 1, total: trimestres.length } }));
     }
     return todos;
@@ -181,83 +178,65 @@ export default function AnomaliasAnalisePage() {
   async function buscarContratosOrgao(cnpj: string, ano: string, trimestres: number[]): Promise<any[]> {
     dispatch(updateActiveAnalise({ mensagem: `Iniciando análise do órgão ${cnpj}...` }));
     const sels = trimestres.length > 0 ? trimestres : [1, 2, 3, 4];
-    const datasPeriodo = sels.map(t => trimestreParaDatas(ano, t));
+    const datasPeriodo = sels.map(t => {
+      let di: string, df: string;
+      switch (t) {
+        case 1: di = `${ano}0101`; df = `${ano}0331`; break;
+        case 2: di = `${ano}0401`; df = `${ano}0630`; break;
+        case 3: di = `${ano}0701`; df = `${ano}0930`; break;
+        default: di = `${ano}1001`; df = `${ano}1231`; break;
+      }
+      return { dataInicial: di, dataFinal: df };
+    });
     const dataInicial = datasPeriodo[0].dataInicial;
     const dataFinal = datasPeriodo[datasPeriodo.length - 1].dataFinal;
 
     const resp = await api.post<{ jobId: string }>(ENDPOINTS.ORGAO_ANALISE_START, {
       cnpjs: [cnpj],
-      dataInicial: dataInicial.replace(/-/g, ''),
-      dataFinal: dataFinal.replace(/-/g, ''),
+      dataInicial,
+      dataFinal,
     });
 
     dispatch(updateActiveAnalise({ mensagem: 'Aguardando resultados da análise...' }));
-    const results = await new Promise<any[] | null>((resolve) => {
-      const ws = new WebSocket(`${WS_BASE_URL}/ws`);
-      let resolved = false;
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ channel: 'orgao_analise', job_id: resp.jobId }));
-      };
-
-      ws.onmessage = (e) => {
-        try {
-          const ev = JSON.parse(e.data);
-          if (ev.type === 'results' && ev.Results) {
-            resolved = true;
-            ws.close();
-            resolve(ev.Results);
-          }
-          if (ev.type === 'error') {
-            resolved = true;
-            ws.close();
-            resolve(null);
-          }
-        } catch (_) {}
-      };
-
-      ws.onerror = () => {
-        if (!resolved) {
-          resolved = true;
-          resolve(null);
-        }
-      };
-
-      cancelRef.current = false;
-      const checkCancel = setInterval(() => {
-        if (cancelRef.current && !resolved) {
-          resolved = true;
-          ws.close();
-          clearInterval(checkCancel);
-          resolve(null);
-        }
-      }, 200);
-    });
+    const results = await listenWebSocket(resp.jobId, 'orgao_analise');
     const contratos = (results || []).flatMap((r: any) => r.contratos || []);
     return contratos;
   }
 
-  async function startAnalysis(params: SubmitParams) {
+  async function handleFormSubmit(itens: ItemBusca[], params: ParametrosBusca) {
+    const now = Date.now();
+    const filaItems: FilaItem[] = itens.map((item, i) => ({
+      id: now + i,
+      tipo: item.tipo,
+      valor: item.valor,
+      ano: params.ano,
+      uf: item.uf || '',
+      codigoMunicipio: item.tipo === 'municipio' ? item.valor : '',
+      cnpjsSelecionados: item.tipo === 'orgao' ? [item.valor] : [],
+      trimestres: params.trimestres,
+      codigoModalidade: params.modalidade,
+    }));
+
+    for (const fi of filaItems) {
+      dispatch(addToFila(fi));
+    }
+
+    if (!processandoRef.current && !filaPausada) {
+      proximaFila();
+    }
+  }
+
+  async function processarItem(item: FilaItem) {
     setErro('');
     cancelRef.current = false;
 
-    const sels = params.trimestres.length > 0 ? params.trimestres : [1, 2, 3, 4];
-
-    let valorFinal = params.valor;
-    if (params.tipo === 'municipio') {
-      valorFinal = params.codigoMunicipio;
-    } else if (params.tipo === 'orgao') {
-      const cnpjs = params.cnpjsSelecionados.length > 0
-        ? [...new Set([...params.cnpjsSelecionados, params.valor].map(normalizarCNPJ))]
-        : [params.valor].map(normalizarCNPJ);
-      valorFinal = params.valor;
-    }
+    const sels = item.trimestres.length > 0 ? item.trimestres : [1, 2, 3, 4];
 
     dispatch(setActiveAnalise({
       job_id: '',
-      tipo: params.tipo,
-      valor: valorFinal,
-      ano: params.ano,
+      tipo: item.tipo,
+      valor: item.valor,
+      ano: item.ano,
       processando: true,
       concluido: false,
       etapa_atual: '',
@@ -272,23 +251,18 @@ export default function AnomaliasAnalisePage() {
       dispatch(updateActiveAnalise({ etapa_atual: 'buscando_licitacoes' }));
 
       let contratos: any[];
-      if (params.tipo === 'orgao') {
-        const cnpjs = params.cnpjsSelecionados.length > 0
-          ? [...new Set([...params.cnpjsSelecionados, params.valor].map(normalizarCNPJ))]
-          : [params.valor].map(normalizarCNPJ);
+      if (item.tipo === 'orgao') {
         const todosContratos: any[] = [];
-        dispatch(updateActiveAnalise({ fetchProgresso: { concluidos: 0, total: cnpjs.length } }));
-        for (let i = 0; i < cnpjs.length; i++) {
-          if (cancelRef.current) break;
-          const c = await buscarContratosOrgao(cnpjs[i], params.ano, sels);
+        dispatch(updateActiveAnalise({ fetchProgresso: { concluidos: 0, total: 1 } }));
+        if (!cancelRef.current) {
+          const c = await buscarContratosOrgao(item.valor, item.ano, sels);
           todosContratos.push(...c);
-          dispatch(updateActiveAnalise({ fetchProgresso: { concluidos: i + 1, total: cnpjs.length } }));
         }
         contratos = todosContratos;
-      } else if (params.tipo === 'municipio') {
-        contratos = await buscarContratosMunicipio(params.uf, valorFinal, params.ano, sels, params.codigoModalidade);
+      } else if (item.tipo === 'municipio') {
+        contratos = await buscarContratosUFMunicipio('municipio', item.uf, item.valor, item.ano, sels);
       } else {
-        contratos = await buscarContratosUF(valorFinal, params.ano, sels, params.codigoModalidade);
+        contratos = await buscarContratosUFMunicipio('uf', item.valor, '', item.ano, sels);
       }
 
       if (cancelRef.current) return;
@@ -312,9 +286,49 @@ export default function AnomaliasAnalisePage() {
 
       dispatch(updateActiveAnalise({ etapa_atual: 'analisando_vinculos', mensagem: `Analisando ${licitacoes.length} documentos...` }));
 
-      const { job_id } = await api.post<{ job_id: string }>(ENDPOINTS.ANOMALIA_INICIAR, { licitacoes });
+      const { job_id } = await apiP2.post<{ job_id: string }>(ENDPOINTS.ANOMALIA_INICIAR, { licitacoes });
 
       dispatch(updateActiveAnalise({ job_id }));
+
+      // Polling fallback — caso o WebSocket não receba o evento de conclusão
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        await new Promise(r => setTimeout(r, 3000));
+        const s = store.getState().anomalia;
+        if (!s.active?.processando || s.active?.concluido) break;
+        try {
+          const prog = await apiP2.get<WorkerProgresso>(`${ENDPOINTS.ANOMALIA_PROGRESSO}/${job_id}`);
+          if (prog.type === 'done' || prog.type === 'cancelled') {
+            dispatch(updateActiveAnalise({
+              processando: false,
+              concluido: true,
+              etapa_atual: 'concluido',
+              totalAnomalias: prog.anomalias_encontradas ?? 0,
+              mensagem: prog.type === 'done' ? 'Análise concluída' : 'Análise cancelada',
+              progresso: prog,
+            }));
+            const activeState = store.getState().anomalia.active;
+            dispatch(addAnalise({
+              id: Date.now(),
+              timestamp: new Date().toISOString(),
+              tipo: activeState?.tipo || '',
+              valor: activeState?.valor || '',
+              ano: activeState?.ano || '',
+              totalAnomalias: prog.anomalias_encontradas ?? 0,
+            }));
+            break;
+          }
+          if (prog.type === 'error') {
+            dispatch(updateActiveAnalise({
+              processando: false,
+              mensagem: prog.message || 'Erro na análise',
+            }));
+            break;
+          }
+        } catch {
+          // continua tentando
+        }
+      }
     } catch (err: any) {
       setErro(`Erro: ${err.message || 'Erro desconhecido'}`);
       dispatch(updateActiveAnalise({ processando: false }));
@@ -325,130 +339,26 @@ export default function AnomaliasAnalisePage() {
 
   function proximaFila() {
     const state = store.getState().anomalia;
-    if (state.fila.length === 0) return;
+    if (state.fila.length === 0 || filaPausadaRef.current) return;
 
     const item = state.fila[0];
     dispatch(removeFromFila(item.id));
-
-    startAnalysis({
-      tipo: item.tipo,
-      valor: item.valor,
-      ano: item.ano,
-      uf: item.uf,
-      codigoMunicipio: item.codigoMunicipio,
-      cnpjsSelecionados: item.cnpjsSelecionados,
-      trimestres: item.trimestres,
-      codigoModalidade: item.codigoModalidade,
-    });
-  }
-
-  function toggleUf(uf: string) {
-    setSelectedUfs(prev =>
-      prev.includes(uf) ? prev.filter(u => u !== uf) : [...prev, uf]
-    );
-  }
-
-  function toggleMunicipio(m: { id: number; nome: string }) {
-    setSelectedMunicipios(prev => {
-      const exists = prev.find(sm => sm.codigo === String(m.id));
-      return exists
-        ? prev.filter(sm => sm.codigo !== String(m.id))
-        : [...prev, { uf: ufFilter, codigo: String(m.id), nome: m.nome }];
-    });
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setErro('');
-
-    if (!anoInput.trim().match(/^\d{4}$/)) {
-      setErro('Ano inválido. Use 4 dígitos.');
-      return;
-    }
-
-    const sels = trimestresSelecionados.size > 0
-      ? [...trimestresSelecionados]
-      : [1, 2, 3, 4];
-
-    const items: FilaItem[] = [];
-    const now = Date.now();
-
-    for (const uf of selectedUfs) {
-      items.push({
-        id: now + items.length,
-        tipo: 'uf',
-        valor: uf,
-        ano: anoInput,
-        uf,
-        codigoMunicipio: '',
-        cnpjsSelecionados: [],
-        trimestres: sels,
-        codigoModalidade,
-      });
-    }
-
-    for (const mun of selectedMunicipios) {
-      items.push({
-        id: now + items.length,
-        tipo: 'municipio',
-        valor: mun.codigo,
-        ano: anoInput,
-        uf: mun.uf,
-        codigoMunicipio: mun.codigo,
-        cnpjsSelecionados: [],
-        trimestres: sels,
-        codigoModalidade,
-      });
-    }
-
-    const uniqCnpjs = [...new Set(cnpjsSelecionados.map(normalizarCNPJ))];
-    for (const cnpj of uniqCnpjs) {
-      items.push({
-        id: now + items.length,
-        tipo: 'orgao',
-        valor: cnpj,
-        ano: anoInput,
-        uf: '',
-        codigoMunicipio: '',
-        cnpjsSelecionados: [cnpj],
-        trimestres: sels,
-        codigoModalidade,
-      });
-    }
-
-    if (items.length === 0) {
-      setErro('Selecione ao menos uma UF, município ou CNPJ.');
-      return;
-    }
-
-    for (const item of items) {
-      dispatch(addToFila(item));
-    }
-
-    setSelectedUfs([]);
-    setSelectedMunicipios([]);
-    setCnpjsSelecionados([]);
-    setCnpjInput('');
-
-    if (!processandoRef.current && items.length > 0) {
-      proximaFila();
-    }
+    processarItem(item);
   }
 
   async function handleCancelar() {
     cancelRef.current = true;
     if (active?.job_id) {
       try {
-        await api.post(`${ENDPOINTS.ANOMALIA_PARAR}/${active.job_id}`);
+        await apiP2.post(`${ENDPOINTS.ANOMALIA_PARAR}/${active.job_id}`);
       } catch {}
     }
-    dispatch(updateActiveAnalise({ processando: false, concluido: true, etapa_atual: 'concluido' }));
+    dispatch(updateActiveAnalise({ processando: false }));
     processandoRef.current = false;
-    setView('form');
     proximaFila();
   }
 
-  const handleToggleCnpj = useCallback((cnpj: string) => {
+  function handleToggleCnpj(cnpj: string) {
     const norm = normalizarCNPJ(cnpj);
     setCnpjsSelecionados(prev => {
       const prevNorm = prev.map(normalizarCNPJ);
@@ -456,33 +366,7 @@ export default function AnomaliasAnalisePage() {
         ? prev.filter((_, i) => prevNorm[i] !== norm)
         : [...prev, cnpj];
     });
-  }, []);
-
-  const handleSelectAll = useCallback((cnpjs: string[]) => {
-    setCnpjsSelecionados(prev => {
-      const set = new Set(prev.map(normalizarCNPJ));
-      const novos = cnpjs.filter(c => !set.has(normalizarCNPJ(c)));
-      return [...prev, ...novos];
-    });
-  }, []);
-
-  const handleDeselectAll = useCallback(() => {
-    setCnpjsSelecionados([]);
-    setCnpjInput('');
-  }, []);
-
-  const handleCnpjInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    setCnpjInput(raw);
-    const norm = normalizarCNPJ(raw);
-    if (norm.length === 14) {
-      setCnpjsSelecionados(prev => {
-        const prevNorm = prev.map(normalizarCNPJ);
-        if (prevNorm.includes(norm)) return prev;
-        return [...prev, raw];
-      });
-    }
-  }, []);
+  }
 
   function renderProgress() {
     const a = active!;
@@ -623,15 +507,6 @@ export default function AnomaliasAnalisePage() {
     );
   }
 
-  function toggleTrimestre(t: number) {
-    setTrimestresSelecionados(prev => {
-      const next = new Set(prev);
-      if (next.has(t)) next.delete(t);
-      else next.add(t);
-      return next;
-    });
-  }
-
   return (
     <div className="tab-page">
       <div className="licitacoes-page">
@@ -683,112 +558,39 @@ export default function AnomaliasAnalisePage() {
             <div className="licitacoes-form-wrapper">
               <div className="licitacoes-layout-duas-colunas" style={{ maxWidth: 960 }}>
                 <div className="licitacoes-coluna-principal">
-                  <form className="card" onSubmit={handleSubmit}>
-                    <h2 style={{ marginBottom: 16 }}>Parâmetros da Consulta</h2>
-
-                    <div className="form-group">
-                      <label>▣ UFs</label>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {UFS.map(uf => (
-                          <button key={uf} type="button"
-                            className={`ano-btn${selectedUfs.includes(uf) ? ' ativo' : ''}`}
-                            onClick={() => toggleUf(uf)}>
-                            {uf}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="form-group">
-                      <label>▣ Municípios</label>
-                      <select value={ufFilter} onChange={(e) => setUfFilter(e.target.value)}
-                        style={{ marginBottom: 8 }}>
-                        {UFS.map((s) => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      {carregandoMunicipios ? (
-                        <p className="form-status">Carregando municípios...</p>
-                      ) : municipios.length === 0 ? (
-                        <p className="form-status vazio">Nenhum município encontrado para {ufFilter}.</p>
-                      ) : (
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', maxHeight: 180, overflowY: 'auto' }}>
-                          {municipios.map(m => (
-                            <button key={m.id} type="button"
-                              className={`ano-btn${selectedMunicipios.some(sm => sm.codigo === String(m.id)) ? ' ativo' : ''}`}
-                              onClick={() => toggleMunicipio(m)}>
-                              {m.nome}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="form-group">
-                      <label>▣ Órgãos (CNPJ)</label>
-                      {cnpjsSelecionados.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
-                          {cnpjsSelecionados.map(cnpj => (
-                            <span key={cnpj} className="ano-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: 'var(--bg-elevated)', borderRadius: 12, fontSize: '0.72rem', fontFamily: 'var(--font-mono)' }}>
-                              {cnpj}
-                              <button type="button" onClick={() => {
-                                const norm = normalizarCNPJ(cnpj);
-                                setCnpjsSelecionados(prev => {
-                                  const prevNorm = prev.map(normalizarCNPJ);
-                                  return prev.filter((_, i) => prevNorm[i] !== norm);
-                                });
-                              }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.85rem', padding: 0, lineHeight: 1 }}>×</button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <input type="text" placeholder="Digite um CNPJ..." value={cnpjInput} onChange={handleCnpjInputChange} />
-                    </div>
-
-                    <div className="form-group required">
-                      <label>Ano</label>
-                      <input type="text" placeholder="2024" value={anoInput} onChange={e => setAnoInput(e.target.value)} maxLength={4} />
-                    </div>
-
-                    <div className="form-group">
-                      <label>Trimestre(s)</label>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {TRIMESTRES.map(t => (
-                          <button key={t.codigo} type="button"
-                            className={`ano-btn${trimestresSelecionados.has(t.codigo) ? ' ativo' : ''}`}
-                            onClick={() => toggleTrimestre(t.codigo)}>
-                            {t.nome}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="form-group optional">
-                      <label>Modalidade (opcional)</label>
-                      <select value={codigoModalidade} onChange={(e) => setCodigoModalidade(e.target.value)}>
-                        <option value="">Todas as modalidades</option>
-                        <option value="1">Dispensa de Licitação</option>
-                        <option value="2">Inexigibilidade</option>
-                        <option value="3">Pregão</option>
-                        <option value="4">Concorrência</option>
-                        <option value="5">Concurso</option>
-                        <option value="6">Leilão</option>
-                        <option value="7">Chamamento Público</option>
-                        <option value="8">Credenciamento</option>
-                      </select>
-                    </div>
-
-                    {erro && <div className="form-erro">{erro}</div>}
-
-                    <button type="submit" className="btn btn-accent">
-                      Adicionar {selectedUfs.length + selectedMunicipios.length + cnpjsSelecionados.length} itens → Fila
-                    </button>
-                  </form>
+                  <FormConsulta
+                    onSubmit={handleFormSubmit}
+                    cnpjsSelecionados={cnpjsSelecionados}
+                    onCnpjsChange={setCnpjsSelecionados}
+                    submitLabel="Adicionar à Fila"
+                    error={erro}
+                  />
 
                   {fila.length > 0 && (
                     <div className="card" style={{ marginTop: 16, padding: 16 }}>
-                      <h3 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-muted)', marginBottom: 12 }}>
-                        Fila de Análises ({fila.length})
-                      </h3>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <h3 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-muted)', margin: 0 }}>
+                          Fila de Análises ({fila.length})
+                        </h3>
+                        <button
+                          className={`btn btn-sm ${filaPausada ? '' : 'btn-outline-danger'}`}
+                          onClick={() => {
+                            setFilaPausada(p => {
+                              const novaPausa = !p;
+                              filaPausadaRef.current = novaPausa;
+                              if (!novaPausa) {
+                                const s = store.getState().anomalia;
+                                if (!s.active || !s.active.processando) {
+                                  setTimeout(() => proximaFila(), 100);
+                                }
+                              }
+                              return novaPausa;
+                            });
+                          }}
+                          style={{ padding: '3px 10px', fontSize: '0.65rem' }}>
+                          {filaPausada ? '▶ Retomar' : '⏸ Pausar'}
+                        </button>
+                      </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {fila.map((item) => (
                           <div key={item.id} style={{
@@ -821,8 +623,12 @@ export default function AnomaliasAnalisePage() {
                   <ConvenioSelector
                     cnpjsSelecionados={cnpjsSelecionados}
                     onToggleCnpj={handleToggleCnpj}
-                    onSelectAll={handleSelectAll}
-                    onDeselectAll={handleDeselectAll}
+                    onSelectAll={(cnpjs) => {
+                      const set = new Set(cnpjsSelecionados.map(normalizarCNPJ));
+                      const novos = cnpjs.filter(c => !set.has(normalizarCNPJ(c)));
+                      setCnpjsSelecionados(prev => [...prev, ...novos]);
+                    }}
+                    onDeselectAll={() => setCnpjsSelecionados([])}
                   />
                 </div>
               </div>

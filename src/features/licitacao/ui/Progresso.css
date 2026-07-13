@@ -2,8 +2,20 @@
   background: var(--bg-surface);
   backdrop-filter: blur(4px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
   padding: 24px;
   margin-bottom: 20px;
+  position: relative;
+}
+
+.progresso-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--accent);
 }
 
 .progresso-topo {
@@ -18,17 +30,90 @@
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 16px;
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
+/* Banner de mensagem (dashed, dot animado) */
+.progresso-banner-mensagem {
+  padding: 10px 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progresso-banner-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.5s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Fetch info (etapas restantes) */
+.progresso-fetch-info {
+  margin-bottom: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Etapas (stages) */
+.progresso-etapas {
+  margin-bottom: 20px;
+}
+
+.progresso-etapa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.progresso-etapa[data-status="pending"] {
+  opacity: 0.4;
+}
+
+.progresso-etapa-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.progresso-etapa-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+}
+
+/* Separador entre etapas e barra */
+.progresso-card > .progresso-bar {
+  margin-top: 0;
+}
+
+/* Progress bar */
 .progresso-bar {
   width: 100%;
   height: 4px;
   background: rgba(255, 255, 255, 0.06);
   overflow: hidden;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .progresso-preenchimento {
@@ -37,17 +122,25 @@
   transition: width 0.3s ease;
 }
 
+/* Stats grid (3 colunas iguais) */
 .progresso-stats {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 16px;
 }
 
 .progresso-stat {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 4px;
+}
+
+.progresso-stat + .progresso-stat {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  padding-left: 16px;
 }
 
 .progresso-stat-val {
@@ -66,14 +159,7 @@
   letter-spacing: 0.5px;
 }
 
-.progresso-stat-sucesso {
-  color: var(--success);
-}
-
-.progresso-stat-erro {
-  color: var(--error);
-}
-
+/* Status text */
 .progresso-status {
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -81,6 +167,19 @@
   margin-bottom: 8px;
 }
 
+.progresso-mensagem {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 12px;
+}
+
+.progresso-mensagem.accent {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Log area */
 .progresso-logs {
   max-height: 240px;
   overflow-y: auto;
@@ -98,20 +197,22 @@
 }
 
 .progresso-log.erro { color: var(--error); }
+
 .progresso-log.sucesso { color: var(--success); }
 
 .progresso-cnpj {
   font-weight: 600;
 }
 
-.progresso-mensagem {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin-top: 12px;
+/* Concluído section */
+.progresso-concluido {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 16px;
+  padding-top: 16px;
+  text-align: center;
 }
 
-.progresso-mensagem.accent {
-  color: var(--accent);
-  font-weight: 600;
+.progresso-concluido .progresso-mensagem {
+  margin-top: 0;
+  margin-bottom: 12px;
 }

@@ -1,15 +1,17 @@
 import { store } from '@/app/store'
 import { updateActiveAnalise, addAnalise } from '@/app/store/slices/anomaliaSlice'
 import type { WorkerProgresso } from '@/app/store/slices/anomaliaSlice'
-import { WS_BASE_URL } from '@/shared/config'
+import { P2_WS_BASE_URL } from '@/shared/config'
 import { ENDPOINTS } from '@/shared/api/endpoints'
 
 const MAX_WS_RETRIES = 3
+const INITIAL_DELAY_MS = 2000
 
 class AnomaliaWebSocketService {
   private ws: WebSocket | null = null
   private retryCount = 0
   private retryTimer: ReturnType<typeof setTimeout> | null = null
+  private initialTimer: ReturnType<typeof setTimeout> | null = null
   private currentJobId: string | null = null
   private unsubscribe: (() => void) | null = null
   private started = false
@@ -20,8 +22,16 @@ class AnomaliaWebSocketService {
 
     const state = store.getState()
     const active = state.anomalia.active
+
     if (active?.job_id && active?.processando) {
-      this.connect(active.job_id)
+      this.initialTimer = setTimeout(() => {
+        const s = store.getState()
+        const a = s.anomalia.active
+        if (a?.job_id && a?.processando) {
+          if (a.job_id === this.currentJobId) return
+          this.connect(a.job_id)
+        }
+      }, INITIAL_DELAY_MS)
     }
 
     this.unsubscribe = store.subscribe(() => {
@@ -30,6 +40,10 @@ class AnomaliaWebSocketService {
 
       if (a?.job_id && a?.processando) {
         if (a.job_id !== this.currentJobId) {
+          if (this.initialTimer) {
+            clearTimeout(this.initialTimer)
+            this.initialTimer = null
+          }
           this.connect(a.job_id)
         }
       } else {
@@ -42,6 +56,10 @@ class AnomaliaWebSocketService {
 
   stop(): void {
     this.started = false
+    if (this.initialTimer) {
+      clearTimeout(this.initialTimer)
+      this.initialTimer = null
+    }
     this.disconnect()
     if (this.unsubscribe) {
       this.unsubscribe()
@@ -64,7 +82,7 @@ class AnomaliaWebSocketService {
       this.ws = null
     }
 
-    const ws = new WebSocket(`${WS_BASE_URL}/ws`)
+    const ws = new WebSocket(`${P2_WS_BASE_URL}/ws`)
     this.ws = ws
 
     ws.onopen = () => {
@@ -74,7 +92,8 @@ class AnomaliaWebSocketService {
 
     ws.onmessage = (e) => {
       try {
-        const ev: WorkerProgresso = JSON.parse(e.data)
+        const raw = JSON.parse(e.data)
+        const ev: WorkerProgresso = raw.data || raw
 
         store.dispatch(updateActiveAnalise({
           progresso: ev,
@@ -141,7 +160,7 @@ class AnomaliaWebSocketService {
     ws.onclose = () => {
       if (this.ws === ws) {
         this.ws = null
-        if (this.currentJobId) {
+        if (this.currentJobId && this.retryCount < MAX_WS_RETRIES) {
           this.scheduleReconnect()
         }
       }

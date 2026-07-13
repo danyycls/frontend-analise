@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect } from 'react'
-import { api } from '@/shared/api/client'
+import { apiP2 } from '@/shared/api/client'
 import { ENDPOINTS } from '@/shared/api/endpoints'
 import { fmtDoc } from '@/shared/lib/formatters'
 
@@ -27,7 +27,7 @@ export default function InspectionView({ document, onClose }: InspectionViewProp
       setLoading(true)
       setError(null)
       try {
-        const json = await api.post<any>(ENDPOINTS.BUSCA_CONTEXTO, {
+        const json = await apiP2.post<any>(ENDPOINTS.BUSCA_CONTEXTO, {
           licitacoes: [{
             numero_controle_pncp: '',
             cpf_cnpj: document,

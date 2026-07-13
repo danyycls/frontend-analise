@@ -2,6 +2,7 @@ import { useState, useEffect, type ChangeEvent } from 'react';
 import { api } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import { CandidateCard } from './CandidateCard';
+import { useCargoSearch } from '../api/hooks';
 import type { TseResultItem, CandidatosResult, CargoOption, OpcoesResult } from '../model/types';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
@@ -21,30 +22,25 @@ export default function BuscaCargo({
   const [cargoNome, setCargoNome] = useState('');
   const [eleito, setEleito] = useState('');
   const [uf, setUf] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { popupInfo, setPopupInfo } = useEntityInfo();
+  const cargoSearch = useCargoSearch();
 
   useEffect(() => {
     api.get<OpcoesResult<CargoOption>>(ENDPOINTS.TSE_CARGOS)
       .then(json => setCargos(json.opcoes || []))
-      .catch(err => setError(err.message));
+      .catch(() => {});
   }, []);
 
-  async function handleBuscar() {
-    if (!cargoNome) { setError('Selecione um cargo'); return; }
-    setLoading(true);
-    setError(null);
-    try {
-      const body: Record<string, unknown> = { cargo_nome: cargoNome };
-      if (eleito) body.eleito = eleito;
-      if (uf) body.sg_uf = uf;
-      const json = await api.post<CandidatosResult>(ENDPOINTS.TSE_CANDIDATOS, body);
-      onRPSearchComplete?.('cargo', { filtro: { cargoNome, eleito, uf } }, json);
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
+  function handleBuscar() {
+    if (!cargoNome) return;
+    const body: Record<string, unknown> = { cargo_nome: cargoNome };
+    if (eleito) body.eleito = eleito;
+    if (uf) body.sg_uf = uf;
+    cargoSearch.mutate(body, {
+      onSuccess: (data) => {
+        onRPSearchComplete?.('cargo', { filtro: { cargoNome, eleito, uf } }, data);
+      },
+    });
   }
 
   if (resultItem) {
@@ -100,11 +96,11 @@ export default function BuscaCargo({
             <option value="">Todas as UF</option>
             {UFS_LIST.map(u => <option key={u} value={u}>{u}</option>)}
           </select>
-          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading || !cargoNome}>
-            {loading ? 'Buscando...' : 'Buscar'}
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={cargoSearch.isPending || !cargoNome}>
+            {cargoSearch.isPending ? 'Buscando...' : 'Buscar'}
           </button>
         </div>
-        {error && <p className="rp-error">{error}</p>}
+        {cargoSearch.error && <p className="rp-error">{(cargoSearch.error as Error).message}</p>}
       </div>
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>

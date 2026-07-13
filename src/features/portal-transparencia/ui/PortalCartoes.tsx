@@ -1,5 +1,5 @@
 import { useState, useCallback, type ChangeEvent } from 'react';
-import { api } from '@/shared/api/client';
+import { useCartoesSearch } from '../api/hooks';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface PortalCartoesProps {
@@ -18,30 +18,16 @@ export default function PortalCartoes({
   const [tipoCartao, setTipoCartao] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resultados, setResultados] = useState<any[]>([]);
   const { popupInfo, setPopupInfo } = useEntityInfo();
+  const cartoesSearch = useCartoesSearch();
 
-  const handleBuscar = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params: Record<string, string> = { pagina: '1' };
-      if (codigoOrgao) params.codigoOrgao = codigoOrgao;
-      if (cpfPortador) params.cpfPortador = cpfPortador;
-      if (cnpjFavorecido) params.cpfCnpjFavorecido = cnpjFavorecido;
-      if (tipoCartao) params.tipoCartao = tipoCartao;
-      if (dataInicio) params.dataTransacaoInicio = dataInicio;
-      if (dataFim) params.dataTransacaoFim = dataFim;
-      const json = await api.get<any[]>('/portal-transparencia/cartoes', params);
-      setResultados(json || []);
-      onPTSearchComplete?.('cartoes', { codigoOrgao, cpfPortador, cnpjFavorecido, tipoCartao, dataInicio, dataFim }, json);
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  }, [codigoOrgao, cpfPortador, cnpjFavorecido, tipoCartao, dataInicio, dataFim, onPTSearchComplete]);
+  const handleBuscar = useCallback(() => {
+    cartoesSearch.mutate({ codigoOrgao, cpfPortador, cnpjFavorecido, tipoCartao, dataInicio, dataFim }, {
+      onSuccess: (data) => {
+        onPTSearchComplete?.('cartoes', { codigoOrgao, cpfPortador, cnpjFavorecido, tipoCartao, dataInicio, dataFim }, data);
+      },
+    });
+  }, [codigoOrgao, cpfPortador, cnpjFavorecido, tipoCartao, dataInicio, dataFim, onPTSearchComplete, cartoesSearch]);
 
   const renderCards = (dados: any[]) => (
     <div className="bcard-grid">
@@ -97,11 +83,11 @@ export default function PortalCartoes({
           </select>
           <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="rp-search-input" />
           <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="rp-search-input" />
-          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading}>{loading ? 'Buscando...' : 'Buscar'}</button>
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={cartoesSearch.isPending}>{cartoesSearch.isPending ? 'Buscando...' : 'Buscar'}</button>
         </div>
-        {error && <p className="rp-error">{error}</p>}
+        {cartoesSearch.error && <p className="rp-error">{(cartoesSearch.error as Error).message}</p>}
       </div>
-      {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {cartoesSearch.data && cartoesSearch.data.length > 0 && <div className="rp-result">{renderCards(cartoesSearch.data)}</div>}
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );

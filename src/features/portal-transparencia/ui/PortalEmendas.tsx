@@ -1,5 +1,5 @@
 import { useState, useCallback, type ChangeEvent } from 'react';
-import { api } from '@/shared/api/client';
+import { useEmendasSearch } from '../api/hooks';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface PortalEmendasProps {
@@ -17,29 +17,16 @@ export default function PortalEmendas({
   const [nomeAutor, setNomeAutor] = useState('');
   const [tipoEmenda, setTipoEmenda] = useState('');
   const [ano, setAno] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resultados, setResultados] = useState<any[]>([]);
   const { popupInfo, setPopupInfo } = useEntityInfo();
+  const emendasSearch = useEmendasSearch();
 
-  const handleBuscar = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params: Record<string, string> = { pagina: '1' };
-      if (codigoEmenda) params.codigoEmenda = codigoEmenda;
-      if (numeroEmenda) params.numeroEmenda = numeroEmenda;
-      if (nomeAutor) params.nomeAutor = nomeAutor;
-      if (tipoEmenda) params.tipoEmenda = tipoEmenda;
-      if (ano) params.ano = ano;
-      const json = await api.get<any[]>('/portal-transparencia/emendas', params);
-      setResultados(json || []);
-      onPTSearchComplete?.('emendas', { codigoEmenda, numeroEmenda, nomeAutor, tipoEmenda, ano }, json);
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  }, [codigoEmenda, numeroEmenda, nomeAutor, tipoEmenda, ano, onPTSearchComplete]);
+  const handleBuscar = useCallback(() => {
+    emendasSearch.mutate({ codigoEmenda, numeroEmenda, nomeAutor, tipoEmenda, ano }, {
+      onSuccess: (data) => {
+        onPTSearchComplete?.('emendas', { codigoEmenda, numeroEmenda, nomeAutor, tipoEmenda, ano }, data);
+      },
+    });
+  }, [codigoEmenda, numeroEmenda, nomeAutor, tipoEmenda, ano, onPTSearchComplete, emendasSearch]);
 
   const renderCards = (dados: any[]) => (
     <div className="bcard-grid">
@@ -97,11 +84,11 @@ export default function PortalEmendas({
             <option value="COMISSAO">Comissão</option>
           </select>
           <input type="number" value={ano} onChange={e => setAno(e.target.value)} className="rp-search-input" placeholder="Ano" min="2000" max="2030" />
-          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading}>{loading ? 'Buscando...' : 'Buscar'}</button>
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={emendasSearch.isPending}>{emendasSearch.isPending ? 'Buscando...' : 'Buscar'}</button>
         </div>
-        {error && <p className="rp-error">{error}</p>}
+        {emendasSearch.error && <p className="rp-error">{(emendasSearch.error as Error).message}</p>}
       </div>
-      {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {emendasSearch.data && emendasSearch.data.length > 0 && <div className="rp-result">{renderCards(emendasSearch.data)}</div>}
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );

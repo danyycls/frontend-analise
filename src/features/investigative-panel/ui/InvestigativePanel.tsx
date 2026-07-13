@@ -38,7 +38,7 @@ import {
 import type { EntityDocument } from '@/domain'
 import type { InvestigationFilters } from '@/entities/investigation'
 import { useDiscoverySubscriber } from '@/shared/lib/entity-discovery'
-import { api } from '@/shared/api/client'
+import { apiP2 } from '@/shared/api/client'
 import { ENDPOINTS } from '@/shared/api/endpoints'
 import GraphCanvas from './GraphCanvas'
 import SidebarEntities from './SidebarEntities'
@@ -502,7 +502,7 @@ export default function InvestigativePanel() {
     }
 
     try {
-      const json = await api.post<any>('/busca/contexto', { licitacoes })
+      const json = await apiP2.post<any>('/busca/contexto', { licitacoes })
 
       dispatch(setLpDataCache({
         ...lpDataCache,

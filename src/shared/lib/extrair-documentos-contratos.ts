@@ -14,6 +14,9 @@ export interface LicitacaoInput {
   amparo_legal?: { codigo?: string; nome?: string; descricao?: string };
   orgao_entidade?: { cnpj?: string; razao_social?: string; esfera_id?: string; poder_id?: string };
   anormalidades?: AnormalidadeInput[];
+  objeto_contrato?: string;
+  data_vigencia_inicio?: string;
+  data_vigencia_fim?: string;
 }
 
 interface AnormalidadeInput {
@@ -161,6 +164,9 @@ function makeInput(
     numero_controle_pncp: ct.numeroControlePNCP || '',
     cpf_cnpj,
     socios,
+    objeto_contrato: objetoContrato(ct),
+    data_vigencia_inicio: ct.dataVigenciaInicio || ct.vigenciaInicio || '',
+    data_vigencia_fim: ct.dataVigenciaFim || ct.vigenciaFim || '',
     ...(anormalidades.length > 0 ? { anormalidades } : {}),
     ...extrairDadosContrato(ct),
   };

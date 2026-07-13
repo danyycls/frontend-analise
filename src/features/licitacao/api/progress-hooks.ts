@@ -17,7 +17,7 @@ export interface ProgressState {
   pct: number;
 }
 
-type AnaliseType = 'orgao' | 'publicacao';
+export type AnaliseType = 'orgao' | 'publicacao' | 'uf-municipio';
 
 const MAX_WS_RETRIES = 3;
 
@@ -27,7 +27,7 @@ export function useAnaliseProgress(
   total: number,
   onCancelar?: () => void
 ) {
-  const channel = tipo === 'publicacao' ? 'publicacao_analise' : 'orgao_analise';
+  const channel = tipo === 'publicacao' || tipo === 'uf-municipio' ? 'uf_municipio_analise' : 'orgao_analise';
 
   const [processed, setProcessed] = useState(0);
   const [success, setSuccess] = useState(0);
@@ -75,7 +75,7 @@ export function useAnaliseProgress(
             setErrors(ev.Errors ?? ev.errors ?? 0);
             break;
           case 'results':
-            setResults(ev.Results || []);
+            setResults(ev.results || []);
             break;
           case 'completed':
             setLog((prev) => [...prev, { type: 'completed', msg: 'Processamento concluído' }]);

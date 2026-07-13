@@ -1,35 +1,35 @@
+import { useEffect, useRef } from 'react';
 import { getTagColor } from './tagColors';
 import './AnomaliaCard.css';
 
-export interface AnomaliaDocumento {
-  id?: string;
-  job_id: string;
-  documento_rastrear: string;
-  nome: string;
-  origem: string;
-  numero_controle_pncp: string;
-  orgao_cnpj: string;
-  orgao_nome: string;
-  uf: string;
-  municipio: string;
-  data_publicacao_pncp?: string;
-  valor_total_estimado?: number;
-  valor_total_homologado?: number;
-  amparo_legal?: { codigo?: string; nome?: string; descricao?: string };
-  orgao_entidade?: { cnpj?: string; razao_social?: string; esfera_id?: string; poder_id?: string };
-  titulo: string;
-  tags: string[];
-  documentos_vinculos: any[];
-  created_at: string;
-}
+export type AnomaliaDocumento = Record<string, any>;
 
 interface Props {
   item: AnomaliaDocumento;
   onSelect: (item: AnomaliaDocumento) => void;
 }
 
+const CAMPOS_ESPERADOS_CARD = [
+  'descricao', 'tag', 'nome', 'fornecedor_documento',
+  'numero_controle_pncp', 'uf', 'municipio', 'categoria', 'tipo', 'gravidade',
+];
+
 export default function AnomaliaCard({ item, onSelect }: Props) {
-  const tituloLongo = item.titulo && item.titulo.length > 100;
+  const loggedRef = useRef(false);
+
+  useEffect(() => {
+    if (loggedRef.current) return;
+    loggedRef.current = true;
+
+    const camposPresentes = new Set(Object.keys(item));
+    const ausentes = CAMPOS_ESPERADOS_CARD.filter(c => !camposPresentes.has(c));
+    if (ausentes.length > 0) {
+      console.warn('[AnomaliaCard] campos ausentes no item:', ausentes.join(', '), '| presentes:', Object.keys(item).join(', '));
+    }
+  }, [item]);
+
+  const titulo = item.descricao || item.nome || item.fornecedor_documento || '-';
+  const tituloLongo = titulo.length > 100;
 
   return (
     <div className="tool-card anomalia-card" onClick={() => onSelect(item)}>
@@ -37,26 +37,24 @@ export default function AnomaliaCard({ item, onSelect }: Props) {
         className="anomalia-card-title"
         style={{ fontSize: tituloLongo ? '0.75rem' : '0.9rem' }}
       >
-        {item.titulo || item.nome || item.documento_rastrear}
+        {titulo}
       </div>
 
       <div className="anomalia-card-tags">
-        {(item.tags || []).map(tag => {
-          const cor = getTagColor(tag);
-          return (
-            <span
-              key={tag}
-              className="anomalia-card-tag"
-              style={{
-                background: cor + '22',
-                color: cor,
-                border: `1px solid ${cor}66`,
-              }}
-            >
-              {tag}
-            </span>
-          );
-        })}
+        {item.tag ? (
+          <span
+            className="anomalia-card-tag"
+            style={{
+              background: getTagColor(item.tag) + '22',
+              color: getTagColor(item.tag),
+              border: `1px solid ${getTagColor(item.tag)}66`,
+            }}
+          >
+            {item.tag}
+          </span>
+        ) : (
+          <span className="anomalia-card-muted">sem tag</span>
+        )}
       </div>
 
       <div className="anomalia-card-divider" />
@@ -68,10 +66,10 @@ export default function AnomaliaCard({ item, onSelect }: Props) {
             {item.numero_controle_pncp}
           </div>
         )}
-        {item.orgao_nome && (
+        {item.nome && (
           <div>
-            <span className="anomalia-card-muted">🏛 </span>
-            {item.orgao_nome}
+            <span className="anomalia-card-muted">👤 </span>
+            {item.nome}
           </div>
         )}
         <div>
@@ -79,17 +77,13 @@ export default function AnomaliaCard({ item, onSelect }: Props) {
           {item.uf || '-'}{item.municipio ? ` - ${item.municipio}` : ''}
         </div>
         <div>
-          <span className="anomalia-card-muted">🔗 </span>
-          {(() => {
-            const docs = item.documentos_vinculos || [];
-            const total = docs.reduce((sum, d) => sum + (d.vinculos?.length || 0), 0);
-            return `${total} vínculo(s)`;
-          })()}
+          <span className="anomalia-card-muted">🏷 </span>
+          {item.categoria || item.tipo || '-'}
         </div>
       </div>
 
       <div className="anomalia-card-date">
-        🕐 {item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : '-'}
+        ⚠ {item.gravidade || '-'}
       </div>
     </div>
   );

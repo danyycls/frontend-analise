@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
 import { api } from '@/shared/api/client';
+import { useServidoresSearch } from '../api/hooks';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 interface PortalServidoresProps {
@@ -17,15 +18,13 @@ export default function PortalServidores({
   const [codigoOrgao, setCodigoOrgao] = useState('');
   const [nomeOrgao, setNomeOrgao] = useState('');
   const [nome, setNome] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resultados, setResultados] = useState<any[]>([]);
   const { popupInfo, setPopupInfo } = useEntityInfo();
   const [orgaosSugestoes, setOrgaosSugestoes] = useState<any[]>([]);
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
   const [buscandoOrgaos, setBuscandoOrgaos] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sugestoesRef = useRef<HTMLDivElement>(null);
+  const servidoresSearch = useServidoresSearch();
 
   useEffect(() => {
     const handleClickFora = (e: MouseEvent) => {
@@ -75,26 +74,13 @@ export default function PortalServidores({
     setMostrarSugestoes(false);
   }, []);
 
-  const handleBuscar = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params: Record<string, string> = {};
-      if (tipoBusca === 'por-cpf' && cpf) params.cpf = cpf;
-      else if (tipoBusca === 'por-orgao' && codigoOrgao) params.orgaoServidorLotacao = codigoOrgao;
-      else if (tipoBusca === 'geral') {
-        if (nome) params.nome = nome;
-        if (cpf) params.cpf = cpf;
-      }
-      const json = await api.get<any>('/portal-transparencia/servidores', params);
-      const data = Array.isArray(json) ? json : [json].filter(Boolean);
-      setResultados(data);
-      onPTSearchComplete?.('servidores', { tipoBusca, cpf, codigoOrgao, nome, nomeOrgao }, data);
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  }, [tipoBusca, cpf, codigoOrgao, nome, nomeOrgao, onPTSearchComplete]);
+  const handleBuscar = useCallback(() => {
+    servidoresSearch.mutate({ tipoBusca, cpf, codigoOrgao, nome }, {
+      onSuccess: (data) => {
+        onPTSearchComplete?.('servidores', { tipoBusca, cpf, codigoOrgao, nome, nomeOrgao }, data);
+      },
+    });
+  }, [tipoBusca, cpf, codigoOrgao, nome, nomeOrgao, onPTSearchComplete, servidoresSearch]);
 
   const renderCards = (dados: any[]) => (
     <div className="bcard-grid">
@@ -175,11 +161,11 @@ export default function PortalServidores({
               <input type="text" value={cpf} onChange={e => setCpf(e.target.value)} className="rp-search-input" placeholder="CPF (opcional)" />
             </>
           )}
-          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading}>{loading ? 'Buscando...' : 'Buscar'}</button>
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={servidoresSearch.isPending}>{servidoresSearch.isPending ? 'Buscando...' : 'Buscar'}</button>
         </div>
-        {error && <p className="rp-error">{error}</p>}
+        {servidoresSearch.error && <p className="rp-error">{(servidoresSearch.error as Error).message}</p>}
       </div>
-      {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {servidoresSearch.data && servidoresSearch.data.length > 0 && <div className="rp-result">{renderCards(servidoresSearch.data)}</div>}
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );

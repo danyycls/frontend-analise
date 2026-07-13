@@ -1,8 +1,7 @@
-import { useState, useCallback, useRef, useEffect, type KeyboardEvent } from 'react';
-import { api } from '@/shared/api/client';
+import { useState, useCallback, useEffect, type KeyboardEvent } from 'react';
 import { fmtDoc } from '@/shared/lib/formatters';
-import { ENDPOINTS } from '@/shared/api/endpoints';
 import { RPResultView } from './RPResultView';
+import { useEmpresasSearch } from '../api/hooks';
 import type { TseResultItem, TseSavedItem } from '../model/types';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
@@ -28,12 +27,10 @@ export default function RelacoesPoliticas({
   onRPAbrirSalvo,
 }: RelacoesPoliticasProps) {
   const [cnpj, setCnpj] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [mostrarSalvas, setMostrarSalvas] = useState(savedList && savedList.length > 0);
   const [rpSalvo, setRpSalvo] = useState<Record<number, boolean>>({});
   const { popupInfo, setPopupInfo } = useEntityInfo();
-  const abortRef = useRef<AbortController | null>(null);
+  const empresasSearch = useEmpresasSearch();
 
   useEffect(() => {
     if (savedList && savedList.length > 0) {
@@ -41,33 +38,15 @@ export default function RelacoesPoliticas({
     }
   }, [savedList]);
 
-  const handleBuscar = useCallback(async () => {
+  const handleBuscar = useCallback(() => {
     const digits = cnpj.replace(/\D/g, '');
-    if (digits.length !== 14) {
-      setError('Informe um CNPJ válido com 14 dígitos.');
-      return;
-    }
-
-    if (abortRef.current) abortRef.current.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const json = await api.post(ENDPOINTS.TSE_RELACOES, { cnpj: digits });
-      if (controller.signal.aborted) return;
-      onRPSearchComplete?.('empresas', digits, json);
-    } catch (err: any) {
-      if (err.name === 'AbortError') return;
-      setError(err.message);
-    }
-    if (!controller.signal.aborted) {
-      setLoading(false);
-      abortRef.current = null;
-    }
-  }, [cnpj, onRPSearchComplete]);
+    if (digits.length !== 14) return;
+    empresasSearch.mutate(digits, {
+      onSuccess: (data) => {
+        onRPSearchComplete?.('empresas', digits, data);
+      },
+    });
+  }, [cnpj, onRPSearchComplete, empresasSearch]);
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') handleBuscar();
@@ -130,11 +109,11 @@ export default function RelacoesPoliticas({
             onKeyDown={handleKeyDown}
             maxLength={18}
           />
-          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading || cnpjAtual.length !== 14}>
-            {loading ? 'Buscando...' : 'Buscar'}
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={empresasSearch.isPending || cnpjAtual.length !== 14}>
+            {empresasSearch.isPending ? 'Buscando...' : 'Buscar'}
           </button>
         </div>
-        {error && <p className="rp-error">{error}</p>}
+        {empresasSearch.error && <p className="rp-error">{(empresasSearch.error as Error).message}</p>}
       </div>
 
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}

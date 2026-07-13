@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { api } from '@/shared/api/client';
+import { apiP2 } from '@/shared/api/client';
 import { extrairDocumentosDosContratos } from '@/shared/lib/extrair-documentos-contratos';
 import './LigacaoPolitica.css';
 
@@ -628,7 +628,7 @@ export default function LigacaoPolitica({
     setError(null);
     setEtapa('buscando');
     try {
-      const json = await api.post<any>(`/busca/contexto`, { licitacoes }, { signal: controller.signal });
+      const json = await apiP2.post<any>(`/busca/contexto`, { licitacoes }, { signal: controller.signal });
       if (controller.signal.aborted) return;
 
       const idAtual = currentId.current;

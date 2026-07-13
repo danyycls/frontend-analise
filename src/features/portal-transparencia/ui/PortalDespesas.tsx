@@ -1,5 +1,5 @@
 import { useState, useCallback, type ChangeEvent } from 'react';
-import { api } from '@/shared/api/client';
+import { useDespesasSearch } from '../api/hooks';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
 const UFS_LIST = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
@@ -19,35 +19,16 @@ export default function PortalDespesas({
   const [codigoOrgao, setCodigoOrgao] = useState('');
   const [nomeFavorecido, setNomeFavorecido] = useState('');
   const [uf, setUf] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resultados, setResultados] = useState<any[]>([]);
   const { popupInfo, setPopupInfo } = useEntityInfo();
+  const despesasSearch = useDespesasSearch();
 
-  const handleBuscar = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let endpoint = '/portal-transparencia/despesas/recursos-recebidos';
-      const params: Record<string, string> = { pagina: '1' };
-      if (tipoBusca === 'recursos-recebidos') {
-        if (ano) { params.mesAnoInicio = `${ano}-01`; params.mesAnoFim = `${ano}-12`; }
-        if (nomeFavorecido) params.nomeFavorecido = nomeFavorecido;
-        if (uf) params.uf = uf;
-      } else if (tipoBusca === 'por-orgao') {
-        endpoint = '/portal-transparencia/despesas/por-orgao';
-        if (ano) params.ano = ano;
-        if (codigoOrgao) params.orgao = codigoOrgao;
-      }
-      const json = await api.get<any>(endpoint, params);
-      const data = Array.isArray(json) ? json : [json].filter(Boolean);
-      setResultados(data);
-      onPTSearchComplete?.('despesas', { tipoBusca, ano, codigoOrgao, nomeFavorecido, uf }, data);
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  }, [tipoBusca, ano, codigoOrgao, nomeFavorecido, uf, onPTSearchComplete]);
+  const handleBuscar = useCallback(() => {
+    despesasSearch.mutate({ tipoBusca, ano, codigoOrgao, nomeFavorecido, uf }, {
+      onSuccess: (data) => {
+        onPTSearchComplete?.('despesas', { tipoBusca, ano, codigoOrgao, nomeFavorecido, uf }, data);
+      },
+    });
+  }, [tipoBusca, ano, codigoOrgao, nomeFavorecido, uf, onPTSearchComplete, despesasSearch]);
 
   const renderCards = (dados: any[]) => (
     <div className="bcard-grid">
@@ -108,11 +89,11 @@ export default function PortalDespesas({
             </>
           )}
           {tipoBusca === 'por-orgao' && <input type="text" value={codigoOrgao} onChange={e => setCodigoOrgao(e.target.value)} className="rp-search-input" placeholder="Código do órgão" />}
-          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading}>{loading ? 'Buscando...' : 'Buscar'}</button>
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={despesasSearch.isPending}>{despesasSearch.isPending ? 'Buscando...' : 'Buscar'}</button>
         </div>
-        {error && <p className="rp-error">{error}</p>}
+        {despesasSearch.error && <p className="rp-error">{(despesasSearch.error as Error).message}</p>}
       </div>
-      {resultados.length > 0 && <div className="rp-result">{renderCards(resultados)}</div>}
+      {despesasSearch.data && despesasSearch.data.length > 0 && <div className="rp-result">{renderCards(despesasSearch.data)}</div>}
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>
   );

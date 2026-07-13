@@ -1,13 +1,17 @@
-// @ts-nocheck
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
-import { setAbaAtiva, setFormAberto, setLicitacaoForm, type LicitacaoFormState } from '@/app/store/slices/navigationSlice';
-import { addConsulta, removeConsulta as removeConsultaAction, setConsultas, setActiveJob } from '@/app/store/slices/consultaSlice';
+import { setAbaAtiva, setFormAberto } from '@/app/store/slices/navigationSlice';
+import {
+  addConsulta, removeConsulta as removeConsultaAction,
+  addToFila, removeFromFila,
+  setProgresso, resetProgresso,
+} from '@/app/store/slices/consultaSlice';
+import type { FilaItem } from '@/app/store/slices/consultaSlice';
 import { addSubTab, setSubTabAtiva } from '@/app/store/slices/ligacaoPoliticaSlice';
-import Formulario from '@/features/licitacao/ui/Formulario';
-import FormularioPublicacao from '@/features/licitacao/ui/FormularioPublicacao';
+import FormConsulta from '@/features/licitacao/ui/FormConsulta';
+import type { ItemBusca, ParametrosBusca } from '@/features/licitacao/ui/FormConsulta';
 import Progresso from '@/features/licitacao/ui/Progresso';
 import Resultados from '@/features/ligacao-politica/ui/Resultados';
 import { JanelaPopup, ContratoDetalhes } from '@/features/ligacao-politica/ui/Resultados';
@@ -18,53 +22,30 @@ import { LicitacaoDefinicao, LicitacaoImportancia, LicitacaoDispensa } from '@/f
 import ConvenioSelector from '@/widgets/ConvenioSelector/ConvenioSelector';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 import { api } from '@/shared/api/client';
+import { ENDPOINTS } from '@/shared/api/endpoints';
 import { fmtDoc, normalizarCNPJ } from '@/shared/lib/formatters';
+import { store } from '@/app/store';
+import { WS_BASE_URL } from '@/shared/config';
 import './LicitacoesPage.css';
-
-let uid = 0;
-
-interface FilaItem {
-  jobId: string;
-  meta: Record<string, unknown>;
-}
 
 export default function LicitacoesPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const formAberto = useAppSelector((s) => s.navigation.formAberto);
-  const tipoBusca = useAppSelector((s) => s.navigation.tipoBusca);
-  const licitacaoForm = useAppSelector((s) => s.navigation.licitacaoForm);
-
-  const formState = useMemo(() => ({
-    tipo: licitacaoForm.tipo,
-    uf: licitacaoForm.uf,
-    codigoMunicipio: licitacaoForm.codigoMunicipio,
-    municipioNome: licitacaoForm.municipioNome,
-    ano: licitacaoForm.ano,
-    trimestres: licitacaoForm.trimestres,
-    modalidade: licitacaoForm.modalidade,
-  }), [licitacaoForm]);
-
   const consultas = useAppSelector((s) => s.consulta.consultas);
-  const consultasFiltradas = useMemo(
-    () => consultas.filter(c => tipoBusca === 'publicacao' ? c.meta.tipo === 'publicacao' : c.meta.tipo !== 'publicacao'),
-    [consultas, tipoBusca]
-  );
-  const activeJob = useAppSelector((s) => s.consulta.activeJob);
+  const progresso = useAppSelector((s) => s.consulta.progresso);
+  const fila = useAppSelector((s) => s.consulta.fila);
   const { popupInfo, setPopupInfo } = useEntityInfo();
   const [pncpDestacado, setPncpDestacado] = useState(null);
   const [popup, setPopup] = useState(null);
   const [entidadeCache, setEntidadeCache] = useState({});
+  const [cnpjsSelecionados, setCnpjsSelecionados] = useState<string[]>([]);
+  const [view, setView] = useState<'form' | 'progress'>('form');
 
-  // ConvenioSelector state (persisted in Redux so it survives tab navigation)
-  const cnpjsSelecionados = useAppSelector((s) => s.navigation.licitacaoForm.cnpjsSelecionados);
+  const cancelRef = useRef(false);
+  const processandoRef = useRef(false);
 
-  // Sequential trimestre processing (refs to avoid closure issues)
-  const filaRef = useRef<FilaItem[]>([]);
-  const acumuladoRef = useRef<any[]>([]);
-  const [filaCount, setFilaCount] = useState(0);
-
-  const KEY_TO_TIPO = {
+  const KEY_TO_TIPO: Record<string, string> = {
     sq_candidato: 'candidato',
     sq_despesa: 'despesa',
     sq_receita: 'receita',
@@ -74,67 +55,257 @@ export default function LicitacoesPage() {
     cpf_cnpj_doador: 'doador',
   };
 
-  // Start processing next job in queue
-  const processarProximo = useCallback(() => {
-    const fila = filaRef.current;
-    if (fila.length === 0) {
-      const acumulado = acumuladoRef.current;
-      if (acumulado.length > 0) {
-        const nova = {
-          id: ++uid,
-          timestamp: new Date().toISOString(),
-          meta: {
-            ...acumulado[0]?.meta,
-            trimestresConcluidos: true,
-            tipo: 'orgao',
-          },
-          resultados: acumulado,
-        };
-        dispatch(addConsulta(nova));
+  function trimestreParaDatas(ano: string, trimestre: number): { dataInicial: string; dataFinal: string } {
+    switch (trimestre) {
+      case 1: return { dataInicial: `${ano}0101`, dataFinal: `${ano}0331` };
+      case 2: return { dataInicial: `${ano}0401`, dataFinal: `${ano}0630` };
+      case 3: return { dataInicial: `${ano}0701`, dataFinal: `${ano}0930` };
+      default: return { dataInicial: `${ano}1001`, dataFinal: `${ano}1231` };
+    }
+  }
+
+  function listenWebSocket(jobId: string, channel: string): Promise<any[] | null> {
+    return new Promise<any[] | null>((resolve) => {
+      const ws = new WebSocket(`${WS_BASE_URL}/ws`);
+      let resolved = false;
+
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          ws.close();
+          resolve(null);
+        }
+      }, 120000);
+
+      const finalizar = (val: any[] | null) => {
+        clearTimeout(timeout);
+        clearInterval(checkCancel);
+        if (!resolved) {
+          resolved = true;
+          ws.close();
+          resolve(val);
+        }
+      };
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ channel, job_id: jobId }));
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const ev = JSON.parse(e.data);
+          if (ev.type === 'results') {
+            finalizar(ev.results || []);
+          }
+          if (ev.type === 'error') {
+            finalizar(null);
+          }
+          if (ev.type === 'done' && !resolved) {
+            finalizar(null);
+          }
+        } catch (_) {}
+      };
+
+      ws.onerror = () => {
+        finalizar(null);
+      };
+
+      cancelRef.current = false;
+      const checkCancel = setInterval(() => {
+        if (cancelRef.current && !resolved) {
+          finalizar(null);
+        }
+      }, 200);
+    });
+  }
+
+  async function buscarContratosUFMunicipio(tipo: string, uf: string, codigoMunicipio: string, ano: string, trimestres: number[]): Promise<{ resultados: any[]; totalContratos: number }> {
+    const todosResultados: any[] = [];
+    let totalContratos = 0;
+    dispatch(setProgresso({ fetchProgresso: { concluidos: 0, total: trimestres.length } }));
+    for (let i = 0; i < trimestres.length; i++) {
+      if (cancelRef.current) break;
+      const t = trimestres[i];
+      const label = tipo === 'uf' ? uf : codigoMunicipio;
+      dispatch(setProgresso({ stage: 'buscando' }));
+
+      const { dataInicial, dataFinal } = trimestreParaDatas(ano, t);
+
+      const resp = await api.post<{ jobId: string }>(ENDPOINTS.UF_MUNICIPIO_ANALISE_START, {
+        tipo,
+        uf,
+        codigo_municipio_ibge: tipo === 'municipio' ? codigoMunicipio : '',
+        data_inicial: dataInicial,
+        data_final: dataFinal,
+      });
+
+      const results: any[] = (await listenWebSocket(resp.jobId, 'uf_municipio_analise')) || [];
+      for (const r of results) {
+        totalContratos += (r.contratos || []).length;
       }
-      acumuladoRef.current = [];
-      dispatch(setActiveJob(null));
+      todosResultados.push(...results);
+      dispatch(setProgresso({ fetchProgresso: { concluidos: i + 1, total: trimestres.length } }));
+    }
+    return { resultados: todosResultados, totalContratos };
+  }
+
+  async function buscarContratosOrgao(cnpj: string, ano: string, trimestres: number[]): Promise<{ resultados: any[]; totalContratos: number }> {
+    const todosResultados: any[] = [];
+    let totalContratos = 0;
+    dispatch(setProgresso({ fetchProgresso: { concluidos: 0, total: trimestres.length } }));
+    for (let i = 0; i < trimestres.length; i++) {
+      if (cancelRef.current) break;
+      const t = trimestres[i];
+      dispatch(setProgresso({ stage: 'buscando' }));
+
+      const { dataInicial, dataFinal } = trimestreParaDatas(ano, t);
+
+      const resp = await api.post<{ jobId: string }>(ENDPOINTS.ORGAO_ANALISE_START, {
+        cnpjs: [cnpj],
+        dataInicial,
+        dataFinal,
+      });
+
+      const results: any[] = (await listenWebSocket(resp.jobId, 'orgao_analise')) || [];
+      for (const r of results) {
+        totalContratos += (r.contratos || []).length;
+      }
+      todosResultados.push(...results);
+      dispatch(setProgresso({ fetchProgresso: { concluidos: i + 1, total: trimestres.length } }));
+    }
+    return { resultados: todosResultados, totalContratos };
+  }
+
+  async function handleFormSubmit(itens: ItemBusca[], params: ParametrosBusca) {
+    const sels = params.trimestres.length > 0 ? params.trimestres : [1, 2, 3, 4];
+    const now = Date.now();
+    let idx = 0;
+
+    for (const item of itens) {
+      const { dataInicial, dataFinal } = trimestreParaDatas(params.ano, sels[0]);
+      const fi: FilaItem = {
+        id: now + idx++,
+        tipo: item.tipo,
+        valor: item.valor,
+        uf: item.uf,
+        nome: item.nome,
+        ano: params.ano,
+        trimestres: sels,
+        dataInicial,
+        dataFinal,
+      };
+      dispatch(addToFila(fi));
+    }
+
+    if (!processandoRef.current) {
+      proximaFila();
+    }
+  }
+
+  async function processarItem(item: FilaItem) {
+    cancelRef.current = false;
+
+    dispatch(setProgresso({
+      stage: 'buscando',
+      concluido: false,
+      cancelado: false,
+      processed: 0,
+      success: 0,
+      errors: 0,
+      log: [],
+      results: null,
+      ultimoEvento: null,
+      fetchProgresso: null,
+    }));
+
+    try {
+      let resultados: any[];
+      let totalContratos: number;
+      if (item.tipo === 'orgao') {
+        const res = await buscarContratosOrgao(item.valor, item.ano, item.trimestres);
+        resultados = res.resultados;
+        totalContratos = res.totalContratos;
+      } else if (item.tipo === 'municipio') {
+        const res = await buscarContratosUFMunicipio('municipio', item.uf || '', item.valor, item.ano, item.trimestres);
+        resultados = res.resultados;
+        totalContratos = res.totalContratos;
+      } else {
+        const res = await buscarContratosUFMunicipio('uf', item.valor, '', item.ano, item.trimestres);
+        resultados = res.resultados;
+        totalContratos = res.totalContratos;
+      }
+
+      if (cancelRef.current) {
+        processandoRef.current = false;
+        proximaFila();
+        return;
+      }
+
+      dispatch(setProgresso({ stage: 'concluido', concluido: true }));
+
+      const consultaId = Date.now();
+      dispatch(addConsulta({
+        id: consultaId,
+        timestamp: new Date().toISOString(),
+        meta: {
+          tipo: item.tipo,
+          valor: item.valor,
+          uf: item.uf,
+          nome: item.nome,
+          ano: item.ano,
+          trimestres: item.trimestres,
+          total: totalContratos,
+        },
+        resultados,
+      }));
+
+      processandoRef.current = false;
+      proximaFila();
+    } catch (err: any) {
+      dispatch(setProgresso({ stage: 'cancelado', cancelado: true }));
+      processandoRef.current = false;
+      proximaFila();
+    }
+  }
+
+  function proximaFila() {
+    const state = store.getState().consulta;
+    if (state.fila.length === 0) {
+      notifyComplete();
       return;
     }
-    const next = fila[0];
-    dispatch(setActiveJob({ jobId: next.jobId, meta: { ...next.meta, tipo: 'orgao' } }));
-  }, [dispatch]);
 
-  // Called when a job completes
-  const handleFinalizar = useCallback((resultados, meta, paginasErro) => {
-    const novos = resultados || [];
-    const acumulado = [...acumuladoRef.current, ...novos];
-    acumuladoRef.current = acumulado;
+    const item = state.fila[0];
+    dispatch(removeFromFila(item.id));
+    processandoRef.current = true;
+    processarItem(item);
+  }
 
-    // Remove the completed job from queue (always the first)
-    const fila = filaRef.current;
-    if (fila.length > 0) {
-      fila.shift();
-      filaRef.current = fila;
-      setFilaCount(fila.length);
+  function notifyComplete() {
+    const success = consultas.length > 0 ? consultas[0].meta?.total || 0 : 0;
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification('Consultas PNCP concluídas', {
+          body: `${consultas.length} consulta(s) processadas`,
+        });
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then((perm) => {
+          if (perm === 'granted') {
+            new Notification('Consultas PNCP concluídas', {
+              body: `${consultas.length} consulta(s) processadas`,
+            });
+          }
+        });
+      }
     }
+  }
 
-    // Schedule next
-    setTimeout(() => processarProximo(), 0);
-  }, [processarProximo]);
-
-  // Called by Formulario to add a new job to the queue
-  const handleEnfileirar = useCallback((jobId: string, meta: Record<string, unknown>) => {
-    const fila = filaRef.current;
-    const isFirst = fila.length === 0;
-    fila.push({ jobId, meta: { ...meta, jobId } });
-    filaRef.current = fila;
-    setFilaCount(fila.length);
-
-    // If nothing is processing, start this one
-    if (isFirst) {
-      dispatch(setActiveJob({ jobId, meta: { ...meta, tipo: 'orgao' } }));
-    }
-  }, [dispatch]);
-
-  const handleIniciar = useCallback((jobId, meta) => {
-    dispatch(setActiveJob({ jobId, meta: { ...meta, tipo: 'orgao' } }));
-  }, [dispatch]);
+  async function handleCancelar() {
+    cancelRef.current = true;
+    dispatch(setProgresso({ stage: 'cancelado', cancelado: true }));
+    processandoRef.current = false;
+    proximaFila();
+  }
 
   const handleApagar = useCallback((id) => {
     dispatch(removeConsultaAction(id));
@@ -147,51 +318,6 @@ export default function LicitacoesPage() {
     navigate('/ligacao-politica');
   }, [dispatch, navigate]);
 
-  const handleCancelarJob = useCallback(() => {
-    dispatch(setActiveJob(null));
-    dispatch(setFormAberto(true));
-    filaRef.current = [];
-    acumuladoRef.current = [];
-    setFilaCount(0);
-  }, [dispatch]);
-
-  const handlePublicacaoResultados = useCallback((dados: any[], meta: Record<string, unknown>) => {
-    const grouped = new Map<string, any[]>();
-    dados.forEach((c) => {
-      const key = c.cnpjOrgao || c.orgaoEntidade?.cnpj || c.nomeOrgao || 'desconhecido';
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key)!.push(c);
-    });
-
-    const resultados = Array.from(grouped.entries()).map(([key, contratos]) => {
-      const primeiro = contratos[0];
-      return {
-        orgao: {
-          cnpj: key,
-          razaoSocial: primeiro?.nomeOrgao || primeiro?.orgaoEntidade?.razaoSocial || key,
-        },
-        contratos,
-        resumo: {
-          totalContratos: contratos.length,
-          totalEmpresas: new Set(contratos.map((c) => c.fornecedor?.cnpj || c.niFornecedor).filter(Boolean)).size,
-          valorTotalContratos: contratos.reduce((sum, c) => sum + (c.valorGlobal ?? c.valorTotalEstimado ?? 0), 0),
-        },
-        periodo: {
-          dataInicial: `${meta.ano}-01-01`,
-          dataFinal: `${meta.ano}-12-31`,
-        },
-      };
-    });
-
-    const nova = {
-      id: ++uid,
-      timestamp: new Date().toISOString(),
-      meta,
-      resultados,
-    };
-    dispatch(addConsulta(nova));
-  }, [dispatch]);
-
   const handleIdClickFromAnalise = useCallback((key, value) => {
     const tipo = KEY_TO_TIPO[key];
     if (tipo) {
@@ -201,13 +327,13 @@ export default function LicitacoesPage() {
     }
   }, []);
 
-  const handleFormChange = useCallback((state: Partial<LicitacaoFormState>) => {
-    dispatch(setLicitacaoForm(state));
-  }, [dispatch]);
+  const handleAtualizarEntidadeCache = useCallback((chave, data) => {
+    setEntidadeCache(prev => ({ ...prev, [chave]: data }));
+  }, []);
 
   const handleLicitacaoPopup = useCallback((pncp) => {
     for (const c of consultas) {
-      for (const r of (c.resultados || [])) {
+      for (const r of (c.resultados || []) as any[]) {
         for (const ct of (r.contratos || [])) {
           if (ct.numeroControlePNCP === pncp) {
             setPopup({ tipo: 'contrato', data: ct, titulo: `Licitação ${pncp}` });
@@ -219,45 +345,13 @@ export default function LicitacoesPage() {
     setPopup({ tipo: 'contrato', data: { numeroControlePNCP: pncp }, titulo: `Licitação ${pncp}` });
   }, [consultas]);
 
-  // ConvenioSelector handlers
-  const cnpjsSelecionadosNorm = useMemo(
-    () => cnpjsSelecionados.map(normalizarCNPJ),
-    [cnpjsSelecionados]
-  );
-
-  const handleToggleCnpj = useCallback((cnpj: string) => {
-    const norm = normalizarCNPJ(cnpj);
-    dispatch(setLicitacaoForm({
-      cnpjsSelecionados: cnpjsSelecionadosNorm.includes(norm)
-        ? cnpjsSelecionados.filter((_, i) => normalizarCNPJ(cnpjsSelecionados[i]) !== norm)
-        : [...cnpjsSelecionados, cnpj],
-    }));
-  }, [dispatch, cnpjsSelecionados, cnpjsSelecionadosNorm]);
-
-  const handleSelectAll = useCallback((cnpjs: string[]) => {
-    const set = new Set(cnpjsSelecionadosNorm);
-    const novos = cnpjs.filter(c => !set.has(normalizarCNPJ(c)));
-    dispatch(setLicitacaoForm({ cnpjsSelecionados: [...cnpjsSelecionados, ...novos] }));
-  }, [dispatch, cnpjsSelecionados, cnpjsSelecionadosNorm]);
-
-  const handleDeselectAll = useCallback(() => {
-    dispatch(setLicitacaoForm({ cnpjsSelecionados: [] }));
-  }, [dispatch]);
-
-  const handleRemoverCnpjExterno = useCallback((cnpj: string) => {
-    const norm = normalizarCNPJ(cnpj);
-    dispatch(setLicitacaoForm({
-      cnpjsSelecionados: cnpjsSelecionados.filter(c => normalizarCNPJ(c) !== norm),
-    }));
-  }, [dispatch, cnpjsSelecionados]);
-
-  const totalOrgaos = consultasFiltradas.reduce((acc, c) => acc + (c.resultados?.length || 0), 0);
+  const totalOrgaos = consultas.reduce((acc, c) => acc + (c.resultados?.length || 0), 0);
 
   const licitacaoSections = [
     { id: 'licitacoes-header', label: 'Início' },
     { id: 'licitacoes-cards', label: 'Entenda a Licitação' },
     { id: 'licitacoes-consulta', label: 'Faça sua Consulta' },
-    ...(consultasFiltradas.length > 0 ? [{ id: 'licitacoes-resultados', label: 'Resultados' }] : []),
+    ...(consultas.length > 0 ? [{ id: 'licitacoes-resultados', label: 'Resultados' }] : []),
   ];
 
   useEffect(() => {
@@ -266,6 +360,8 @@ export default function LicitacoesPage() {
       return () => clearTimeout(timer);
     }
   }, [pncpDestacado]);
+
+  const showProgress = progresso.stage !== 'idle' && !progresso.concluido && !progresso.cancelado;
 
   return (
     <div className="tab-page">
@@ -295,33 +391,93 @@ export default function LicitacoesPage() {
           </div>
 
           <div className="licitacoes-form-wrapper" id="licitacoes-consulta">
-            {activeJob && filaCount > 0 ? (
-              <div style={{ width: '100%' }}>
-                {filaCount > 1 && (
-                  <div className="progresso-card" style={{ marginBottom: 12, padding: '8px 16px', textAlign: 'center' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      Trimestres restantes: {filaCount - 1}
+            {view === 'progress' && (progresso.stage === 'buscando' || progresso.stage === 'processando') ? (
+              <>
+                <div style={{ maxWidth: 960, marginBottom: 16 }}>
+                  <button className="btn btn-sm" onClick={() => setView('form')} style={{ borderColor: 'var(--text-muted)', color: 'var(--text-muted)' }}>
+                    ← Voltar ao formulário
+                  </button>
+                  <button className="btn btn-sm btn-outline-danger" onClick={handleCancelar} style={{ marginLeft: 8 }}>
+                    Cancelar
+                  </button>
+                </div>
+                <div style={{ width: '100%' }}>
+                  <Progresso
+                    onCancelar={handleCancelar}
+                    onNovaAnalise={() => { dispatch(setProgresso({ stage: 'idle' })); setView('form'); }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                {(progresso.stage === 'buscando' || progresso.stage === 'processando') && (
+                  <div style={{
+                    maxWidth: 960, marginBottom: 16,
+                    padding: '10px 16px',
+                    background: 'rgba(232, 197, 71, 0.1)',
+                    border: '1px solid rgba(232, 197, 71, 0.3)',
+                    borderRadius: 6,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    fontFamily: 'var(--font-mono)', fontSize: '0.78rem',
+                  }}>
+                    <span>
+                      <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#e8c547', marginRight: 8, animation: 'pulse 1.5s infinite' }}></span>
+                      Consulta em andamento
                     </span>
+                    <button className="btn btn-sm" onClick={() => setView('progress')} style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}>
+                      Ver Progresso
+                    </button>
                   </div>
                 )}
-                <Progresso
-                  jobId={activeJob.jobId}
-                  total={activeJob.meta.total}
-                  meta={activeJob.meta}
-                  onFinalizar={handleFinalizar}
-                  onCancelar={handleCancelarJob}
-                  streamPath="/orgao/analise/stream"
-                />
-              </div>
-            ) : formAberto ? (
-              tipoBusca === 'orgao' ? (
+
                 <div className="licitacoes-layout-duas-colunas">
                   <div className="licitacoes-coluna-principal">
-                    <Formulario
-                      onIniciar={handleEnfileirar}
-                      cnpjsExternos={cnpjsSelecionados}
-                      onRemoverCnpjExterno={handleRemoverCnpjExterno}
-                    />
+                    {formAberto && (
+                      <FormConsulta
+                        onSubmit={handleFormSubmit}
+                        cnpjsSelecionados={cnpjsSelecionados}
+                        onCnpjsChange={setCnpjsSelecionados}
+                        submitLabel="Adicionar à Fila"
+                      />
+                    )}
+
+                    {fila.length > 0 && (
+                      <div className="card" style={{ marginTop: 16, padding: 16 }}>
+                        <h3 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-muted)', marginBottom: 12 }}>
+                          Fila de Consultas ({fila.length})
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {fila.map((item) => (
+                            <div key={item.id} style={{
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              padding: '8px 10px', background: 'var(--bg-elevated)', borderRadius: 6,
+                              fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
+                            }}>
+                              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>
+                                  {item.tipo === 'uf' ? 'UF' : item.tipo === 'municipio' ? 'Município' : 'Órgão'}
+                                </span>
+                                <span>{item.valor}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>{item.ano}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>
+                                  {(item.trimestres?.length ?? 0) > 0 ? `T${(item.trimestres ?? []).join(',T')}` : 'Todos'}
+                                </span>
+                              </div>
+                              <button className="btn btn-sm btn-outline-danger" onClick={() => dispatch(removeFromFila(item.id))}
+                                style={{ padding: '2px 8px', fontSize: '0.65rem' }}>
+                                Remover
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {!formAberto && fila.length === 0 && (
+                      <button className="btn btn-sm" onClick={() => dispatch(setFormAberto(true))}>
+                        + Nova Consulta
+                      </button>
+                    )}
                   </div>
                   <div className="licitacoes-coluna-lateral">
                     <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -332,44 +488,53 @@ export default function LicitacoesPage() {
                     </div>
                     <ConvenioSelector
                       cnpjsSelecionados={cnpjsSelecionados}
-                      onToggleCnpj={handleToggleCnpj}
-                      onSelectAll={handleSelectAll}
-                      onDeselectAll={handleDeselectAll}
+                      onToggleCnpj={(cnpj: string) => {
+                        const norm = normalizarCNPJ(cnpj);
+                        setCnpjsSelecionados(prev => {
+                          const prevNorm = prev.map(normalizarCNPJ);
+                          return prevNorm.includes(norm)
+                            ? prev.filter((_, i) => prevNorm[i] !== norm)
+                            : [...prev, cnpj];
+                        });
+                      }}
+                      onSelectAll={(cnpjs: string[]) => {
+                        setCnpjsSelecionados(prev => {
+                          const set = new Set(prev.map(normalizarCNPJ));
+                          const novos = cnpjs.filter(c => !set.has(normalizarCNPJ(c)));
+                          return [...prev, ...novos];
+                        });
+                      }}
+                      onDeselectAll={() => setCnpjsSelecionados([])}
                     />
                   </div>
                 </div>
-              ) : (
-                <div className="licitacoes-form-inner">
-                  <FormularioPublicacao
-                    onIniciar={handleIniciar}
-                    onResultados={handlePublicacaoResultados}
-                    formState={formState}
-                    onFormChange={handleFormChange}
-                  />
-                </div>
-              )
-            ) : null}
+              </>
+            )}
           </div>
 
-          {consultasFiltradas.length > 0 && (
+          {(progresso.concluido || progresso.cancelado || view === 'progress') && (
+            <div style={{ width: '100%', maxWidth: 960, marginTop: 16 }}>
+              <Progresso
+                onCancelar={handleCancelar}
+                onNovaAnalise={() => { dispatch(resetProgresso()); setView('form'); dispatch(setFormAberto(true)); }}
+              />
+            </div>
+          )}
+
+          {consultas.length > 0 && (
             <>
-              {(formAberto || (activeJob && filaCount > 0)) && <div className="licitacoes-section-divider" />}
+              <div className="licitacoes-section-divider" />
               <div className="licitacoes-content" id="licitacoes-resultados">
                 <div className="consultas-bar">
-                  {!formAberto && !activeJob && (
-                    <button className="btn btn-sm" onClick={() => dispatch(setFormAberto(true))}>
-                      + Nova Consulta
-                    </button>
-                  )}
-                  {consultasFiltradas.length > 0 && (
+                  {consultas.length > 0 && (
                     <span className="consultas-count">
-                      {consultasFiltradas.length} consulta{consultasFiltradas.length > 1 ? 's' : ''}
+                      {consultas.length} consulta{consultas.length > 1 ? 's' : ''}
                       {totalOrgaos > 0 && ` · ${totalOrgaos} orgaos`}
                     </span>
                   )}
                 </div>
 
-                {consultasFiltradas.map((consulta) => (
+                {consultas.map((consulta) => (
                   <ConsultaCard
                     key={consulta.id}
                     consulta={consulta}
@@ -394,7 +559,7 @@ export default function LicitacoesPage() {
       )}
       {popup && popup.tipo === 'entidade' && (
         <JanelaPopup titulo={`Entidade: ${fmtDoc(popup.chave)}`} onFechar={() => setPopup(null)}>
-          <EntityPopup tipo={KEY_TO_TIPO[popup.idKey]} chave={popup.chave} cache={entidadeCache} onCache={handleAtualizarEntidadeCache} />
+          <EntityPopup tipo={KEY_TO_TIPO[popup.idKey]} chave={popup.chave} cachedData={entidadeCache[popup.chave]} onLoaded={(data) => handleAtualizarEntidadeCache(popup.chave, data)} />
         </JanelaPopup>
       )}
     </div>
@@ -411,11 +576,11 @@ function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose, onLigacaoPo
 
   const titulo = isPublicacao
     ? `UF: ${consulta.meta.uf}${consulta.meta.municipioNome ? ' \u00b7 ' + consulta.meta.municipioNome : ''}`
-    : `${consulta.meta.cnpjs?.length || 0} CNPJs`;
+    : `${consulta.meta.valor || consulta.meta.cnpjs?.join(', ') || ''}`;
 
   const subtitulo = isPublicacao
     ? `${consulta.meta.ano} \u00b7 ${consulta.meta.trimestres?.length || 0} trimestre(s)`
-    : `${consulta.meta.dataInicial || '?'} a ${consulta.meta.dataFinal || '?'}`;
+    : `${consulta.meta.ano || ''}`;
 
   const resumo = `${totalOrgaos} \u00f3rg\u00e3o(s) \u00b7 ${totalContratos} contrato(s)`;
 
@@ -443,6 +608,8 @@ function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose, onLigacaoPo
             consultaMeta={consulta.meta}
             pncpDestacado={pncpDestacado}
             onIdClick={onIdClick}
+            onAnaliseDetalhada={undefined}
+            pncpComMatch={undefined}
           />
         </div>
       </div>,
@@ -504,6 +671,8 @@ function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose, onLigacaoPo
           consultaMeta={consulta.meta}
           pncpDestacado={pncpDestacado}
           onIdClick={onIdClick}
+          onAnaliseDetalhada={undefined}
+          pncpComMatch={undefined}
         />
       </div>
     </div>

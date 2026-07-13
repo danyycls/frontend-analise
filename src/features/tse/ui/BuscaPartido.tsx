@@ -2,6 +2,7 @@ import { useState, useEffect, type ChangeEvent } from 'react';
 import { api } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import { CandidateCard } from './CandidateCard';
+import { usePartidoSearch } from '../api/hooks';
 import type { TseResultItem, CandidatosResult, PartidoOption, OpcoesResult } from '../model/types';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 
@@ -21,30 +22,25 @@ export default function BuscaPartido({
   const [partidoId, setPartidoId] = useState('');
   const [eleito, setEleito] = useState('');
   const [uf, setUf] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { popupInfo, setPopupInfo } = useEntityInfo();
+  const partidoSearch = usePartidoSearch();
 
   useEffect(() => {
     api.get<OpcoesResult<PartidoOption>>(ENDPOINTS.TSE_PARTIDOS)
       .then(json => setPartidos(json.opcoes || []))
-      .catch(err => setError(err.message));
+      .catch(() => {});
   }, []);
 
-  async function handleBuscar() {
-    if (!partidoId) { setError('Selecione um partido'); return; }
-    setLoading(true);
-    setError(null);
-    try {
-      const body: Record<string, unknown> = { partido_id: partidoId };
-      if (eleito) body.eleito = eleito;
-      if (uf) body.sg_uf = uf;
-      const json = await api.post<CandidatosResult>(ENDPOINTS.TSE_CANDIDATOS, body);
-      onRPSearchComplete?.('partido', { filtro: { partidoId, eleito, uf } }, json);
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
+  function handleBuscar() {
+    if (!partidoId) return;
+    const body: Record<string, unknown> = { partido_id: partidoId };
+    if (eleito) body.eleito = eleito;
+    if (uf) body.sg_uf = uf;
+    partidoSearch.mutate(body, {
+      onSuccess: (data) => {
+        onRPSearchComplete?.('partido', { filtro: { partidoId, eleito, uf } }, data);
+      },
+    });
   }
 
   if (resultItem) {
@@ -100,11 +96,11 @@ export default function BuscaPartido({
             <option value="">Todas as UF</option>
             {UFS_LIST.map(u => <option key={u} value={u}>{u}</option>)}
           </select>
-          <button className="btn btn-sm" onClick={handleBuscar} disabled={loading || !partidoId}>
-            {loading ? 'Buscando...' : 'Buscar'}
+          <button className="btn btn-sm" onClick={handleBuscar} disabled={partidoSearch.isPending || !partidoId}>
+            {partidoSearch.isPending ? 'Buscando...' : 'Buscar'}
           </button>
         </div>
-        {error && <p className="rp-error">{error}</p>}
+        {partidoSearch.error && <p className="rp-error">{(partidoSearch.error as Error).message}</p>}
       </div>
       {popupInfo && <PopupInfo chave={popupInfo} onFechar={() => setPopupInfo(null)} />}
     </div>

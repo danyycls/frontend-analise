@@ -5,7 +5,6 @@ import { API_BASE_URL, WS_BASE_URL } from '@/shared/config';
 import DetalheMunicipio from './DetalheMunicipio';
 import RecursosMunicipioDetalhe from './RecursosMunicipioDetalhe';
 import ErrorBoundary from '@/shared/ui/ErrorBoundary/ErrorBoundary';
-import DevBanner from '@/shared/ui/DevBanner/DevBanner';
 import { PieChart, aggregateBy, topN, CHART_COLORS, fmtMoneyCompact, CHART_SIZE_MD, CHART_SIZE_LG } from './chart-utils';
 import DeputadoDetailView from '@/features/analise/ui/DeputadoDetailView';
 import SenadorDetailView from '@/features/analise/ui/SenadorDetailView';
@@ -868,7 +867,6 @@ export default function ConhecendoEstado() {
 
   return (
     <div className="estado-page">
-      <DevBanner />
       <PageNav />
       <div className="estado-header" id="estado-inicio">
         <h1>Conhecendo {nome}</h1>

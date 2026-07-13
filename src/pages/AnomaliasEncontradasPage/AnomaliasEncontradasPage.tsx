@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import './AnomaliasEncontradasPage.css';
-import { api } from '@/shared/api/client';
+import { apiP2 } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import ToolCard from '@/shared/ui/ToolCard/ToolCard';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
@@ -32,7 +32,7 @@ interface ListarResponse {
   total: number;
   pagina: number;
   por_pagina: number;
-  anomalias: AnomaliaDocumento[];
+  anomalias: Record<string, any>[];
 }
 
 export default function AnomaliasEncontradasPage() {
@@ -57,9 +57,15 @@ export default function AnomaliasEncontradasPage() {
       if (municipioFiltro.trim()) params.municipio = municipioFiltro.trim();
       if (tagFiltro) params.tag = tagFiltro;
       if (categoriaFiltro) params.categoria = categoriaFiltro;
-      const data = await api.get<ListarResponse>(ENDPOINTS.ANOMALIAS_LISTAR, params);
+      const data = await apiP2.get<ListarResponse>(ENDPOINTS.ANOMALIAS_LISTAR, params);
+      if (data.anomalias.length > 0) {
+        console.log('[AnomaliasEncontradas] total:', data.total, '| campos do primeiro item:', Object.keys(data.anomalias[0]).join(', '));
+      } else {
+        console.log('[AnomaliasEncontradas] resposta vazia — total:', data.total);
+      }
       setResultado(data);
-    } catch {
+    } catch (err) {
+      console.error('[AnomaliasEncontradas] erro ao buscar:', err);
       setResultado(null);
     }
     setLoading(false);
@@ -229,7 +235,7 @@ export default function AnomaliasEncontradasPage() {
                 }}>
                   {resultado.anomalias.map((a, i) => (
                     <AnomaliaCard
-                      key={a.id || `${a.documento_rastrear}-${i}`}
+                      key={a.id && a.id !== '<nil>' ? a.id : `${a.fornecedor_documento || a.numero_controle_pncp || i}-${i}`}
                       item={a}
                       onSelect={setSelectedAnomalia}
                     />

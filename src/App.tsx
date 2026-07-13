@@ -1,9 +1,8 @@
 import { lazy, Suspense } from 'react';
-import FeedbackPage from './pages/FeedbackPage/FeedbackPage';
 import { Routes, Route } from 'react-router-dom';
 import { Sidebar } from './widgets/Sidebar/Sidebar';
 import ConhecendoEstado from './features/estado/ui/ConhecendoEstado';
-import DevBanner from './shared/ui/DevBanner/DevBanner';
+import { SearchNotificationProvider, NotificationToast } from './shared/ui/Notifications';
 import './App.css';
 
 const HomePage = lazy(() => import('./pages/HomePage/HomePage'));
@@ -44,25 +43,26 @@ function AppLayout() {
       <Sidebar />
       <main className="app-main">
         <div className="app-main-inner">
-          <DevBanner />
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route index element={<HomePage />} />
-              <Route path="licitacoes" element={<LicitacoesPage />} />
-              <Route path="tse" element={<TsePage />} />
-              <Route path="portal" element={<PortalTransparenciaPage />} />
-              <Route path="deputados" element={<DeputadosPage />} />
-              <Route path="senadores" element={<SenadoresPage />} />
-              <Route path="tcu" element={<TcuPage />} />
-              <Route path="ligacao-politica" element={<LigacaoPoliticaPage />} />
-              <Route path="estado" element={<EstadoPage />} />
-              <Route path="wiki" element={<WikiPage />} />
-              <Route path="anomalias-analise" element={<AnomaliasAnalisePage />} />
-              <Route path="anomalias-encontradas" element={<AnomaliasEncontradasPage />} />
-                <Route path="feedback" element={<FeedbackPage />} />
-              <Route path="*" element={<HomePage />} />
-            </Routes>
-          </Suspense>
+          <SearchNotificationProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route index element={<HomePage />} />
+                <Route path="licitacoes" element={<LicitacoesPage />} />
+                <Route path="tse" element={<TsePage />} />
+                <Route path="portal" element={<PortalTransparenciaPage />} />
+                <Route path="deputados" element={<DeputadosPage />} />
+                <Route path="senadores" element={<SenadoresPage />} />
+                <Route path="tcu" element={<TcuPage />} />
+                <Route path="ligacao-politica" element={<LigacaoPoliticaPage />} />
+                <Route path="estado" element={<EstadoPage />} />
+                <Route path="wiki" element={<WikiPage />} />
+                <Route path="anomalias-analise" element={<AnomaliasAnalisePage />} />
+                <Route path="anomalias-encontradas" element={<AnomaliasEncontradasPage />} />
+                <Route path="*" element={<HomePage />} />
+              </Routes>
+            </Suspense>
+            <NotificationToast />
+          </SearchNotificationProvider>
         </div>
       </main>
     </div>

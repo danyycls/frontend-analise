@@ -1,7 +1,7 @@
 export const ENDPOINTS = {
   // Licitacoes
   ORGAO_ANALISE_START: '/orgao/analise',
-  PUBLICACAO_ANALISE_START: '/publicacao/analise',
+  UF_MUNICIPIO_ANALISE_START: '/uf-municipio/analise',
 
   // Busca
   BUSCA_CONTEXTO: '/busca/contexto',
@@ -56,7 +56,7 @@ export const ENDPOINTS = {
   ANOMALIA_WS_CHANNEL: 'anomalia_analise',
   ANOMALIA_INICIAR: '/worker/anomalia/iniciar',
   ANOMALIA_PARAR: '/worker/anomalia/parar',
-  ANOMALIA_PROGRESSO: '/worker/anomalia/progresso',
+  ANOMALIA_PROGRESSO: '/worker/anomalia/progression',
   ANOMALIAS_LISTAR: '/anomalias',
 
   // Convenios
