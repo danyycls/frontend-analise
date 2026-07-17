@@ -4,6 +4,7 @@ import './Progresso.css';
 
 const STAGES = [
   { id: 'buscando', label: 'Buscando contratos' },
+  { id: 'enriquecendo', label: 'Buscando detalhes por órgão' },
   { id: 'processando', label: 'Processando dados' },
   { id: 'concluido', label: 'Concluído' },
 ];
@@ -68,11 +69,11 @@ export default function Progresso({ onCancelar, onNovaAnalise }: ProgressoProps)
 
       {progresso.fetchProgresso && progresso.fetchProgresso.total > 0 && (
         <div className="progresso-fetch-info">
-          {progresso.fetchProgresso.concluidos}/{progresso.fetchProgresso.total} trimestres concluídos
+          {progresso.fetchProgresso.concluidos}/{progresso.fetchProgresso.total} {progresso.stage === 'enriquecendo' ? 'órgãos processados' : 'trimestres concluídos'}
         </div>
       )}
 
-      {(progresso.stage === 'buscando' || progresso.stage === 'processando') && (fila?.length ?? 0) > 0 && (
+      {(progresso.stage === 'buscando' || progresso.stage === 'enriquecendo' || progresso.stage === 'processando') && (fila?.length ?? 0) > 0 && (
         <div className="progresso-fetch-info">
           {(fila?.length ?? 0)} etapa{(fila?.length ?? 0) > 1 ? 's' : ''} restante{(fila?.length ?? 0) > 1 ? 's' : ''}
         </div>

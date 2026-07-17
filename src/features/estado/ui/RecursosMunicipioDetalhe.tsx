@@ -1,6 +1,5 @@
-// @ts-nocheck
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { API_BASE_URL } from '@/shared/config';
+import { api } from '@/shared/api/client';
 import { useAppSelector, useAppDispatch } from '@/app/store/hooks';
 import {
   addSearchStart,
@@ -13,84 +12,10 @@ import {
   removeYearFromSearch,
 } from '@/app/store/slices/recursosMunicipioSlice';
 import { PieChart, aggregateBy, topN, fmtMoneyCompact, CHART_SIZE_SM, CHART_SIZE_LG } from './chart-utils';
-
-function usePaginacao(dados, itensPorPagina = 10) {
-  const [pagina, setPagina] = useState(0);
-  const arr = dados || [];
-  const totalPaginas = Math.max(1, Math.ceil(arr.length / itensPorPagina));
-  const inicio = pagina * itensPorPagina;
-  const paginaDados = arr.slice(inicio, inicio + itensPorPagina);
-  return { pagina, setPagina, totalPaginas, paginaDados };
-}
-
-function Paginacao({ pagina, totalPaginas, onPagina }) {
-  if (totalPaginas <= 1) return null;
-  return (
-    <div className="dm-paginacao">
-      <button className="pagina-btn" disabled={pagina === 0} onClick={() => onPagina(pagina - 1)}>◀</button>
-      <span className="pagina-info">{pagina + 1} / {totalPaginas}</span>
-      <button className="pagina-btn" disabled={pagina >= totalPaginas - 1} onClick={() => onPagina(pagina + 1)}>▶</button>
-    </div>
-  );
-}
-
-function fmtMoney(v) {
-  if (!v && v !== 0) return '-';
-  return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function fmtMesAno(n) {
-  if (!n) return '-';
-  const s = String(n);
-  if (s.length === 6) return s.substring(4, 6) + '/' + s.substring(0, 4);
-  return s;
-}
-
-function DraggableChartPopup({ titulo, data, onFechar }) {
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const dragRef = useRef({ startX: 0, startY: 0, origX: 0, origY: 0 });
-
-  const handleMouseDown = useCallback((e) => {
-    e.preventDefault();
-    setDragging(true);
-    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
-  }, [pos]);
-
-  useEffect(() => {
-    if (!dragging) return;
-    const handleMove = (e) => {
-      const dx = e.clientX - dragRef.current.startX;
-      const dy = e.clientY - dragRef.current.startY;
-      setPos({ x: dragRef.current.origX + dx, y: dragRef.current.origY + dy });
-    };
-    const handleUp = () => setDragging(false);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
-    };
-  }, [dragging]);
-
-  return (
-    <div className="dm-modal-overlay" onClick={onFechar} style={{ alignItems: 'center' }}>
-      <div
-        className="dm-modal chart-popup-modal"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 560, transform: `translate(${pos.x}px, ${pos.y}px)`, cursor: dragging ? 'grabbing' : 'default' }}
-      >
-        <div className="dm-modal-header" onMouseDown={handleMouseDown} style={{ cursor: 'grab', userSelect: 'none' }}>
-          <h3>{titulo} <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 400 }}>(arraste para mover)</span></h3>
-          <button className="dm-modal-close" onClick={onFechar}>×</button>
-        </div>
-        <div className="dm-modal-body" style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
-          <PieChart data={data} size={CHART_SIZE_LG} />
-        </div>
-      </div>
-    </div>
-  );
-}
+import { usePaginacao } from '@/shared/lib/hooks/usePaginacao';
+import { Paginacao } from '@/shared/ui';
+import { fmtMoney, fmtMesAno } from '@/shared/lib/formatters';
+import { DraggableChartPopup } from './DraggableChartPopup';
 
 export default function RecursosMunicipioDetalhe({ uf, ufNome, municipios, onFechar }) {
   const dispatch = useAppDispatch();
@@ -187,13 +112,13 @@ export default function RecursosMunicipioDetalhe({ uf, ufNome, municipios, onFec
       try {
         const codigos = selectedIBGEs.length > 0 ? selectedIBGEs : [''];
         for (const codigo of codigos) {
-          let url = `${API_BASE_URL}/estado/${uf}/recursos-federais?ano=${ano}`;
-          if (codigo) url += `&codigoIBGE=${codigo}`;
-
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
-          const novos = data.dados || [];
+          const data = await api.get('/portal-transparencia/despesas/recursos-recebidos', {
+            uf,
+            mesAnoInicio: `${ano}-01`,
+            mesAnoFim: `${ano}-12`,
+            codigoIBGE: codigo || undefined,
+          });
+          const novos = Array.isArray(data) ? data : [];
           dispatch(appendDados({ id, novos }));
         }
         dispatch(updateSearchProgress({ id, progresso: { atual: i + 1, total: anosValidos.length, ano, status: 'concluido' } }));

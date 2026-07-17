@@ -18,11 +18,15 @@ import { ENDPOINTS } from '@/shared/api/endpoints';
 import { WS_BASE_URL } from '@/shared/config';
 import { extrairDocumentosDosContratos } from '@/shared/lib/extrair-documentos-contratos';
 import { normalizarCNPJ } from '@/shared/lib/formatters';
+import { extrairCnpjsDosContratos } from '@/shared/lib/extrair-cnpjs-contratos';
 import ConvenioSelector from '@/widgets/ConvenioSelector/ConvenioSelector';
+import FilaSession from '@/shared/ui/FilaSession';
+import type { FilaItemView } from '@/shared/ui/FilaSession';
 import '../LicitacoesPage/LicitacoesPage.css';
 
 const STAGES = [
   { id: 'buscando_licitacoes', label: 'Buscando licitações' },
+  { id: 'enriquecendo_dados',  label: 'Buscando detalhes por órgão' },
   { id: 'analisando_vinculos', label: 'Analisando vínculos' },
   { id: 'concluido',           label: 'Concluído' },
 ];
@@ -60,6 +64,7 @@ export default function AnomaliasAnalisePage() {
   const [erro, setErro] = useState('');
   const [view, setView] = useState<'form' | 'progress'>('form');
   const [filaPausada, setFilaPausada] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const cancelRef = useRef(false);
   const processandoRef = useRef(false);
@@ -203,6 +208,29 @@ export default function AnomaliasAnalisePage() {
     return contratos;
   }
 
+  async function enriquecerContratos(contratosIniciais: any[], ano: string, trimestres: number[]): Promise<any[]> {
+    const cnpjs = extrairCnpjsDosContratos(contratosIniciais);
+    if (cnpjs.length === 0) return contratosIniciais;
+
+    dispatch(updateActiveAnalise({
+      etapa_atual: 'enriquecendo_dados',
+      fetchProgresso: { concluidos: 0, total: cnpjs.length },
+      mensagem: `Enriquecendo dados de ${cnpjs.length} órgão(s)...`,
+    }));
+
+    const enriquecidos: any[] = [];
+    for (let i = 0; i < cnpjs.length; i++) {
+      if (cancelRef.current) break;
+      dispatch(updateActiveAnalise({ mensagem: `Buscando detalhes — ${cnpjs[i]} (${i + 1}/${cnpjs.length})` }));
+      const c = await buscarContratosOrgao(cnpjs[i], ano, trimestres);
+      enriquecidos.push(...c);
+      dispatch(updateActiveAnalise({ fetchProgresso: { concluidos: i + 1, total: cnpjs.length } }));
+    }
+
+    if (cancelRef.current) return contratosIniciais;
+    return enriquecidos.length > 0 ? enriquecidos : contratosIniciais;
+  }
+
   async function handleFormSubmit(itens: ItemBusca[], params: ParametrosBusca) {
     const now = Date.now();
     const filaItems: FilaItem[] = itens.map((item, i) => ({
@@ -261,8 +289,10 @@ export default function AnomaliasAnalisePage() {
         contratos = todosContratos;
       } else if (item.tipo === 'municipio') {
         contratos = await buscarContratosUFMunicipio('municipio', item.uf, item.valor, item.ano, sels);
+        contratos = await enriquecerContratos(contratos, item.ano, sels);
       } else {
         contratos = await buscarContratosUFMunicipio('uf', item.valor, '', item.ano, sels);
+        contratos = await enriquecerContratos(contratos, item.ano, sels);
       }
 
       if (cancelRef.current) return;
@@ -412,14 +442,14 @@ export default function AnomaliasAnalisePage() {
             </div>
           )}
 
-          {etapa === 'buscando_licitacoes' && a.fetchProgresso.total > 0 && (
+          {(etapa === 'buscando_licitacoes' || etapa === 'enriquecendo_dados') && a.fetchProgresso.total > 0 && (
             <div style={{
               marginBottom: 16,
               fontFamily: 'var(--font-mono)',
               fontSize: '0.75rem',
               color: 'var(--text-secondary)',
             }}>
-              {a.fetchProgresso.concluidos}/{a.fetchProgresso.total} etapas concluídas
+              {a.fetchProgresso.concluidos}/{a.fetchProgresso.total} {etapa === 'enriquecendo_dados' ? 'órgãos processados' : 'etapas concluídas'}
             </div>
           )}
 
@@ -566,57 +596,22 @@ export default function AnomaliasAnalisePage() {
                     error={erro}
                   />
 
-                  {fila.length > 0 && (
-                    <div className="card" style={{ marginTop: 16, padding: 16 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <h3 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-muted)', margin: 0 }}>
-                          Fila de Análises ({fila.length})
-                        </h3>
-                        <button
-                          className={`btn btn-sm ${filaPausada ? '' : 'btn-outline-danger'}`}
-                          onClick={() => {
-                            setFilaPausada(p => {
-                              const novaPausa = !p;
-                              filaPausadaRef.current = novaPausa;
-                              if (!novaPausa) {
-                                const s = store.getState().anomalia;
-                                if (!s.active || !s.active.processando) {
-                                  setTimeout(() => proximaFila(), 100);
-                                }
-                              }
-                              return novaPausa;
-                            });
-                          }}
-                          style={{ padding: '3px 10px', fontSize: '0.65rem' }}>
-                          {filaPausada ? '▶ Retomar' : '⏸ Pausar'}
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {fila.map((item) => (
-                          <div key={item.id} style={{
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            padding: '8px 10px', background: 'var(--bg-elevated)', borderRadius: 6,
-                            fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
-                          }}>
-                            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                              <span style={{ color: 'var(--text-muted)' }}>
-                                {item.tipo === 'uf' ? 'UF' : item.tipo === 'municipio' ? 'Município' : 'Órgão'}
-                              </span>
-                              <span>{item.valor}</span>
-                              <span style={{ color: 'var(--text-muted)' }}>{item.ano}</span>
-                              <span style={{ color: 'var(--text-muted)' }}>
-                                {item.trimestres.length > 0 ? `T${item.trimestres.join(',T')}` : 'Todos'}
-                              </span>
-                            </div>
-                            <button className="btn btn-sm btn-outline-danger" onClick={() => dispatch(removeFromFila(item.id))}
-                              style={{ padding: '2px 8px', fontSize: '0.65rem' }}>
-                              Remover
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <FilaSession
+                    titulo="Fila de Análises"
+                    itens={fila as FilaItemView[]}
+                    onRemover={(id) => dispatch(removeFromFila(id))}
+                    onRemoverMultiplos={(ids) => ids.forEach(id => dispatch(removeFromFila(id)))}
+                    onPausar={setFilaPausada}
+                    pausado={filaPausada}
+                    processando={active?.processando ?? false}
+                    onIniciarProximo={() => {
+                      const s = store.getState().anomalia;
+                      if (!s.active || !s.active.processando) {
+                        setTimeout(() => proximaFila(), 100);
+                      }
+                    }}
+                    onVerProgresso={() => setView('progress')}
+                  />
                 </div>
 
                 <div className="licitacoes-coluna-lateral">
@@ -636,9 +631,45 @@ export default function AnomaliasAnalisePage() {
 
             {analises.length > 0 && (
               <div style={{ width: '100%', maxWidth: 960, marginTop: 32 }}>
-                <h3 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-muted)', marginBottom: 12 }}>
-                  Histórico de Análises
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-muted)', margin: 0 }}>
+                    Histórico de Análises
+                  </h3>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === analises.length}
+                        onChange={() => {
+                          if (selectedIds.size === analises.length) {
+                            setSelectedIds(new Set());
+                          } else {
+                            setSelectedIds(new Set(analises.map(a => a.id)));
+                          }
+                        }}
+                      />
+                      Selecionar Todos
+                    </label>
+                    {selectedIds.size > 0 && (
+                      <>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                          {selectedIds.size} selecionado(s)
+                        </span>
+                        <button className="btn btn-sm btn-outline-danger" onClick={() => {
+                          analises.filter(a => selectedIds.has(a.id)).forEach(a => dispatch(removeAnalise(a.id)));
+                          setSelectedIds(new Set());
+                        }} style={{ padding: '3px 10px', fontSize: '0.65rem' }}>
+                          Apagar Selecionados
+                        </button>
+                      </>
+                    )}
+                    {selectedIds.size > 0 && selectedIds.size < analises.length && (
+                      <button className="btn btn-sm" onClick={() => setSelectedIds(new Set())} style={{ padding: '3px 10px', fontSize: '0.65rem' }}>
+                        Limpar Seleção
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {analises.map((a) => (
                     <div key={a.id} className="card" style={{
@@ -646,7 +677,20 @@ export default function AnomaliasAnalisePage() {
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       fontSize: '0.8rem',
                     }}>
-                      <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(a.id)}
+                          onChange={() => {
+                            setSelectedIds(prev => {
+                              const next = new Set(prev);
+                              if (next.has(a.id)) next.delete(a.id);
+                              else next.add(a.id);
+                              return next;
+                            });
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        />
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
                           {a.tipo === 'uf' ? 'Estado' : a.tipo === 'municipio' ? 'Município' : 'Órgão'}
                         </span>
@@ -666,7 +710,10 @@ export default function AnomaliasAnalisePage() {
                         <button className="btn btn-sm" onClick={() => navigate('/anomalias-encontradas')}>
                           Ver
                         </button>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => dispatch(removeAnalise(a.id))}>
+                        <button className="btn btn-sm btn-outline-danger" onClick={() => {
+                          dispatch(removeAnalise(a.id));
+                          setSelectedIds(prev => { const n = new Set(prev); n.delete(a.id); return n; });
+                        }}>
                           ✕
                         </button>
                       </div>

@@ -1,7 +1,5 @@
-import { useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
 import type { NodeType } from '@/domain'
-import { useAppDispatch } from '@/app/store/hooks'
-import { entityDiscovered } from '@/app/store/slices/investigationSlice'
 
 export interface DiscoveredEntity {
   id: string
@@ -46,15 +44,4 @@ export function useDiscoveryReporter(): (
     },
     []
   )
-}
-
-export function useDiscoverySubscriber(): void {
-  const dispatch = useAppDispatch()
-
-  useEffect(() => {
-    const unsubscribe = discoveryBus.subscribe((entity) => {
-      dispatch(entityDiscovered(entity))
-    })
-    return unsubscribe
-  }, [dispatch])
 }

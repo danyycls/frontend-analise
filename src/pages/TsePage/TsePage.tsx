@@ -3,8 +3,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { setAbaAtiva } from '@/app/store/slices/navigationSlice';
 import {
-  setRpTopAba, setRpMetodoAtiva, addRpSubTab,
-  removeRpSubTab, reorderRpSubTabs, setRpMetodoState,
+  setTopAba, setMetodoAtiva, addSubTab,
+  removeSubTab, reorderSubTabs, setMetodoState,
 } from '@/app/store/slices/tseSlice';
 import RelacoesPoliticas from '@/features/tse/ui/RelacoesPoliticas';
 import BuscaCargo from '@/features/tse/ui/BuscaCargo';
@@ -27,17 +27,17 @@ const RP_METODOS = [
 
 export default function TsePage() {
   const dispatch = useAppDispatch();
-  const rpTopAba = useAppSelector((s) => s.tse.rpTopAba);
-  const rpMetodoState = useAppSelector((s) => s.tse.rpMetodoState);
+  const topAba = useAppSelector((s) => s.tse.topAba);
+  const metodoState = useAppSelector((s) => s.tse.metodoState);
   const [rpDataCache, setRpDataCache] = useState({});
   const [rpCache, setRpCache] = useState([]);
   const rpDataCacheRef = useRef(rpDataCache);
-  const rpMetodoStateRef = useRef(rpMetodoState);
+  const metodoStateRef = useRef(metodoState);
   const reportDiscovery = useDiscoveryReporter();
   const { popupInfo, setPopupInfo } = useEntityInfo();
 
   useEffect(() => { rpDataCacheRef.current = rpDataCache; }, [rpDataCache]);
-  useEffect(() => { rpMetodoStateRef.current = rpMetodoState; }, [rpMetodoState]);
+  useEffect(() => { metodoStateRef.current = metodoState; }, [metodoState]);
 
   const handleSalvarRP = useCallback((item) => {
     const novo = { ...item, id: ++rpUid };
@@ -53,9 +53,9 @@ export default function TsePage() {
   const handleRPSearchComplete = useCallback((method, searchParams, data) => {
     const id = ++rpUid;
     setRpDataCache(prev => ({ ...prev, [id]: { searchParams, data, id, method, timestamp: new Date().toISOString() } }));
-    dispatch(addRpSubTab({ method, id }));
-    dispatch(setRpMetodoAtiva({ method, ativa: `rp-${id}` }));
-    dispatch(setRpTopAba(method));
+    dispatch(addSubTab({ method, id }));
+    dispatch(setMetodoAtiva({ method, ativa: `rp-${id}` }));
+    dispatch(setTopAba(method));
     dispatch(setAbaAtiva('relacoes'));
 
     const discoveries: any[] = [];
@@ -76,23 +76,23 @@ export default function TsePage() {
 
   const handleFecharRPSubTab = useCallback((method, key) => {
     const id = Number(key.replace('rp-', ''));
-    dispatch(removeRpSubTab({ method, id }));
+    dispatch(removeSubTab({ method, id }));
   }, [dispatch]);
 
   const handleAbrirRPSalvo = useCallback((item) => {
     const method = item.method || 'empresas';
     const id = item.id;
     setRpDataCache(prev => ({ ...prev, [id]: item }));
-    if (!rpMetodoStateRef.current[method]?.subs.includes(id)) {
-      dispatch(addRpSubTab({ method, id }));
+    if (!metodoStateRef.current[method]?.subs.includes(id)) {
+      dispatch(addSubTab({ method, id }));
     }
-    dispatch(setRpMetodoAtiva({ method, ativa: `rp-${id}` }));
-    dispatch(setRpTopAba(method));
+    dispatch(setMetodoAtiva({ method, ativa: `rp-${id}` }));
+    dispatch(setTopAba(method));
     dispatch(setAbaAtiva('relacoes'));
   }, [dispatch]);
 
   const handleAbrirMetodoRP = useCallback((method) => {
-    dispatch(setRpTopAba(method));
+    dispatch(setTopAba(method));
     dispatch(setAbaAtiva('relacoes'));
   }, [dispatch]);
 
@@ -105,18 +105,18 @@ export default function TsePage() {
         </div>
 
         <div className="lp-sub-tabs">
-          <button className={`lp-sub-tab ${rpTopAba === 'geral' ? 'ativo' : ''}`} onClick={() => dispatch(setRpTopAba('geral'))}>
+          <button className={`lp-sub-tab ${topAba === 'geral' ? 'ativo' : ''}`} onClick={() => dispatch(setTopAba('geral'))}>
             Geral
           </button>
           {RP_METODOS.map(m => (
-            <button key={m.key} className={`lp-sub-tab ${rpTopAba === m.key ? 'ativo' : ''}`} onClick={() => dispatch(setRpTopAba(m.key))}>
+            <button key={m.key} className={`lp-sub-tab ${topAba === m.key ? 'ativo' : ''}`} onClick={() => dispatch(setTopAba(m.key))}>
               {m.label}
-              <span className="lp-sub-tab-fechar" onClick={(e) => { e.stopPropagation(); dispatch(setRpTopAba('geral')); }}>×</span>
+              <span className="lp-sub-tab-fechar" onClick={(e) => { e.stopPropagation(); dispatch(setTopAba('geral')); }}>×</span>
             </button>
           ))}
         </div>
 
-        <div style={{ display: rpTopAba === 'geral' ? '' : 'none' }}>
+        <div style={{ display: topAba === 'geral' ? '' : 'none' }}>
           <div className="rp-metodo-grid">
             {RP_METODOS.map(m => (
               <button key={m.key} className="rp-metodo-btn" onClick={() => handleAbrirMetodoRP(m.key)}>
@@ -129,14 +129,14 @@ export default function TsePage() {
         </div>
 
         {RP_METODOS.map(m => {
-          const methodState = rpMetodoState[m.key];
+          const methodState = metodoState[m.key];
           if (!methodState) return null;
           const Comp = m.Component;
           return (
-            <div key={m.key} style={{ display: rpTopAba === m.key ? '' : 'none' }}>
+            <div key={m.key} style={{ display: topAba === m.key ? '' : 'none' }}>
               <div className="lp-sub-tabs">
                 <button className={`lp-sub-tab ${methodState.ativa === 'geral' ? 'ativo' : ''}`}
-                  onClick={() => dispatch(setRpMetodoAtiva({ method: m.key, ativa: 'geral' }))}>Geral</button>
+                  onClick={() => dispatch(setMetodoAtiva({ method: m.key, ativa: 'geral' }))}>Geral</button>
                 {methodState.subs.map((id, idx) => {
                   const item = rpDataCache[id];
                   let label = `#${id}`;
@@ -148,14 +148,14 @@ export default function TsePage() {
                   const key = `rp-${id}`;
                   return (
                     <button key={key} className={`lp-sub-tab ${methodState.ativa === key ? 'ativo' : ''}`}
-                      onClick={() => dispatch(setRpMetodoAtiva({ method: m.key, ativa: key }))}
+                      onClick={() => dispatch(setMetodoAtiva({ method: m.key, ativa: key }))}
                       draggable
                       onDragStart={(e) => e.dataTransfer.setData('text/plain', idx)}
                       onDragOver={(e) => { e.preventDefault(); }}
                       onDrop={(e) => {
                         e.preventDefault();
                         const from = Number(e.dataTransfer.getData('text/plain'));
-                        if (from !== idx) dispatch(reorderRpSubTabs({ method: m.key, from, to: idx }));
+                        if (from !== idx) dispatch(reorderSubTabs({ method: m.key, from, to: idx }));
                       }}>
                       {label}
                       <span className="lp-sub-tab-fechar" onClick={(e) => { e.stopPropagation(); handleFecharRPSubTab(m.key, key); }}>×</span>
@@ -164,7 +164,7 @@ export default function TsePage() {
                 })}
               </div>
               <div style={{ display: methodState.ativa === 'geral' ? '' : 'none' }}>
-                <Comp onFechar={() => dispatch(setRpTopAba('geral'))} onSave={handleSalvarRP} onApagar={handleApagarRP}
+                <Comp onFechar={() => dispatch(setTopAba('geral'))} onSave={handleSalvarRP} onApagar={handleApagarRP}
                   savedList={rpCache} onIdClick={handleIdClick} onRPSearchComplete={handleRPSearchComplete} onRPAbrirSalvo={handleAbrirRPSalvo} />
               </div>
               {methodState.subs.map(id => {
@@ -172,7 +172,7 @@ export default function TsePage() {
                 const item = rpDataCache[id];
                 return (
                   <div key={key} style={{ display: methodState.ativa === key ? '' : 'none' }}>
-                    <Comp onFechar={() => dispatch(setRpMetodoAtiva({ method: m.key, ativa: 'geral' }))}
+                    <Comp onFechar={() => dispatch(setMetodoAtiva({ method: m.key, ativa: 'geral' }))}
                       onSave={handleSalvarRP} onApagar={handleApagarRP} savedList={rpCache}
                       onIdClick={handleIdClick} resultItem={item || null} />
                   </div>

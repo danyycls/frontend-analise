@@ -238,8 +238,8 @@ export function ContratoDetalhes({ contrato, onIdClick }) {
           <div className="socios-wrapper">
             <details className="socios">
               <summary>{c.fornecedor.qsa.length} sócio(s)</summary>
-              {c.fornecedor.qsa.map((s, i) => (
-                <div key={i} className="socio-card">
+              {c.fornecedor.qsa.map((s) => (
+                <div key={s.cnpj_cpf_socio || s.nome_socio || s.qualificacao_socio} className="socio-card">
                   <Campo label="Nome" valor={s.nome_socio} />
                   <Campo label="CPF/CNPJ" valor={s.cnpj_cpf_socio ? <span className="ad-id-link" onClick={() => onIdClick?.('cpf_cnpj', s.cnpj_cpf_socio)}>{s.cnpj_cpf_socio}</span> : '-'} />
                   <Campo label="Qualificação" valor={s.qualificacao_socio} />
@@ -587,7 +587,7 @@ function OrgaoCard({ resultado, pncpDestacado, onAnaliseDetalhada, pncpComMatch,
                       const temMatch = pncpComMatch?.has(c.numeroControlePNCP) || false;
                       const rowClass = estaDestacado ? 'pncp-destacado' : temMatch ? 'tem-match' : '';
                       return (
-                        <tr key={idxOriginal} className={rowClass}>
+                        <tr key={c.numeroControlePNCP || idxOriginal} className={rowClass}>
                           <td>
                             <span
                               className="expand-btn"
@@ -671,7 +671,7 @@ export default function Resultados({ resultados, consultaMeta, pncpDestacado, on
     );
   }
 
-  return resultados.map((r, i) => (
-    <OrgaoCard key={i} resultado={r} consultaMeta={consultaMeta} pncpDestacado={pncpDestacado} onAnaliseDetalhada={onAnaliseDetalhada} pncpComMatch={pncpComMatch} onIdClick={onIdClick} />
+  return resultados.map((r) => (
+    <OrgaoCard key={r.orgao || r.orgaoCnpj || r.consultaId} resultado={r} consultaMeta={consultaMeta} pncpDestacado={pncpDestacado} onAnaliseDetalhada={onAnaliseDetalhada} pncpComMatch={pncpComMatch} onIdClick={onIdClick} />
   ));
 }

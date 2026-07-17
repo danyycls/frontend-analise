@@ -1,23 +1,10 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
+import { fLabel, fmtVal } from '@/shared/lib/formatters';
 import './AnaliseDetalhada.css';
-
-function fLabel(k) {
-  return k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
 
 function isPrim(v) {
   return v === null || v === undefined || typeof v === 'boolean' || typeof v === 'number' || typeof v === 'string';
-}
-
-function fVal(v) {
-  if (v === null || v === undefined) return '-';
-  if (typeof v === 'boolean') return v ? 'Sim' : 'Nao';
-  if (typeof v === 'number') {
-    if (Number.isInteger(v)) return v.toLocaleString('pt-BR');
-    return v.toFixed(2);
-  }
-  return String(v) || '-';
 }
 
 const SKIP_KEYS = new Set(['id', 'created_at', 'updated_at', 'deleted_at', 'extra', '_doc_origem', '_descricao', '_nome_entity']);
@@ -37,10 +24,10 @@ function Campo({ k, v, onIdClick }) {
       <span className="ad-campo-rotulo">{fLabel(k)}:</span>
       {isId ? (
         <span className="ad-campo-valor ad-id-link" onClick={() => onIdClick?.(k, v)}>
-          {fVal(v)}
+          {fmtVal(v)}
         </span>
       ) : (
-        <span className="ad-campo-valor">{fVal(v)}</span>
+        <span className="ad-campo-valor">{fmtVal(v)}</span>
       )}
     </div>
   );
@@ -80,8 +67,8 @@ export function ObjCard({ data, titulo, open = false, hideToggle, onIdClick }) {
                 <div key={k} className="ad-array-section">
                   <h5 className="ad-array-title">{fLabel(k)} ({v.length})</h5>
                   <div className="ad-array-items">
-                    {v.map((item, i) => (
-                      <ObjCard key={i} data={item} titulo={`Item ${i + 1}`} open={false} onIdClick={onIdClick} />
+                    {v.map((item) => (
+                      <ObjCard key={item.sq_despesa || item.sq_receita || item.sq_candidato || item.numeroControlePNCP || item.id} data={item} titulo={`Item`} open={false} onIdClick={onIdClick} />
                     ))}
                   </div>
                 </div>
@@ -134,7 +121,7 @@ function ArrayTable({ items, label, onIdClick }) {
       { key: 'sq_despesa', label: 'Id', fmt: (v) => String(v) },
       { key: 'origem_despesa_descricao', label: 'Origem' },
       { key: 'descricao', label: 'Descricao', fmt: (v) => truncate(v, 50) },
-      { key: 'valor', label: 'Valor', fmt: (v) => fVal(v) },
+      { key: 'valor', label: 'Valor', fmt: (v) => fmtVal(v) },
       { key: 'created_at', label: 'Created At', fmt: fmtCreated },
     ];
   } else if (first?.despesa && typeof first.despesa === 'object') {
@@ -142,28 +129,28 @@ function ArrayTable({ items, label, onIdClick }) {
       { key: 'despesa.sq_despesa', label: 'Id', fmt: (v) => String(v) },
       { key: 'despesa.origem_despesa_descricao', label: 'Origem' },
       { key: 'despesa.descricao', label: 'Descricao', fmt: (v) => truncate(v, 50) },
-      { key: 'despesa.valor', label: 'Valor', fmt: (v) => fVal(v) },
+      { key: 'despesa.valor', label: 'Valor', fmt: (v) => fmtVal(v) },
       { key: 'despesa.created_at', label: 'Created At', fmt: fmtCreated },
     ];
   } else if (first?.partido && typeof first.partido === 'object') {
     columns = [
       { key: 'despesa.sq_despesa', label: 'Id', fmt: (v) => String(v) },
       { key: 'despesa.descricao', label: 'Descricao', fmt: (v) => truncate(v, 50) },
-      { key: 'despesa.valor', label: 'Valor', fmt: (v) => fVal(v) },
+      { key: 'despesa.valor', label: 'Valor', fmt: (v) => fmtVal(v) },
       { key: 'despesa.created_at', label: 'Created At', fmt: fmtCreated },
     ];
   } else if (firstKeys.includes('partido_id') && firstKeys.includes('sq_despesa')) {
     columns = [
       { key: 'sq_despesa', label: 'Id', fmt: (v) => String(v) },
       { key: 'descricao', label: 'Descricao', fmt: (v) => truncate(v, 50) },
-      { key: 'valor', label: 'Valor', fmt: (v) => fVal(v) },
+      { key: 'valor', label: 'Valor', fmt: (v) => fmtVal(v) },
       { key: 'created_at', label: 'Created At', fmt: fmtCreated },
     ];
   } else if (hasAnyKey(['sq_receita', 'data_receita'])) {
     columns = [
       { key: 'sq_receita', label: 'SQ Receita', fmt: (v) => String(v) },
       { key: 'descricao', label: 'Descricao', fmt: (v) => truncate(v, 50) },
-      { key: 'valor', label: 'Valor', fmt: (v) => fVal(v) },
+      { key: 'valor', label: 'Valor', fmt: (v) => fmtVal(v) },
       { key: 'data_receita', label: 'Data', fmt: (v) => fData(v) },
     ];
   } else {
@@ -260,8 +247,8 @@ function ItemListView({ items, titulo, onIdClick }) {
         <span className="ad-s-cnt">{items.length}</span>
       </h4>
       <div className="ad-array-items">
-        {items.map((item, i) => (
-          <ObjCard key={i} data={item} titulo={`${i + 1}`} open={false} onIdClick={onIdClick} />
+        {items.map((item) => (
+          <ObjCard key={item.sq_despesa || item.sq_receita || item.sq_candidato || item.numeroControlePNCP || item.id} data={item} titulo={``} open={false} onIdClick={onIdClick} />
         ))}
       </div>
     </div>
@@ -295,8 +282,8 @@ function TCUListView({ items, onIdClick }) {
             <span className="ad-s-cnt">{lista.length}</span>
           </h4>
           <div className="tcu-cards">
-            {lista.map((item, i) => (
-              <div key={i} className="tcu-card">
+            {lista.map((item) => (
+              <div key={item.numeroRegistro || item.numeroProcessoFormatado || item.nome} className="tcu-card">
                 <div className="tcu-card-topo">
                   <span className="tcu-card-tipo">TCU</span>
                   <span className="tcu-card-nome">{item.nome || '-'}</span>
@@ -388,14 +375,14 @@ function ServidorPublicoListView({ items, onIdClick }) {
           <span className="ad-s-cnt">{items.length}</span>
         </h4>
         <div className="tcu-cards">
-          {items.map((item, i) => {
+          {items.map((item) => {
             const serv = item.servidor || {};
             const pes = serv.pessoa || {};
             const orgaoLot = serv.orgaoServidorLotacao || {};
             const orgaoExe = serv.orgaoServidorExercicio || {};
             const func = serv.funcao || {};
             return (
-              <div key={i} className="tcu-card">
+              <div key={pes.cpf || pes.nome || item.id} className="tcu-card">
                 <div className="tcu-card-topo">
                   <span className="tcu-card-tipo" style={{ background: '#7D3C98' }}>SERVIDOR</span>
                   <span className="tcu-card-nome">{pes.nome || '-'}</span>

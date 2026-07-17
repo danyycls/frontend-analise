@@ -16,17 +16,15 @@ const UFS = [
 const TAGS = [
   'Fornecedor-TSE',
   'Doador-TSE',
-  'Doação Candidato-TSE',
-  'Doação Partido-TSE',
+  'Candidato-TSE',
   'Contas Irregulares-TCU',
   'Inabilitado-TCU',
   'Inidôneo-TCU',
   'Servidor Público-Portal Transparência',
   'Pessoa Exposta-Portal Transparência',
-  'Dispensa acima do limite-Regra',
 ];
 
-const CATEGORIAS = ['TSE', 'TCU', 'Portal Transparência', 'Regra'];
+const CATEGORIAS = ['TSE', 'TCU', 'Portal Transparência'];
 
 interface ListarResponse {
   total: number;

@@ -1,9 +1,9 @@
-# PODP — Projeto Observatório de Dados Públicos (Front-end)
+# SYS — Front-end de Visualização e Análise de Dados Públicos
 
-Interface web do **PODP**, plataforma unificada para análise de dados públicos brasileiros. Consome dois backends:
+Interface web do projeto **SYS**, plataforma para visualização e análise de dados públicos brasileiros. Consome dois backends:
 
-- **P1** (`backend-analise`): Data hub com fontes externas (IBGE, TSE, Câmara, Senado, PortalTransparência, TCU, PNCP, SICONFI, OpenCNPJ)
-- **P2** (`projeto2-analise`): Motor de análise (ligação política, anomalias, esferas brasileiras, feedback)
+- **Hub de dados ODT**: Agrega dados de fontes externas (IBGE, TSE, Câmara, Senado, Portal da Transparência, TCU, PNCP, SICONFI, OpenCNPJ)
+- **Motor de análise SYS**: Realiza análises de ligação política, detecção de anomalias, dados de estados/municípios e feedback
 
 ## Stack
 
@@ -11,9 +11,8 @@ Interface web do **PODP**, plataforma unificada para análise de dados públicos
 - React Router DOM
 - Redux Toolkit + Redux Persist
 - TanStack React Query
-- Sigma.js / Graphology (visualização de grafos)
 - Mapas interativos (react-simple-maps + dados IBGE)
-- Tema claro/escuro (Tailwind CSS)
+- Tema claro/escuro
 
 ## Como rodar
 
@@ -36,57 +35,72 @@ Os arquivos estáticos serão gerados em `dist/`.
 
 | Variável | Descrição | Padrão |
 |---|---|---|
-| `VITE_API_BASE_URL` | URL do P1 (data hub) | `http://localhost:8080` |
-| `VITE_WS_BASE_URL` | URL do WebSocket do P1 | `ws://localhost:8080` |
-| `VITE_P2_API_BASE_URL` | URL do P2 (motor de análise) | `http://localhost:8084` |
-| `VITE_P2_WS_BASE_URL` | URL do WebSocket do P2 | `ws://localhost:8084` |
+| `VITE_API_BASE_URL` | URL do hub de dados ODT | `http://localhost:8080` |
+| `VITE_WS_BASE_URL` | URL do WebSocket do hub ODT | `ws://localhost:8080` |
+| `VITE_P2_API_BASE_URL` | URL do motor de análise SYS | `http://localhost:8084` |
+| `VITE_P2_WS_BASE_URL` | URL do WebSocket do motor SYS | `ws://localhost:8084` |
 
 ## Backends
 
-O front-end consome duas APIs:
+| Projeto | Papel | Porta |
+|---------|-------|-------|
+| Hub de dados ODT | Agrega dados públicos (IBGE, TSE, Câmara, Senado, PortalTransparência, TCU, PNCP, SICONFI, OpenCNPJ) | `8080` |
+| Motor de análise SYS | Análise de ligação política, detecção de anomalias, dados de estados/municípios, feedback | `8084` |
 
-| Projeto | Repositório | Papel | Porta |
-|---------|-------------|-------|-------|
-| P1 | [github.com/danyele/podp](https://github.com/danyele/podp) | Data hub: fontes externas, dados TSE | `8080` |
-| P2 | [github.com/danyele/podp-analise](https://github.com/danyele/podp-analise) | Motor de análise: ligação política, anomalias | `8084` |
+### Mapeamento de endpoints
 
-### Mapeamento de rotas
-
-| Rota | Backend | Serviço |
-|------|---------|---------|
-| `/orgao/analise`, `/uf-municipio/analise` | P1 | Análise de órgãos/PNCP |
-| `/ibge/*`, `/deputados/*`, `/senado/*` | P1 | Dados públicos |
-| `/tcu/*`, `/portal-transparencia/*` | P1 | TCU e PortalTransparência |
-| `/busca/cargos`, `/busca/partidos`, etc. | P1 | TSE (CSV importado) |
-| `/busca/relacoes`, `/entidade` | P1 | Consultas de entidades |
-| `/siconfi/*`, `/opencnpj/*`, `/pncp/*` | P1 | SICONFI, OpenCNPJ, PNCP |
-| `/busca/contexto` | P2 | Ligação política |
-| `/worker/anomalia/*` | P2 | Worker de anomalias |
-| `/anomalias` | P2 | Consulta de anomalias |
-| `/feedback` | P2 | Feedback |
-| `/estado/:uf/*`, `/municipio/*` | P2 | Esferas brasileiras |
-| WebSocket `/ws` (canal `anomalia_analise`) | P2 | Progresso de anomalias |
+| Endpoint | Backend | Serviço |
+|----------|---------|---------|
+| `/orgao/analise`, `/uf-municipio/analise` | ODT | Análise de órgãos/PNCP |
+| `/ibge/*`, `/deputados/*`, `/senado/*` | ODT | Dados públicos |
+| `/tcu/*`, `/portal-transparencia/*` | ODT | TCU e PortalTransparência |
+| `/busca/cargos`, `/busca/partidos`, etc. | ODT | TSE |
+| `/busca/relacoes`, `/entidade` | ODT | Consultas de entidades |
+| `/siconfi/*`, `/opencnpj/*`, `/pncp/*` | ODT | SICONFI, OpenCNPJ, PNCP |
+| `/worker/anomalia/*` | SYS | Worker de anomalias |
+| `/anomalias` | SYS | Consulta de anomalias |
+| `/feedback` | SYS | Feedback |
+| `/estado/:uf/*`, `/municipio/*` | SYS | Esferas brasileiras |
+| WebSocket `/ws` (canal `anomalia_analise`) | SYS | Progresso de anomalias |
 
 ## Estrutura de pastas
 
 ```
 src/
 ├── app/             # Store Redux, providers
-├── domain/          # Modelos de domínio (grafos, cross-reference)
 ├── entities/        # Entidades (deputado, senador, licitação, etc.)
 ├── features/        # Funcionalidades por domínio
 │   ├── analise/     # Análise de deputados/senadores/TCU
 │   ├── estado/      # Dados de estados e municípios
-│   ├── investigative-panel/  # Painel investigativo com grafos
 │   ├── licitacao/   # Consulta de licitações e progresso
-│   ├── ligacao-politica/  # Ligação política (chama P2)
+│   ├── ligacao-politica/  # Ligação política
 │   ├── portal-transparencia/  # Portal da Transparência
 │   └── tse/         # Dados do TSE
 ├── pages/           # Páginas da aplicação
 ├── shared/          # Código compartilhado
-│   ├── api/         # Clientes HTTP (api: P1, apiP2: P2)
+│   ├── api/         # Clientes HTTP (api: ODT, apiP2: SYS)
 │   ├── config/      # Variáveis de ambiente
 │   ├── lib/         # Utilitários e serviços (WebSocket)
 │   └── ui/          # Componentes reutilizáveis
 └── widgets/         # Widgets de layout (Sidebar, etc.)
 ```
+
+## Páginas
+
+Documentação detalhada de cada página em [`docs/pages/`](docs/pages/).
+
+| Rota | Página | Descrição |
+|------|--------|-----------|
+| `/` | Home | Dashboard principal com cards das ferramentas |
+| `/licitacoes` | Licitações | Busca de contratos públicos no PNCP |
+| `/tse` | TSE | Dados eleitorais do TSE |
+| `/portal` | Portal Transparência | Dados do Portal da Transparência |
+| `/deputados` | Deputados | Análise de deputados federais |
+| `/senadores` | Senadores | Análise de senadores |
+| `/tcu` | TCU | Consultas ao TCU |
+| `/ligacao-politica` | Ligação Política | Cruzamento de fornecedores e políticos |
+| `/estado` | Estado (mapa) | Mapa interativo do Brasil |
+| `/estado/:uf` | Estado (detalhe) | Dados detalhados de um estado |
+| `/anomalias-analise` | Análise de Anomalias | Detecção automatizada de anomalias |
+| `/anomalias-encontradas` | Anomalias Encontradas | Listagem de anomalias detectadas |
+| `/wiki` | Wiki | Documentação das fontes de dados |

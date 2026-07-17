@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { setAbaAtiva, setFormAberto } from '@/app/store/slices/navigationSlice';
 import {
   addConsulta, removeConsulta as removeConsultaAction,
-  addToFila, removeFromFila,
+  addToFila, removeFromFila, clearFila,
   setProgresso, resetProgresso,
 } from '@/app/store/slices/consultaSlice';
 import type { FilaItem } from '@/app/store/slices/consultaSlice';
@@ -23,9 +23,14 @@ import ConvenioSelector from '@/widgets/ConvenioSelector/ConvenioSelector';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 import { api } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import { fmtDoc, normalizarCNPJ } from '@/shared/lib/formatters';
+import { fmtDoc, fmtValor, normalizarCNPJ } from '@/shared/lib/formatters';
+import { extrairCnpjsDosContratos } from '@/shared/lib/extrair-cnpjs-contratos';
+import { PieChart, CHART_SIZE_MD, topN } from '@/features/estado/ui/chart-utils';
 import { store } from '@/app/store';
 import { WS_BASE_URL } from '@/shared/config';
+import FilaSession from '@/shared/ui/FilaSession';
+import type { FilaItemView } from '@/shared/ui/FilaSession';
+import DraggablePopup from '@/shared/ui/DraggablePopup';
 import './LicitacoesPage.css';
 
 export default function LicitacoesPage() {
@@ -41,9 +46,16 @@ export default function LicitacoesPage() {
   const [entidadeCache, setEntidadeCache] = useState({});
   const [cnpjsSelecionados, setCnpjsSelecionados] = useState<string[]>([]);
   const [view, setView] = useState<'form' | 'progress'>('form');
+  const [filaPausada, setFilaPausada] = useState(false);
+  const [cardAberto, setCardAberto] = useState<string | null>(null);
 
   const cancelRef = useRef(false);
   const processandoRef = useRef(false);
+  const filaPausadaRef = useRef(false);
+
+  useEffect(() => {
+    filaPausadaRef.current = filaPausada;
+  }, [filaPausada]);
 
   const KEY_TO_TIPO: Record<string, string> = {
     sq_candidato: 'candidato',
@@ -149,14 +161,18 @@ export default function LicitacoesPage() {
     return { resultados: todosResultados, totalContratos };
   }
 
-  async function buscarContratosOrgao(cnpj: string, ano: string, trimestres: number[]): Promise<{ resultados: any[]; totalContratos: number }> {
+  async function buscarContratosOrgao(cnpj: string, ano: string, trimestres: number[], trackProgress = true): Promise<{ resultados: any[]; totalContratos: number }> {
     const todosResultados: any[] = [];
     let totalContratos = 0;
-    dispatch(setProgresso({ fetchProgresso: { concluidos: 0, total: trimestres.length } }));
+    if (trackProgress) {
+      dispatch(setProgresso({ fetchProgresso: { concluidos: 0, total: trimestres.length } }));
+    }
     for (let i = 0; i < trimestres.length; i++) {
       if (cancelRef.current) break;
       const t = trimestres[i];
-      dispatch(setProgresso({ stage: 'buscando' }));
+      if (trackProgress) {
+        dispatch(setProgresso({ stage: 'buscando' }));
+      }
 
       const { dataInicial, dataFinal } = trimestreParaDatas(ano, t);
 
@@ -171,9 +187,27 @@ export default function LicitacoesPage() {
         totalContratos += (r.contratos || []).length;
       }
       todosResultados.push(...results);
-      dispatch(setProgresso({ fetchProgresso: { concluidos: i + 1, total: trimestres.length } }));
+      if (trackProgress) {
+        dispatch(setProgresso({ fetchProgresso: { concluidos: i + 1, total: trimestres.length } }));
+      }
     }
     return { resultados: todosResultados, totalContratos };
+  }
+
+  async function enriquecerResultados(resultados: any[], ano: string, trimestres: number[]): Promise<any[]> {
+    const todosContratos = resultados.flatMap((r: any) => r.contratos || []);
+    const cnpjs = extrairCnpjsDosContratos(todosContratos);
+    if (cnpjs.length === 0) return resultados;
+
+    dispatch(setProgresso({ stage: 'enriquecendo', fetchProgresso: { concluidos: 0, total: cnpjs.length } }));
+    const enriquecidos: any[] = [];
+    for (let i = 0; i < cnpjs.length; i++) {
+      if (cancelRef.current) break;
+      const res = await buscarContratosOrgao(cnpjs[i], ano, trimestres, false);
+      enriquecidos.push(...res.resultados);
+      dispatch(setProgresso({ fetchProgresso: { concluidos: i + 1, total: cnpjs.length } }));
+    }
+    return enriquecidos.length > 0 ? enriquecidos : resultados;
   }
 
   async function handleFormSubmit(itens: ItemBusca[], params: ParametrosBusca) {
@@ -217,6 +251,7 @@ export default function LicitacoesPage() {
       ultimoEvento: null,
       fetchProgresso: null,
     }));
+    setView('progress');
 
     try {
       let resultados: any[];
@@ -227,12 +262,12 @@ export default function LicitacoesPage() {
         totalContratos = res.totalContratos;
       } else if (item.tipo === 'municipio') {
         const res = await buscarContratosUFMunicipio('municipio', item.uf || '', item.valor, item.ano, item.trimestres);
-        resultados = res.resultados;
-        totalContratos = res.totalContratos;
+        resultados = await enriquecerResultados(res.resultados, item.ano, item.trimestres);
+        totalContratos = resultados.reduce((sum, r) => sum + (r.contratos || []).length, 0);
       } else {
         const res = await buscarContratosUFMunicipio('uf', item.valor, '', item.ano, item.trimestres);
-        resultados = res.resultados;
-        totalContratos = res.totalContratos;
+        resultados = await enriquecerResultados(res.resultados, item.ano, item.trimestres);
+        totalContratos = resultados.reduce((sum, r) => sum + (r.contratos || []).length, 0);
       }
 
       if (cancelRef.current) {
@@ -274,6 +309,8 @@ export default function LicitacoesPage() {
       notifyComplete();
       return;
     }
+
+    if (filaPausadaRef.current) return;
 
     const item = state.fila[0];
     dispatch(removeFromFila(item.id));
@@ -379,19 +416,22 @@ export default function LicitacoesPage() {
 
         <div className="licitacoes-content-wrapper">
           <div className="licitacoes-cards-top">
-            <ToolCard id="licitacao-o-que-e" title="O que é uma Licitação?">
-              <LicitacaoDefinicao />
-            </ToolCard>
-            <ToolCard id="licitacao-importancia" title="Por que isso importa?">
-              <LicitacaoImportancia />
-            </ToolCard>
-            <ToolCard id="licitacao-dispensa" title="Dispensa de Licitação">
-              <LicitacaoDispensa />
-            </ToolCard>
+            <button className="tool-card-btn" onClick={() => setCardAberto('definicao')}>
+              <span className="tool-card-btn-icon">?</span>
+              <span>O que é uma Licitação?</span>
+            </button>
+            <button className="tool-card-btn" onClick={() => setCardAberto('importancia')}>
+              <span className="tool-card-btn-icon">!</span>
+              <span>Por que isso importa?</span>
+            </button>
+            <button className="tool-card-btn" onClick={() => setCardAberto('dispensa')}>
+              <span className="tool-card-btn-icon">*</span>
+              <span>Dispensa de Licitação</span>
+            </button>
           </div>
 
           <div className="licitacoes-form-wrapper" id="licitacoes-consulta">
-            {view === 'progress' && (progresso.stage === 'buscando' || progresso.stage === 'processando') ? (
+            {view === 'progress' && progresso.stage !== 'idle' ? (
               <>
                 <div style={{ maxWidth: 960, marginBottom: 16 }}>
                   <button className="btn btn-sm" onClick={() => setView('form')} style={{ borderColor: 'var(--text-muted)', color: 'var(--text-muted)' }}>
@@ -441,37 +481,21 @@ export default function LicitacoesPage() {
                       />
                     )}
 
-                    {fila.length > 0 && (
-                      <div className="card" style={{ marginTop: 16, padding: 16 }}>
-                        <h3 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-muted)', marginBottom: 12 }}>
-                          Fila de Consultas ({fila.length})
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {fila.map((item) => (
-                            <div key={item.id} style={{
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                              padding: '8px 10px', background: 'var(--bg-elevated)', borderRadius: 6,
-                              fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
-                            }}>
-                              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>
-                                  {item.tipo === 'uf' ? 'UF' : item.tipo === 'municipio' ? 'Município' : 'Órgão'}
-                                </span>
-                                <span>{item.valor}</span>
-                                <span style={{ color: 'var(--text-muted)' }}>{item.ano}</span>
-                                <span style={{ color: 'var(--text-muted)' }}>
-                                  {(item.trimestres?.length ?? 0) > 0 ? `T${(item.trimestres ?? []).join(',T')}` : 'Todos'}
-                                </span>
-                              </div>
-                              <button className="btn btn-sm btn-outline-danger" onClick={() => dispatch(removeFromFila(item.id))}
-                                style={{ padding: '2px 8px', fontSize: '0.65rem' }}>
-                                Remover
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <FilaSession
+                      titulo="Fila de Consultas"
+                      itens={fila as FilaItemView[]}
+                      onRemover={(id) => dispatch(removeFromFila(id))}
+                      onRemoverMultiplos={(ids) => ids.forEach(id => dispatch(removeFromFila(id)))}
+                      onPausar={setFilaPausada}
+                      pausado={filaPausada}
+                      processando={processandoRef.current}
+                      onIniciarProximo={() => {
+                        if (!processandoRef.current) {
+                          setTimeout(() => proximaFila(), 100);
+                        }
+                      }}
+                      onVerProgresso={() => setView('progress')}
+                    />
 
                     {!formAberto && fila.length === 0 && (
                       <button className="btn btn-sm" onClick={() => dispatch(setFormAberto(true))}>
@@ -512,7 +536,7 @@ export default function LicitacoesPage() {
             )}
           </div>
 
-          {(progresso.concluido || progresso.cancelado || view === 'progress') && (
+          {(progresso.concluido || progresso.cancelado) && (
             <div style={{ width: '100%', maxWidth: 960, marginTop: 16 }}>
               <Progresso
                 onCancelar={handleCancelar}
@@ -562,6 +586,22 @@ export default function LicitacoesPage() {
           <EntityPopup tipo={KEY_TO_TIPO[popup.idKey]} chave={popup.chave} cachedData={entidadeCache[popup.chave]} onLoaded={(data) => handleAtualizarEntidadeCache(popup.chave, data)} />
         </JanelaPopup>
       )}
+
+      {cardAberto === 'definicao' && (
+        <DraggablePopup titulo="O que é uma Licitação?" onFechar={() => setCardAberto(null)}>
+          <LicitacaoDefinicao />
+        </DraggablePopup>
+      )}
+      {cardAberto === 'importancia' && (
+        <DraggablePopup titulo="Por que isso importa?" onFechar={() => setCardAberto(null)}>
+          <LicitacaoImportancia />
+        </DraggablePopup>
+      )}
+      {cardAberto === 'dispensa' && (
+        <DraggablePopup titulo="Dispensa de Licitação" onFechar={() => setCardAberto(null)}>
+          <LicitacaoDispensa />
+        </DraggablePopup>
+      )}
     </div>
   );
 }
@@ -584,6 +624,69 @@ function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose, onLigacaoPo
 
   const resumo = `${totalOrgaos} \u00f3rg\u00e3o(s) \u00b7 ${totalContratos} contrato(s)`;
 
+  const todosContratos = useMemo(() => {
+    return consulta.resultados.flatMap((r: any) => r.contratos || []);
+  }, [consulta.resultados]);
+
+  const totalValor = useMemo(() => {
+    return todosContratos.reduce((s, c) => s + Number(c.valorGlobal ?? c.valorTotalEstimado ?? 0), 0);
+  }, [todosContratos]);
+
+  const categorias = useMemo(() => {
+    const cats: Record<string, number> = {};
+    todosContratos.forEach(c => {
+      const nome = c.categoriaProcesso?.nome || 'Sem categoria';
+      cats[nome] = (cats[nome] || 0) + Number(c.valorGlobal ?? c.valorTotalEstimado ?? 0);
+    });
+    return cats;
+  }, [todosContratos]);
+
+  const chartCategoria = useMemo(() => {
+    return topN(
+      Object.entries(categorias).map(([nome, valor]) => ({ nome, valor })).sort((a, b) => b.valor - a.valor),
+      6
+    );
+  }, [categorias]);
+
+  const categoriasList = useMemo(() => Object.keys(categorias).sort(), [categorias]);
+
+
+
+  function PainelResumo() {
+    return (
+      <div className="consulta-painel-resumo">
+        <div className="painel-resumo-header">
+          <span className="painel-resumo-title">Resumo da Consulta</span>
+          <span className="painel-resumo-count">{totalContratos} contratos</span>
+          <span className="painel-resumo-valor">{fmtValor(totalValor)}</span>
+        </div>
+        {chartCategoria.length > 0 && (
+          <div className="painel-resumo-charts">
+            <div className="chart-card-sm">
+              <div className="chart-card-title">Valor por Categoria</div>
+              <PieChart data={chartCategoria} size={CHART_SIZE_MD} />
+            </div>
+          </div>
+        )}
+        {categoriasList.length > 0 && (
+          <div style={{ marginTop: 12, borderTop: '1px solid var(--card-border)', paddingTop: 12 }}>
+            <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--text-muted)', marginBottom: 8 }}>
+              Por Categoria
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 6 }}>
+              {categoriasList.map(cat => (
+                <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', background: 'var(--bg-elevated)', borderRadius: 4 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>{cat}</span>
+                  <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{fmtValor(categorias[cat])}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (maximizado) {
     return createPortal(
       <div className="consulta-card consulta-card-maximizada">
@@ -602,6 +705,7 @@ function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose, onLigacaoPo
             <button className="btn-apagar" onClick={onClose} title="Fechar">{'\u2715'}</button>
           </div>
         </div>
+        <PainelResumo />
         <div className="consulta-body" style={{ overflow: 'auto', flex: 1 }}>
           <Resultados
             resultados={consulta.resultados}
@@ -665,6 +769,7 @@ function ConsultaCard({ consulta, pncpDestacado, onIdClick, onClose, onLigacaoPo
           <button className="btn-apagar" onClick={onClose} title="Fechar">{'\u2715'}</button>
         </div>
       </div>
+      <PainelResumo />
       <div className="consulta-body">
         <Resultados
           resultados={consulta.resultados}

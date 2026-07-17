@@ -1,16 +1,11 @@
 // @ts-nocheck
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { apiP2 } from '@/shared/api/client';
+import { ENDPOINTS } from '@/shared/api/endpoints';
+import { P2_API_BASE_URL } from '@/shared/config';
 import { extrairDocumentosDosContratos } from '@/shared/lib/extrair-documentos-contratos';
+import { fmtDoc, fmtVal, fLabel } from '@/shared/lib/formatters';
 import './LigacaoPolitica.css';
-
-function fmtDoc(d) {
-  if (!d) return '-';
-  const s = d.replace(/\D/g, '');
-  if (s.length === 11) return s.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  if (s.length === 14) return s.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-  return d;
-}
 
 const TIPO_ROTULO = {
   candidato: 'Candidato',
@@ -49,19 +44,7 @@ const TIPO_COR = {
   servidor_publico: 'tag-servidor',
 };
 
-function fmtVal(v) {
-  if (v === null || v === undefined) return '-';
-  if (typeof v === 'boolean') return v ? 'Sim' : 'Nao';
-  if (typeof v === 'number') {
-    if (Number.isInteger(v)) return v.toLocaleString('pt-BR');
-    return v.toFixed(2);
-  }
-  return String(v) || '-';
-}
 
-function fLabel(k) {
-  return k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
 
 const SKIP_KEYS_VINC = new Set(['id', 'created_at', 'updated_at', 'deleted_at']);
 
@@ -110,8 +93,8 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
                 <div className="lp-vinc-subsec">
                   <span className="lp-vinc-secao-subtitle">Despesas como Candidato ({detalhes.fornecedor.despesas_candidato.length})</span>
                   <div className="lp-vinc-sub-items">
-                    {detalhes.fornecedor.despesas_candidato.slice(0, 5).map((dc, i) => (
-                      <div key={i} className="lp-vinc-sub-item">
+                    {detalhes.fornecedor.despesas_candidato.slice(0, 5).map((dc) => (
+                      <div key={dc.sq_despesa || dc.despesa?.sq_despesa || dc.descricao} className="lp-vinc-sub-item">
                         <span>{dc.descricao_de_vinculo || dc.despesa?.descricao || '-'}</span>
                         <span className="lp-vinc-valor-mono">{fmtVal(dc.despesa?.valor)}</span>
                       </div>
@@ -126,8 +109,8 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
                 <div className="lp-vinc-subsec">
                   <span className="lp-vinc-secao-subtitle">Despesas como Partido ({detalhes.fornecedor.despesas_orgao_partidario.length})</span>
                   <div className="lp-vinc-sub-items">
-                    {detalhes.fornecedor.despesas_orgao_partidario.slice(0, 5).map((dp, i) => (
-                      <div key={i} className="lp-vinc-sub-item">
+                    {detalhes.fornecedor.despesas_orgao_partidario.slice(0, 5).map((dp) => (
+                      <div key={dp.sq_despesa || dp.despesa?.sq_despesa || dp.descricao} className="lp-vinc-sub-item">
                         <span>{dp.descricao_de_vinculo || dp.despesa?.descricao || '-'}</span>
                         <span className="lp-vinc-valor-mono">{fmtVal(dp.despesa?.valor)}</span>
                       </div>
@@ -157,8 +140,8 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
             <div className="lp-vinc-secao">
               <span className="lp-vinc-secao-title">Receitas de Candidato ({rc.length})</span>
               <div className="lp-vinc-sub-items">
-                {rc.slice(0, 5).map((r, i) => (
-                  <div key={i} className="lp-vinc-sub-item">
+                {rc.slice(0, 5).map((r) => (
+                  <div key={r.sq_receita || r.descricao} className="lp-vinc-sub-item">
                     <span>{r.descricao || '-'}</span>
                     <span className="lp-vinc-valor-mono">{fmtVal(r.valor)}</span>
                     {r.data_receita && <span className="lp-vinc-data">{r.data_receita}</span>}
@@ -172,8 +155,8 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
             <div className="lp-vinc-secao">
               <span className="lp-vinc-secao-title">Receitas de Orgao Partidario ({rop.length})</span>
               <div className="lp-vinc-sub-items">
-                {rop.slice(0, 5).map((r, i) => (
-                  <div key={i} className="lp-vinc-sub-item">
+                {rop.slice(0, 5).map((r) => (
+                  <div key={r.sq_receita || r.descricao} className="lp-vinc-sub-item">
                     <span>{r.descricao || '-'}</span>
                     <span className="lp-vinc-valor-mono">{fmtVal(r.valor)}</span>
                     {r.data_receita && <span className="lp-vinc-data">{r.data_receita}</span>}
@@ -190,8 +173,8 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
                 <div className="lp-vinc-subsec">
                   <span className="lp-vinc-secao-subtitle">Contas Julgadas Irregulares ({tcuCI.length})</span>
                   <div className="lp-vinc-sub-items">
-                    {tcuCI.slice(0, 5).map((r, i) => (
-                      <div key={i} className="lp-vinc-sub-item">
+                    {tcuCI.slice(0, 5).map((r) => (
+                      <div key={r.numeroProcessoFormatado || r.nome} className="lp-vinc-sub-item">
                         <span>{r.nome || '-'}</span>
                         {r.numeroProcessoFormatado && <span className="lp-vinc-valor-mono">{r.numeroProcessoFormatado}</span>}
                       </div>
@@ -204,8 +187,8 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
                 <div className="lp-vinc-subsec">
                   <span className="lp-vinc-secao-subtitle">Inabilitados ({tcuINAB.length})</span>
                   <div className="lp-vinc-sub-items">
-                    {tcuINAB.slice(0, 5).map((r, i) => (
-                      <div key={i} className="lp-vinc-sub-item">
+                    {tcuINAB.slice(0, 5).map((r) => (
+                      <div key={r.numeroProcessoFormatado || r.nome} className="lp-vinc-sub-item">
                         <span>{r.nome || '-'}</span>
                         {r.numeroProcessoFormatado && <span className="lp-vinc-valor-mono">{r.numeroProcessoFormatado}</span>}
                       </div>
@@ -218,8 +201,8 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
                 <div className="lp-vinc-subsec">
                   <span className="lp-vinc-secao-subtitle">Inidôneos ({tcuINID.length})</span>
                   <div className="lp-vinc-sub-items">
-                    {tcuINID.slice(0, 5).map((r, i) => (
-                      <div key={i} className="lp-vinc-sub-item">
+                    {tcuINID.slice(0, 5).map((r) => (
+                      <div key={r.numeroProcessoFormatado || r.nome} className="lp-vinc-sub-item">
                         <span>{r.nome || '-'}</span>
                         {r.numeroProcessoFormatado && <span className="lp-vinc-valor-mono">{r.numeroProcessoFormatado}</span>}
                       </div>
@@ -233,14 +216,14 @@ function VinculoDetalhesView({ detalhes, onIdClick }) {
           {hasServPub && (
             <div className="lp-vinc-secao">
               <span className="lp-vinc-secao-title">Servidor Público (Portal da Transparência)</span>
-              {servPub.map((s, i) => {
+              {servPub.map((s) => {
                 const serv = s.servidor || {};
                 const pes = serv.pessoa || {};
                 const orgaoLot = serv.orgaoServidorLotacao || {};
                 const orgaoExe = serv.orgaoServidorExercicio || {};
                 const func = serv.funcao || {};
                 return (
-                  <div key={i} className="lp-vinc-subsec">
+                  <div key={pes.cpf || pes.nome || s.id} className="lp-vinc-subsec">
                     <span className="lp-vinc-secao-subtitle">Registro #{i + 1}</span>
                     <div className="lp-vinc-grid">
                       <div className="lp-vinc-campo">
@@ -405,8 +388,8 @@ function CardContexto({ item, onNavigateToLicitacao, onIdClick }) {
               </div>
               {sociosAbertos && (
                 <div className="lp-card-socios-list">
-                  {socios.map((s, i) => (
-                    <div key={i} className="lp-card-socio">
+                  {socios.map((s) => (
+                    <div key={s.documento || s.nome} className="lp-card-socio">
                       <span className="lp-card-socio-nome">{s.nome || '-'}</span>
                       <span
                         className="lp-card-socio-doc clickable"
@@ -501,6 +484,7 @@ export default function LigacaoPolitica({
   const [etapa, setEtapa] = useState('idle');
   const [salvo, setSalvo] = useState(false);
   const [mostrarSalvas, setMostrarSalvas] = useState(false);
+  const [progresso, setProgresso] = useState(null);
   const abortRef = useRef(null);
   const perConsultaState = useRef({});
   const currentId = useRef(consultaId || 'all');
@@ -508,9 +492,9 @@ export default function LigacaoPolitica({
   const saveCurrentState = useCallback(() => {
     const id = currentId.current;
     if (id && id !== 'cached') {
-      perConsultaState.current[id] = { data, loading, error, etapa, salvo };
+      perConsultaState.current[id] = { data, loading, error, etapa, salvo, progresso };
     }
-  }, [data, loading, error, etapa, salvo]);
+  }, [data, loading, error, etapa, salvo, progresso]);
 
   const restoreState = useCallback((id, fallbackCached) => {
     const saved = perConsultaState.current[id];
@@ -520,6 +504,7 @@ export default function LigacaoPolitica({
       setError(saved.error);
       setEtapa(saved.etapa);
       setSalvo(saved.salvo);
+      setProgresso(saved.progresso || null);
       return true;
     }
     if (fallbackCached?.data) {
@@ -528,6 +513,7 @@ export default function LigacaoPolitica({
       setError(null);
       setEtapa('completo');
       setSalvo(false);
+      setProgresso(null);
       return true;
     }
     return false;
@@ -619,23 +605,59 @@ export default function LigacaoPolitica({
     abortRef.current = controller;
 
     if (licitacoes.length === 0) {
-      setError('Nenhuma licitacao encontrada nas consultas.');
+      setError('Nenhum documento encontrado nas consultas.');
       setLoading(false);
       setEtapa('idle');
       return;
     }
     setLoading(true);
     setError(null);
+    setProgresso(null);
     setEtapa('buscando');
     try {
-      const json = await apiP2.post<any>(`/busca/contexto`, { licitacoes }, { signal: controller.signal });
+      const initResp = await apiP2.post<any>(ENDPOINTS.ANOMALIA_INICIAR, { licitacoes }, { signal: controller.signal });
       if (controller.signal.aborted) return;
+
+      const jobId = initResp.job_id;
+
+      // Poll progression endpoint for real-time progress
+      let done = false;
+      while (!done) {
+        await new Promise(r => setTimeout(r, 1500));
+        if (controller.signal.aborted) return;
+
+        const progResp = await fetch(`${P2_API_BASE_URL}${ENDPOINTS.ANOMALIA_PROGRESSO}/${jobId}`, { signal: controller.signal }).catch(() => null);
+        if (!progResp || !progResp.ok) continue;
+        const prog = await progResp.json();
+
+        setProgresso(prog);
+
+        if (prog.type === 'done' || prog.type === 'cancelled') {
+          done = true;
+          if (prog.type === 'cancelled') {
+            setEtapa('idle');
+            setLoading(false);
+            setError('Análise cancelada');
+            return;
+          }
+        }
+        if (prog.type === 'error') {
+          setEtapa('erro');
+          setLoading(false);
+          setError(prog.message || 'Erro na análise');
+          return;
+        }
+      }
+
+      const resp = await fetch(`${P2_API_BASE_URL}${ENDPOINTS.ANOMALIA_RESULTADO}/${jobId}`, { signal: controller.signal });
+      if (!resp.ok) throw new Error('Erro ao buscar resultados');
+      const json = await resp.json();
 
       const idAtual = currentId.current;
       const idReq = consultaId || 'all';
       if (idAtual !== idReq && idAtual !== 'cached') {
         const savedSalvo = !!(onSave && !cachedItem);
-        perConsultaState.current[idReq] = { data: json, loading: false, error: null, etapa: 'completo', salvo: savedSalvo };
+        perConsultaState.current[idReq] = { data: json, loading: false, error: null, etapa: 'completo', salvo: savedSalvo, progresso: null };
         onResultsReady?.(consultaId, json, licitacoes);
         if (onSave && !cachedItem) {
           onSave({
@@ -653,6 +675,7 @@ export default function LigacaoPolitica({
 
       setData(json);
       setEtapa('completo');
+      setProgresso(null);
       onResultsReady?.(consultaId, json, licitacoes);
       if (onSave && !cachedItem) {
         onSave({
@@ -671,7 +694,7 @@ export default function LigacaoPolitica({
       const idAtual = currentId.current;
       const idReq = consultaId || 'all';
       if (idAtual !== idReq && idAtual !== 'cached') {
-        perConsultaState.current[idReq] = { data: null, loading: false, error: err.message, etapa: 'erro', salvo: false };
+        perConsultaState.current[idReq] = { data: null, loading: false, error: err.message, etapa: 'erro', salvo: false, progresso: null };
         return;
       }
       setError(err.message);
@@ -695,6 +718,7 @@ export default function LigacaoPolitica({
       abortRef.current = null;
     }
     setLoading(false);
+    setProgresso(null);
     setEtapa('idle');
     setError(null);
   };
@@ -757,8 +781,9 @@ export default function LigacaoPolitica({
           {cachedItem ? 'Ligacao Politica (Salva)' : consultaId ? 'Ligacao Politica' : 'Ligacao Politica (Geral)'}
         </h2>
         <span className="lp-info">
-          {etapa === 'completo' && `${totalVinculos} vinculo${totalVinculos !== 1 ? 's' : ''} · ${totalProcessados} processado${totalProcessados !== 1 ? 's' : ''}`}
-          {etapa !== 'completo' && licitacoes.length > 0 && `${licitacoes.length} licitacao${licitacoes.length !== 1 ? 'oes' : ''}`}
+          {etapa === 'completo' && `${totalVinculos} vinculo${totalVinculos !== 1 ? 's' : ''} · ${totalProcessados} documento${totalProcessados !== 1 ? 's' : ''} processado${totalProcessados !== 1 ? 's' : ''}`}
+          {etapa === 'buscando' && progresso && `${progresso.processed || 0}/${progresso.total || licitacoes.length} documento${licitacoes.length !== 1 ? 's' : ''} analisado${licitacoes.length !== 1 ? 's' : ''}`}
+          {etapa === 'idle' && licitacoes.length > 0 && `${licitacoes.length} documento${licitacoes.length !== 1 ? 's' : ''} extraído${licitacoes.length !== 1 ? 's' : ''}`}
         </span>
         <div className="lp-topo-actions">
           {consultaId ? (
@@ -816,17 +841,31 @@ export default function LigacaoPolitica({
         <div className="lp-progresso">
           {licitacoes.length > 0 ? (
             <p className="lp-status">
-              {licitacoes.length} licitacao{licitacoes.length !== 1 ? 'oes' : ''} extraida{licitacoes.length !== 1 ? 's' : ''}. Clique em <strong>Buscar</strong> para iniciar a analise.
+              {licitacoes.length} documento{licitacoes.length !== 1 ? 's' : ''} extraído{licitacoes.length !== 1 ? 's' : ''}. Clique em <strong>Buscar</strong> para iniciar a análise.
             </p>
           ) : (
-            <p className="lp-status">Nenhuma licitacao encontrada. Realize uma consulta primeiro.</p>
+            <p className="lp-status">Nenhum documento encontrado. Realize uma consulta primeiro.</p>
           )}
         </div>
       )}
 
       {etapa === 'buscando' && (
         <div className="lp-progresso">
-          <p className="lp-status">Buscando {licitacoes.length} licitacao{licitacoes.length !== 1 ? 'oes' : ''}...</p>
+          {progresso ? (
+            <div>
+              <p className="lp-status">
+                {progresso.message || `Analisando ${progresso.processed || 0} de ${progresso.total || licitacoes.length} documento${licitacoes.length !== 1 ? 's' : ''}...`}
+              </p>
+              {progresso.total > 0 && (
+                <div className="lp-status" style={{ marginTop: 8, fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                  {progresso.processed || 0}/{progresso.total || licitacoes.length} analisados
+                  {progresso.anomalias_encontradas > 0 && ` · ${progresso.anomalias_encontradas} anomalia${progresso.anomalias_encontradas !== 1 ? 's' : ''}`}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="lp-status">Iniciando análise de {licitacoes.length} documento{licitacoes.length !== 1 ? 's' : ''}...</p>
+          )}
         </div>
       )}
 

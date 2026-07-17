@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { setAbaAtiva } from '@/app/store/slices/navigationSlice';
-import { setPtTopAba, setPtMetodoAtiva, addPtSubTab, removePtSubTab, setPtMetodoState } from '@/app/store/slices/portalSlice';
+import { setTopAba, setMetodoAtiva, addSubTab, removeSubTab, setMetodoState } from '@/app/store/slices/portalSlice';
 import { InfoBadge, PopupInfo, useEntityInfo } from '@/shared/ui/EntityInfo/EntityInfo';
 import PortalOrgaos from '@/features/portal-transparencia/ui/PortalOrgaos';
 import PortalPessoas from '@/features/portal-transparencia/ui/PortalPessoas';
@@ -24,8 +24,8 @@ const PT_METODOS = [
 
 export default function PortalTransparenciaPage() {
   const dispatch = useAppDispatch();
-  const ptTopAba = useAppSelector((s) => s.portal.ptTopAba);
-  const ptMetodoState = useAppSelector((s) => s.portal.ptMetodoState);
+  const topAba = useAppSelector((s) => s.portal.topAba);
+  const metodoState = useAppSelector((s) => s.portal.metodoState);
   const [ptDataCache, setPtDataCache] = useState({});
   const ptDataCacheRef = useRef(ptDataCache);
   useEffect(() => { ptDataCacheRef.current = ptDataCache; }, [ptDataCache]);
@@ -36,19 +36,19 @@ export default function PortalTransparenciaPage() {
   const handlePTSearchComplete = useCallback((method, searchParams, data) => {
     const id = ++ptUid;
     setPtDataCache(prev => ({ ...prev, [id]: { searchParams, data, id, method, timestamp: new Date().toISOString() } }));
-    dispatch(addPtSubTab({ method, id }));
-    dispatch(setPtMetodoAtiva({ method, ativa: `pt-${id}` }));
-    dispatch(setPtTopAba(method));
+    dispatch(addSubTab({ method, id }));
+    dispatch(setMetodoAtiva({ method, ativa: `pt-${id}` }));
+    dispatch(setTopAba(method));
     dispatch(setAbaAtiva('portal'));
   }, [dispatch]);
 
   const handleFecharPTSubTab = useCallback((method, key) => {
     const id = Number(key.replace('pt-', ''));
-    dispatch(removePtSubTab({ method, id }));
+    dispatch(removeSubTab({ method, id }));
   }, [dispatch]);
 
   const handleAbrirMetodoPT = useCallback((method) => {
-    dispatch(setPtTopAba(method));
+    dispatch(setTopAba(method));
     dispatch(setAbaAtiva('portal'));
   }, [dispatch]);
 
@@ -61,16 +61,16 @@ export default function PortalTransparenciaPage() {
         </div>
 
         <div className="lp-sub-tabs">
-          <button className={`lp-sub-tab ${ptTopAba === 'geral' ? 'ativo' : ''}`} onClick={() => dispatch(setPtTopAba('geral'))}>Geral</button>
+          <button className={`lp-sub-tab ${topAba === 'geral' ? 'ativo' : ''}`} onClick={() => dispatch(setTopAba('geral'))}>Geral</button>
           {PT_METODOS.map(m => (
-            <button key={m.key} className={`lp-sub-tab ${ptTopAba === m.key ? 'ativo' : ''}`} onClick={() => dispatch(setPtTopAba(m.key))}>
+            <button key={m.key} className={`lp-sub-tab ${topAba === m.key ? 'ativo' : ''}`} onClick={() => dispatch(setTopAba(m.key))}>
               {m.label}
-              <span className="lp-sub-tab-fechar" onClick={(e) => { e.stopPropagation(); dispatch(setPtTopAba('geral')); }}>×</span>
+              <span className="lp-sub-tab-fechar" onClick={(e) => { e.stopPropagation(); dispatch(setTopAba('geral')); }}>×</span>
             </button>
           ))}
         </div>
 
-        <div style={{ display: ptTopAba === 'geral' ? '' : 'none' }}>
+        <div style={{ display: topAba === 'geral' ? '' : 'none' }}>
           <div className="rp-metodo-grid">
             {PT_METODOS.map(m => (
               <button key={m.key} className="rp-metodo-btn" onClick={() => handleAbrirMetodoPT(m.key)}>
@@ -83,14 +83,14 @@ export default function PortalTransparenciaPage() {
         </div>
 
         {PT_METODOS.map(m => {
-          const methodState = ptMetodoState[m.key];
+          const methodState = metodoState[m.key];
           if (!methodState) return null;
           const Comp = m.Component;
           return (
-            <div key={m.key} style={{ display: ptTopAba === m.key ? '' : 'none' }}>
+            <div key={m.key} style={{ display: topAba === m.key ? '' : 'none' }}>
               <div className="lp-sub-tabs">
                 <button className={`lp-sub-tab ${methodState.ativa === 'geral' ? 'ativo' : ''}`}
-                  onClick={() => dispatch(setPtMetodoAtiva({ method: m.key, ativa: 'geral' }))}>Geral</button>
+                  onClick={() => dispatch(setMetodoAtiva({ method: m.key, ativa: 'geral' }))}>Geral</button>
                 {methodState.subs.map((id, idx) => {
                   const item = ptDataCache[id];
                   let label = `#${id}`;
@@ -106,7 +106,7 @@ export default function PortalTransparenciaPage() {
                   const key = `pt-${id}`;
                   return (
                     <button key={key} className={`lp-sub-tab ${methodState.ativa === key ? 'ativo' : ''}`}
-                      onClick={() => dispatch(setPtMetodoAtiva({ method: m.key, ativa: key }))}>
+                      onClick={() => dispatch(setMetodoAtiva({ method: m.key, ativa: key }))}>
                       {label}
                       <span className="lp-sub-tab-fechar" onClick={(e) => { e.stopPropagation(); handleFecharPTSubTab(m.key, key); }}>×</span>
                     </button>
@@ -114,14 +114,14 @@ export default function PortalTransparenciaPage() {
                 })}
               </div>
               <div style={{ display: methodState.ativa === 'geral' ? '' : 'none' }}>
-                <Comp onFechar={() => dispatch(setPtTopAba('geral'))} onIdClick={handleIdClick} onPTSearchComplete={handlePTSearchComplete} />
+                <Comp onFechar={() => dispatch(setTopAba('geral'))} onIdClick={handleIdClick} onPTSearchComplete={handlePTSearchComplete} />
               </div>
               {methodState.subs.map(id => {
                 const key = `pt-${id}`;
                 const item = ptDataCache[id];
                 return (
                   <div key={key} style={{ display: methodState.ativa === key ? '' : 'none' }}>
-                    <Comp onFechar={() => dispatch(setPtMetodoAtiva({ method: m.key, ativa: 'geral' }))} onIdClick={handleIdClick} resultItem={item || null} />
+                    <Comp onFechar={() => dispatch(setMetodoAtiva({ method: m.key, ativa: 'geral' }))} onIdClick={handleIdClick} resultItem={item || null} />
                   </div>
                 );
               })}

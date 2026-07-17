@@ -208,3 +208,88 @@
   position: sticky;
   top: 24px;
 }
+
+.consulta-painel-resumo {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--card-border);
+  background: var(--bg-surface);
+}
+
+.painel-resumo-header {
+  display: flex;
+  gap: 16px;
+  align-items: baseline;
+  margin-bottom: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.painel-resumo-title {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+}
+
+.painel-resumo-count {
+  color: var(--text-secondary);
+}
+
+.painel-resumo-valor {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.painel-resumo-charts {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.licitacoes-cards-top {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 32px;
+  width: 100%;
+}
+
+.tool-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: var(--bg-surface);
+  border: 1px solid var(--accent-tertiary-glow);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 1;
+}
+
+.tool-card-btn:hover {
+  border-color: var(--accent-tertiary);
+  box-shadow: 0 0 8px var(--accent-tertiary-subtle);
+  background: var(--bg-elevated);
+}
+
+.tool-card-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--accent-tertiary-glow);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}

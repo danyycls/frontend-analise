@@ -2,18 +2,12 @@
 import { useState, useEffect } from 'react'
 import { apiP2 } from '@/shared/api/client'
 import { ENDPOINTS } from '@/shared/api/endpoints'
-import { fmtDoc } from '@/shared/lib/formatters'
+import { P2_API_BASE_URL } from '@/shared/config'
+import { fmtDoc, fmtValor } from '@/shared/lib/formatters'
 
 interface InspectionViewProps {
   document: string
   onClose: () => void
-}
-
-function fmtValor(v: unknown): string {
-  if (v == null) return '-'
-  const n = Number(v)
-  if (isNaN(n)) return String(v)
-  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 export default function InspectionView({ document, onClose }: InspectionViewProps) {
@@ -27,13 +21,33 @@ export default function InspectionView({ document, onClose }: InspectionViewProp
       setLoading(true)
       setError(null)
       try {
-        const json = await apiP2.post<any>(ENDPOINTS.BUSCA_CONTEXTO, {
+        const initResp = await apiP2.post<any>(ENDPOINTS.ANOMALIA_INICIAR, {
           licitacoes: [{
             numero_controle_pncp: '',
             cpf_cnpj: document,
             socios: [],
           }],
         })
+        if (cancelled) return
+
+        const jobId = initResp.job_id
+
+        let json: any
+        while (true) {
+          await new Promise(r => setTimeout(r, 1000))
+          if (cancelled) return
+
+          const resp = await fetch(`${P2_API_BASE_URL}${ENDPOINTS.ANOMALIA_RESULTADO}/${jobId}`)
+          if (resp.ok) {
+            json = await resp.json()
+            break
+          }
+          if (resp.status !== 404) {
+            const errText = await resp.text().catch(() => 'Erro ao buscar resultados')
+            throw new Error(errText)
+          }
+        }
+
         if (!cancelled) setData(json)
       } catch (err: any) {
         if (!cancelled) setError(err.message || 'Erro ao consultar')

@@ -1,0 +1,107 @@
+.draggable-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.draggable-popup {
+  position: fixed;
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(480px, calc(100vh - 32px));
+  background: var(--bg-surface, #111);
+  border: 1px solid var(--card-border, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.draggable-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: grab;
+  user-select: none;
+  border-bottom: 1px solid var(--card-border, rgba(255, 255, 255, 0.08));
+  background: var(--bg-elevated, rgba(255, 255, 255, 0.04));
+}
+
+.draggable-popup-header:active {
+  cursor: grabbing;
+}
+
+.draggable-popup-titulo {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.draggable-popup-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.12s;
+}
+
+.draggable-popup-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.draggable-popup-body {
+  padding: 16px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.draggable-popup-body p {
+  margin-bottom: 6px;
+}
+
+.draggable-popup-body ul {
+  margin: 6px 0;
+  padding-left: 16px;
+  list-style: none;
+}
+
+.draggable-popup-body ul li {
+  margin-bottom: 3px;
+  position: relative;
+  padding-left: 12px;
+}
+
+.draggable-popup-body ul li::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.draggable-popup-body ul li strong {
+  color: var(--text-primary);
+}
+
+.draggable-popup-body h4 {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 10px 0 4px;
+}

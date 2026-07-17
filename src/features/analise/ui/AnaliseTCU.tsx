@@ -6,15 +6,6 @@ import { usePageMemory } from '@/shared/lib/hooks';
 import { InfoBadge } from '@/shared/ui/EntityInfo/EntityInfo';
 import './AnaliseTCU.css';
 
-function fmtVal(v: unknown) {
-  if (v === null || v === undefined) return '-';
-  return String(v);
-}
-
-function fLabel(k) {
-  return k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
-
 const API_MAP = {
   'contas-irregulares': { endpoint: '/tcu/contas-irregulares', label: 'Contas Irregulares', desc: 'Consulta pessoas físicas e jurídicas com contas julgadas irregulares pelo TCU. Filtre por nome, CPF, CNPJ, UF ou município.' },
   'fins-eleitorais':    { endpoint: '/tcu/fins-eleitorais',    label: 'Fins Eleitorais',    desc: 'Consulta contas irregulares com implicação eleitoral nos últimos 8 anos. Filtre por nome, CPF, UF ou município.' },

@@ -1,91 +1,20 @@
-// @ts-nocheck
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { API_BASE_URL } from '@/shared/config';
+import { api } from '@/shared/api/client';
 import { ContratoDetalhes, JanelaPopup } from '../../ligacao-politica/ui/Resultados';
 import { PieChart, CHART_SIZE_MD, CHART_SIZE_LG } from './chart-utils';
-
-function fmtMoney(v) {
-  if (!v && v !== 0) return '-';
-  return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function fmtDate(d) {
-  if (!d) return '-';
-  const m = String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
-  return d;
-}
+import { usePaginacao } from '@/shared/lib/hooks/usePaginacao';
+import { Paginacao } from '@/shared/ui';
+import { fmtMoney, fmtData } from '@/shared/lib/formatters';
+import PageNav from '@/shared/ui/PageNav/PageNav';
 
 const ITENS_POR_PAGINA = 10;
-
-function usePaginacao(dados, itensPorPagina = ITENS_POR_PAGINA) {
-  const [pagina, setPagina] = useState(0);
-  const arr = dados || [];
-  const totalPaginas = Math.max(1, Math.ceil(arr.length / itensPorPagina));
-  const inicio = pagina * itensPorPagina;
-  const paginaDados = arr.slice(inicio, inicio + itensPorPagina);
-  return { pagina, setPagina, totalPaginas, paginaDados };
-}
-
-function Paginacao({ pagina, totalPaginas, onPagina }) {
-  if (totalPaginas <= 1) return null;
-  return (
-    <div className="dm-paginacao">
-      <button className="pagina-btn" disabled={pagina === 0} onClick={() => onPagina(pagina - 1)}>◀</button>
-      <span className="pagina-info">{pagina + 1} / {totalPaginas}</span>
-      <button className="pagina-btn" disabled={pagina >= totalPaginas - 1} onClick={() => onPagina(pagina + 1)}>▶</button>
-    </div>
-  );
-}
 
 const PAGE_SECTIONS = [
   { id: 'municipio-licitacoes', label: 'Licitações' },
   { id: 'municipio-recursos', label: 'Recursos' },
 ];
 
-function PageNav() {
-  const [active, setActive] = useState('municipio-licitacoes');
 
-  useEffect(() => {
-    const ids = PAGE_SECTIONS.map((s) => s.id);
-    const elements = ids.map((id) => document.getElementById(id)).filter(Boolean);
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) {
-          setActive(visible[0].target.id);
-        }
-      },
-      { rootMargin: '-15% 0px -70% 0px', threshold: 0 },
-    );
-
-    elements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const scrollTo = useCallback((id) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
-  return (
-    <nav className="estado-page-nav">
-      {PAGE_SECTIONS.map((section) => (
-        <button
-          key={section.id}
-          className={`page-nav-item ${active === section.id ? 'active' : ''}`}
-          onClick={() => scrollTo(section.id)}
-        >
-          <span className="page-nav-dot" />
-          <span>{section.label}</span>
-        </button>
-      ))}
-    </nav>
-  );
-}
 
 export default function DetalheMunicipio({ municipio, uf, onFechar }) {
   const [licAnoInput, setLicAnoInput] = useState('');
@@ -146,13 +75,9 @@ export default function DetalheMunicipio({ municipio, uf, onFechar }) {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const res = await fetch(
-      `${API_BASE_URL}/estado/${uf}/licitacoes/municipio/${municipio.id}?ano=${ano}`,
-      { signal: controller.signal }
-    );
-
-    if (!res.ok) throw new Error(`Erro ${res.status} ao buscar licitacoes`);
-    return res.json();
+    const json = await api.post(`/pncp/contratos/municipio/${municipio.id}`, { data_inicial: `${ano}0101`, data_final: `${ano}1228` }, { signal: controller.signal });
+    const data = (json as any).data || [];
+    return data;
   }
 
   function licCancelar() {
@@ -238,7 +163,7 @@ export default function DetalheMunicipio({ municipio, uf, onFechar }) {
 
   return (
     <div className="estado-page">
-      <PageNav />
+      <PageNav sections={PAGE_SECTIONS} position="right" />
 
       <div className="estado-header" id="municipio-licitacoes">
         <h1 style={{ textTransform: 'none', fontSize: '1.2rem' }}>
@@ -386,8 +311,8 @@ export default function DetalheMunicipio({ municipio, uf, onFechar }) {
                     <td>{c.categoriaProcesso?.nome || c.modalidadeNome || '-'}</td>
                     <td>{c.fornecedor?.razaoSocial || c.nomeRazaoSocialFornecedor || '-'}</td>
                     <td className="dm-obj-col">{(c.objetoContrato || '').substring(0, 60)}{(c.objetoContrato || '').length > 60 ? '…' : ''}</td>
-                    <td style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>{fmtDate(c.dataVigenciaInicio)} ~ {fmtDate(c.dataVigenciaFim)}</td>
-                    <td style={{ fontSize: '0.7rem' }}>{fmtDate(c.dataPublicacaoPncp)}</td>
+                    <td style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>{fmtData(c.dataVigenciaInicio)} ~ {fmtData(c.dataVigenciaFim)}</td>
+                    <td style={{ fontSize: '0.7rem' }}>{fmtData(c.dataPublicacaoPncp)}</td>
                     <td>{fmtMoney(c.valorGlobal ?? c.valorTotalEstimado)}</td>
                   </tr>
                 ))}

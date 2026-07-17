@@ -3,9 +3,6 @@ export const ENDPOINTS = {
   ORGAO_ANALISE_START: '/orgao/analise',
   UF_MUNICIPIO_ANALISE_START: '/uf-municipio/analise',
 
-  // Busca
-  BUSCA_CONTEXTO: '/busca/contexto',
-
   // IBGE
   IBGE_ESTADOS: '/ibge/estados',
   IBGE_MUNICIPIOS: '/ibge/municipios',
@@ -49,14 +46,12 @@ export const ENDPOINTS = {
   TCU_INABILITADOS: '/tcu/inabilitados',
   TCU_INIDONEOS: '/tcu/inidoneos',
 
-  // Ligacao Politica
-  LIGACAO_POLITICA: '/ligacao-politica',
-
   // Worker Anomalias
   ANOMALIA_WS_CHANNEL: 'anomalia_analise',
   ANOMALIA_INICIAR: '/worker/anomalia/iniciar',
   ANOMALIA_PARAR: '/worker/anomalia/parar',
   ANOMALIA_PROGRESSO: '/worker/anomalia/progression',
+  ANOMALIA_RESULTADO: '/worker/anomalia/resultados',
   ANOMALIAS_LISTAR: '/anomalias',
 
   // Convenios

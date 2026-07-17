@@ -26,7 +26,7 @@ interface ProgressoState {
   success: number;
   errors: number;
   log: ProgressLog[];
-  stage: 'idle' | 'buscando' | 'processando' | 'concluido' | 'cancelado';
+    stage: 'idle' | 'buscando' | 'enriquecendo' | 'processando' | 'concluido' | 'cancelado';
   concluido: boolean;
   cancelado: boolean;
   results: unknown[] | null;
@@ -77,6 +77,9 @@ const consultaSlice = createSlice({
     removeFromFila(state, action: PayloadAction<number>) {
       state.fila = state.fila.filter(f => f.id !== action.payload);
     },
+    clearFila(state) {
+      state.fila = [];
+    },
     // Progress tracking
     setProgresso(state, action: PayloadAction<Partial<ProgressoState>>) {
       if (!state.progresso) {
@@ -101,7 +104,7 @@ const consultaSlice = createSlice({
 
 export const {
   addConsulta, removeConsulta, setConsultas,
-  addToFila, removeFromFila,
+  addToFila, removeFromFila, clearFila,
   setProgresso, resetProgresso,
 } = consultaSlice.actions;
 export default consultaSlice.reducer;

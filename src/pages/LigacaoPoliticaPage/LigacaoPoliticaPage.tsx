@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { setAbaAtiva } from '@/app/store/slices/navigationSlice';
-import { clearInspectionDoc, addEntities as addInvEntities, setLpEdges, updateEntityData } from '@/app/store/slices/investigationSlice';
+import { addEntities as addInvEntities, updateEntityData } from '@/app/store/slices/investigationSlice';
 import {
   setSubTabAtiva, addSubTab, removeSubTab, reorderSubTabs,
   setLigPoliticaAberta, addLigPoliticaCache, updateLigPoliticaCache,
@@ -15,7 +15,7 @@ import LigacaoPolitica from '@/features/ligacao-politica/ui/LigacaoPolitica';
 import { processLpResults } from '@/features/investigative-panel/lib/processLpResults';
 import { JanelaPopup, ContratoDetalhes } from '@/features/ligacao-politica/ui/Resultados';
 import EntityPopup from '@/features/ligacao-politica/ui/EntityPopup';
-import InspectionView from '@/features/ligacao-politica/ui/InspectionView';
+import PageNav from '@/shared/ui/PageNav/PageNav';
 import { fmtDoc } from '@/shared/lib/formatters';
 import { useDiscoveryReporter } from '@/shared/lib/entity-discovery';
 
@@ -41,8 +41,6 @@ export default function LigacaoPoliticaPage() {
   const ligPoliticaCache = useAppSelector((s) => s.ligacaoPolitica.ligPoliticaCache);
   const lpResultados = useAppSelector((s) => s.ligacaoPolitica.lpResultados);
   const lpDataCache = useAppSelector((s) => s.ligacaoPolitica.lpDataCache);
-  const inspectionDoc = useAppSelector((s) => s.investigation.inspectionDoc);
-  const panelLicitacoes = useAppSelector((s) => s.ligacaoPolitica.panelLicitacoes);
   const lpFromPanel = useAppSelector((s) => s.ligacaoPolitica.lpFromPanel);
   const invEntities = useAppSelector((s) => s.investigation.entities as Record<string, any>);
   const invEntityOrder = useAppSelector((s) => s.investigation.entityOrder as string[]);
@@ -119,9 +117,6 @@ export default function LigacaoPoliticaPage() {
         );
         if (politicalEntities.length > 0) {
           dispatch(addInvEntities(politicalEntities as any));
-        }
-        if (lpResultEdges.length > 0) {
-          dispatch(setLpEdges(lpResultEdges));
         }
         for (const dle of docLinkedEntities) {
           dispatch(updateEntityData({ id: dle.entityId, data: { parent_id: dle.parentId }, context: dle.context }));
@@ -206,21 +201,25 @@ export default function LigacaoPoliticaPage() {
     return set;
   }, [lpResultados]);
 
+  const lpSections = [
+    { id: 'lp-header', label: 'Início' },
+    { id: 'lp-content', label: 'Análise' },
+  ];
+
   return (
     <div className="tab-page">
-      <div className="tab-content">
-        {inspectionDoc ? (
-          <InspectionView
-            document={inspectionDoc}
-            onClose={() => dispatch(clearInspectionDoc())}
-          />
-        ) : (
-          <>
-        <div className="tab-header">
-          <h2 className="tab-title">Ligação Política</h2>
-          <p className="tab-desc">Cruzamento de dados entre fornecedores e agentes políticos.</p>
+      <PageNav position="left" sections={lpSections} />
+      <div className="licitacoes-page">
+        <div className="licitacoes-header" id="lp-header">
+          <div className="licitacoes-badge">// LIGAÇÃO POLÍTICA //</div>
+          <h1 className="licitacoes-title">
+            Cruzamento de Dados<br />
+            <span style={{ color: 'var(--accent)', fontSize: 'inherit' }}>Fornecedores e Agentes Políticos</span>
+          </h1>
+          <p className="licitacoes-subtitle">Analise vínculos entre fornecedores de licitações e políticos, partidos, servidores públicos e mais.</p>
         </div>
 
+        <div id="lp-content">
         <div className="lp-sub-tabs">
           <button className={`lp-sub-tab ${subTabAtiva === 'geral' ? 'ativo' : ''}`} onClick={() => dispatch(setSubTabAtiva('geral'))}>Geral</button>
           {subTabs.map((tab, idx) => {
@@ -259,7 +258,6 @@ export default function LigacaoPoliticaPage() {
             onLoadSaved={handleAbrirSalvoLP}
             onDadosAtualizados={handleLPDadosAtualizados}
             onIdClick={handleIdClickFromAnalise}
-            panelLicitacoes={panelLicitacoes}
           />
         </div>
 
@@ -278,13 +276,11 @@ export default function LigacaoPoliticaPage() {
                 savedList={ligPoliticaCache} onLoadSaved={handleAbrirSalvoLP}
                 onDadosAtualizados={handleLPDadosAtualizados}
                 onIdClick={handleIdClickFromAnalise}
-                panelLicitacoes={panelLicitacoes}
               />
             </div>
           );
         })}
-          </>
-        )}
+          </div>
       </div>
 
       {popup && popup.tipo === 'contrato' && (

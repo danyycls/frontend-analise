@@ -1,4 +1,3 @@
-// @ts-nocheck
 import './chart-utils.css';
 export const CHART_COLORS = [
   '#ff0080', '#00ffff', '#39ff14', '#ff6600', '#b000ff',

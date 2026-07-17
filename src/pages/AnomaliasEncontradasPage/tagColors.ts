@@ -2,7 +2,6 @@ const TAG_CORES: Record<string, string> = {
   'TSE':                  '#00f0ff',
   'TCU':                  '#ff6a00',
   'Portal Transparência': '#39ff14',
-  'Regra':                '#e8c547',
 };
 
 export function extrairCategoria(tag: string): string {

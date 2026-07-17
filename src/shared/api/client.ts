@@ -52,8 +52,8 @@ function createClient(baseUrl: string) {
   }
 
   return {
-    get: <T>(endpoint: string, params?: Record<string, string | number | undefined>) =>
-      request<T>(endpoint, { method: 'GET', params }),
+    get: <T>(endpoint: string, params?: Record<string, string | number | undefined>, options?: Omit<RequestInit, 'body' | 'method'>) =>
+      request<T>(endpoint, { method: 'GET', params, ...options }),
 
     post: <T>(endpoint: string, body?: unknown, options?: Omit<RequestInit, 'body' | 'method'>) =>
       request<T>(endpoint, { method: 'POST', body, ...options }),

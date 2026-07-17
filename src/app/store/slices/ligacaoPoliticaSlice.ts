@@ -5,16 +5,38 @@ interface SubTab {
   id: number;
 }
 
+interface LpCachedItem {
+  id: number;
+  data?: any;
+  licitacoes?: any[];
+  [key: string]: any;
+}
+
+interface LpResultadoItem {
+  cpf_cnpj?: string;
+  numero_controle_pncp?: string;
+  documentos?: Array<{ vinculos?: any[] }>;
+  [key: string]: any;
+}
+
+interface LpResultados {
+  resultados: LpResultadoItem[];
+  [key: string]: any;
+}
+
+interface LpDataCacheValue {
+  data: any;
+  licitacoes: any[];
+  timestamp: number;
+}
+
 interface LigacaoPoliticaState {
   subTabs: SubTab[];
   subTabAtiva: string;
-  ligPoliticaAberta: unknown | null;
-  ligPoliticaCache: unknown[];
-  lpResultados: unknown | null;
-  lpDataCache: Record<string, unknown>;
-  adTabAtiva: string;
-  adAnalises: unknown[];
-  panelLicitacoes: unknown[];
+  ligPoliticaAberta: LpCachedItem | null;
+  ligPoliticaCache: LpCachedItem[];
+  lpResultados: LpResultados | null;
+  lpDataCache: Record<string, LpDataCacheValue>;
   lpFromPanel: boolean;
 }
 
@@ -25,9 +47,6 @@ const initialState: LigacaoPoliticaState = {
   ligPoliticaCache: [],
   lpResultados: null,
   lpDataCache: {},
-  adTabAtiva: 'geral',
-  adAnalises: [],
-  panelLicitacoes: [],
   lpFromPanel: false,
 };
 
@@ -64,46 +83,31 @@ const ligacaoPoliticaSlice = createSlice({
       const [item] = state.subTabs.splice(from, 1);
       state.subTabs.splice(to, 0, item);
     },
-    setLigPoliticaAberta(state, action: PayloadAction<unknown | null>) {
+    setLigPoliticaAberta(state, action: PayloadAction<LpCachedItem | null>) {
       state.ligPoliticaAberta = action.payload;
     },
-    setLigPoliticaCache(state, action: PayloadAction<unknown[]>) {
+    setLigPoliticaCache(state, action: PayloadAction<LpCachedItem[]>) {
       state.ligPoliticaCache = action.payload;
     },
-    addLigPoliticaCache(state, action: PayloadAction<unknown>) {
+    addLigPoliticaCache(state, action: PayloadAction<LpCachedItem>) {
       state.ligPoliticaCache = [action.payload, ...state.ligPoliticaCache];
     },
-    updateLigPoliticaCache(state, action: PayloadAction<{ id: number; data: unknown }>) {
-      state.ligPoliticaCache = state.ligPoliticaCache.map((c: any) =>
-        c.id === action.payload.id ? { ...c, ...(action.payload.data as any) } : c
+    updateLigPoliticaCache(state, action: PayloadAction<{ id: number; data: any }>) {
+      state.ligPoliticaCache = state.ligPoliticaCache.map((c) =>
+        c.id === action.payload.id ? { ...c, ...action.payload.data } : c
       );
     },
     removeLigPoliticaCache(state, action: PayloadAction<number>) {
-      state.ligPoliticaCache = state.ligPoliticaCache.filter((c: any) => c.id !== action.payload);
+      state.ligPoliticaCache = state.ligPoliticaCache.filter((c) => c.id !== action.payload);
     },
-    setLpResultados(state, action: PayloadAction<unknown | null>) {
+    setLpResultados(state, action: PayloadAction<LpResultados | null>) {
       state.lpResultados = action.payload;
     },
-    setLpDataCache(state, action: PayloadAction<Record<string, unknown>>) {
+    setLpDataCache(state, action: PayloadAction<Record<string, LpDataCacheValue>>) {
       state.lpDataCache = action.payload;
-    },
-    setAdTabAtiva(state, action: PayloadAction<string>) {
-      state.adTabAtiva = action.payload;
-    },
-    setAdAnalises(state, action: PayloadAction<unknown[]>) {
-      state.adAnalises = action.payload;
-    },
-    addAdAnalise(state, action: PayloadAction<unknown>) {
-      state.adAnalises = [...state.adAnalises, action.payload];
-    },
-    removeAdAnalise(state, action: PayloadAction<number>) {
-      state.adAnalises = state.adAnalises.filter((a: any) => a.id !== action.payload);
     },
     setSubTabs(state, action: PayloadAction<SubTab[]>) {
       state.subTabs = action.payload;
-    },
-    setPanelLicitacoes(state, action: PayloadAction<unknown[]>) {
-      state.panelLicitacoes = action.payload;
     },
     setLpFromPanel(state, action: PayloadAction<boolean>) {
       state.lpFromPanel = action.payload;
@@ -123,12 +127,7 @@ export const {
   removeLigPoliticaCache,
   setLpResultados,
   setLpDataCache,
-  setAdTabAtiva,
-  setAdAnalises,
-  addAdAnalise,
-  removeAdAnalise,
   setSubTabs,
-  setPanelLicitacoes,
   setLpFromPanel,
 } = ligacaoPoliticaSlice.actions;
 export default ligacaoPoliticaSlice.reducer;

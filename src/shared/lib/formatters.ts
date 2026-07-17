@@ -108,3 +108,10 @@ export function fmtPct(n: number | null | undefined): string {
 export function normalizarCNPJ(cnpj: string): string {
   return cnpj.replace(/\D/g, '');
 }
+
+/**
+ * Converte snake_case para Title Case ("hello_world" → "Hello World").
+ */
+export function fLabel(k: string): string {
+  return k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
