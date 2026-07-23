@@ -2,7 +2,7 @@
 
 Interface web do projeto **SYS**, plataforma para visualização e análise de dados públicos brasileiros. Consome dois backends:
 
-- **Hub de dados ODT**: Agrega dados de fontes externas (IBGE, TSE, Câmara, Senado, Portal da Transparência, TCU, PNCP, SICONFI, OpenCNPJ)
+- **Hub de dados ODP**: Agrega dados de fontes externas (IBGE, TSE, Câmara, Senado, Portal da Transparência, TCU, PNCP, SICONFI, OpenCNPJ)
 - **Motor de análise SYS**: Realiza análises de ligação política, detecção de anomalias, dados de estados/municípios e feedback
 
 ## Stack
@@ -35,8 +35,8 @@ Os arquivos estáticos serão gerados em `dist/`.
 
 | Variável | Descrição | Padrão |
 |---|---|---|
-| `VITE_API_BASE_URL` | URL do hub de dados ODT | `http://localhost:8080` |
-| `VITE_WS_BASE_URL` | URL do WebSocket do hub ODT | `ws://localhost:8080` |
+| `VITE_API_BASE_URL` | URL do hub de dados ODP | `http://localhost:8080` |
+| `VITE_WS_BASE_URL` | URL do WebSocket do hub ODP | `ws://localhost:8080` |
 | `VITE_P2_API_BASE_URL` | URL do motor de análise SYS | `http://localhost:8084` |
 | `VITE_P2_WS_BASE_URL` | URL do WebSocket do motor SYS | `ws://localhost:8084` |
 
@@ -44,19 +44,19 @@ Os arquivos estáticos serão gerados em `dist/`.
 
 | Projeto | Papel | Porta |
 |---------|-------|-------|
-| Hub de dados ODT | Agrega dados públicos (IBGE, TSE, Câmara, Senado, PortalTransparência, TCU, PNCP, SICONFI, OpenCNPJ) | `8080` |
+| Hub de dados ODP | Agrega dados públicos (IBGE, TSE, Câmara, Senado, PortalTransparência, TCU, PNCP, SICONFI, OpenCNPJ) | `8080` |
 | Motor de análise SYS | Análise de ligação política, detecção de anomalias, dados de estados/municípios, feedback | `8084` |
 
 ### Mapeamento de endpoints
 
 | Endpoint | Backend | Serviço |
 |----------|---------|---------|
-| `/orgao/analise`, `/uf-municipio/analise` | ODT | Análise de órgãos/PNCP |
-| `/ibge/*`, `/deputados/*`, `/senado/*` | ODT | Dados públicos |
-| `/tcu/*`, `/portal-transparencia/*` | ODT | TCU e PortalTransparência |
-| `/busca/cargos`, `/busca/partidos`, etc. | ODT | TSE |
-| `/busca/relacoes`, `/entidade` | ODT | Consultas de entidades |
-| `/siconfi/*`, `/opencnpj/*`, `/pncp/*` | ODT | SICONFI, OpenCNPJ, PNCP |
+| `/orgao/analise`, `/uf-municipio/analise` | ODP | Análise de órgãos/PNCP |
+| `/ibge/*`, `/deputados/*`, `/senado/*` | ODP | Dados públicos |
+| `/tcu/*`, `/portal-transparencia/*` | ODP | TCU e PortalTransparência |
+| `/busca/cargos`, `/busca/partidos`, etc. | ODP | TSE |
+| `/busca/relacoes`, `/entidade` | ODP | Consultas de entidades |
+| `/siconfi/*`, `/opencnpj/*`, `/pncp/*` | ODP | SICONFI, OpenCNPJ, PNCP |
 | `/worker/anomalia/*` | SYS | Worker de anomalias |
 | `/anomalias` | SYS | Consulta de anomalias |
 | `/feedback` | SYS | Feedback |
@@ -78,7 +78,7 @@ src/
 │   └── tse/         # Dados do TSE
 ├── pages/           # Páginas da aplicação
 ├── shared/          # Código compartilhado
-│   ├── api/         # Clientes HTTP (api: ODT, apiP2: SYS)
+│   ├── api/         # Clientes HTTP (api: ODP, apiP2: SYS)
 │   ├── config/      # Variáveis de ambiente
 │   ├── lib/         # Utilitários e serviços (WebSocket)
 │   └── ui/          # Componentes reutilizáveis
